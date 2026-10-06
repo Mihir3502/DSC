@@ -75,6 +75,41 @@ void runScript("db:check", async () => {
     );
     ok("app.system_metadata exists");
 
+    // Better Auth tables (M1.1): runtime DML only; DELETE limited to sessions
+    // and verification records; never schema creation.
+    const authPrivileges = await one<Record<string, boolean | null>>(sql`
+      SELECT to_regclass('auth.user') IS NOT NULL AS tables_present,
+        has_schema_privilege('auth', 'CREATE') AS auth_create,
+        has_table_privilege('auth.session', 'DELETE') AS session_delete,
+        has_table_privilege('auth.verification', 'DELETE') AS verification_delete,
+        has_table_privilege('auth.user', 'DELETE') AS user_delete,
+        has_table_privilege('auth.account', 'DELETE') AS account_delete,
+        has_table_privilege('auth.user', 'UPDATE') AS user_update`);
+    assertCheck(
+      authPrivileges.tables_present,
+      "auth tables are missing (run pnpm db:migrate)",
+    );
+    assertCheck(
+      authPrivileges.auth_create === false,
+      "application role can create objects in the auth schema",
+    );
+    assertCheck(
+      authPrivileges.session_delete && authPrivileges.verification_delete,
+      "application role lacks DELETE on auth.session/auth.verification (run pnpm db:bootstrap:local after db:migrate)",
+    );
+    assertCheck(
+      authPrivileges.user_delete === false &&
+        authPrivileges.account_delete === false,
+      "application role must not delete auth.user/auth.account",
+    );
+    assertCheck(
+      authPrivileges.user_update,
+      "application role lacks UPDATE on auth.user",
+    );
+    ok(
+      "auth schema privileges: DML as designed, DELETE only on sessions/verifications, no DDL",
+    );
+
     // DML round trip inside a transaction that is always rolled back.
     try {
       await db.transaction(async (tx) => {
@@ -100,6 +135,10 @@ void runScript("db:check", async () => {
 
     for (const [label, statement] of [
       ["create table in app", sql`CREATE TABLE app.__db_check_probe (id int)`],
+      [
+        "create table in auth",
+        sql`CREATE TABLE auth.__db_check_probe (id int)`,
+      ],
       [
         "create table in public",
         sql`CREATE TABLE public.__db_check_probe (id int)`,

@@ -62,7 +62,7 @@ export async function applyLocalDatabaseGrants(
     throw new Error("admin connection is not on the expected database");
   }
 
-  for (const schema of ["app", "drizzle"]) {
+  for (const schema of ["app", "drizzle", "auth"]) {
     const { rows } = await admin.query<{ owner: string }>(
       "SELECT pg_get_userbyid(nspowner) AS owner FROM pg_namespace WHERE nspname = $1",
       [schema],
@@ -93,7 +93,27 @@ export async function applyLocalDatabaseGrants(
     `GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA app TO ${app}`,
     `ALTER DEFAULT PRIVILEGES FOR ROLE ${migrator} IN SCHEMA app GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${app}`,
     `ALTER DEFAULT PRIVILEGES FOR ROLE ${migrator} IN SCHEMA app GRANT USAGE, SELECT ON SEQUENCES TO ${app}`,
+    // Better Auth tables (ADR-0002): read/insert/update only by default.
+    `CREATE SCHEMA IF NOT EXISTS auth AUTHORIZATION ${migrator}`,
+    `REVOKE ALL ON SCHEMA auth FROM PUBLIC`,
+    `GRANT USAGE ON SCHEMA auth TO ${app}`,
+    `GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA auth TO ${app}`,
+    `ALTER DEFAULT PRIVILEGES FOR ROLE ${migrator} IN SCHEMA auth GRANT SELECT, INSERT, UPDATE ON TABLES TO ${app}`,
   ];
+  // Table-specific DELETE, applied once the auth migration has created the
+  // tables (run db:bootstrap:local again after db:migrate). Sessions and
+  // verification records are deleted on revocation/consumption; accounts and
+  // credentials are never deleted by the application.
+  for (const table of ["session", "verification"]) {
+    if (await tableExists(admin, `auth.${table}`)) {
+      statements.push(`GRANT DELETE ON auth.${table} TO ${app}`);
+    }
+  }
+  for (const table of ["user", "account"]) {
+    if (await tableExists(admin, `auth.${table}`)) {
+      statements.push(`REVOKE DELETE, TRUNCATE ON auth."${table}" FROM ${app}`);
+    }
+  }
 
   await admin.query("BEGIN");
   try {
@@ -105,9 +125,18 @@ export async function applyLocalDatabaseGrants(
   }
   return [
     `database ${database}: CONNECT for ${app}; CONNECT, CREATE for ${migrator}; PUBLIC access revoked`,
-    `schemas app, drizzle: owned by ${migrator}; ${app} has USAGE on app only`,
+    `schemas app, drizzle, auth: owned by ${migrator}; ${app} has USAGE on app and auth`,
     `${app}: SELECT/INSERT/UPDATE/DELETE on app tables, including future ones (default privileges)`,
+    `schema auth: owned by ${migrator}; ${app} has SELECT/INSERT/UPDATE, DELETE only on auth.session and auth.verification`,
   ];
+}
+
+async function tableExists(client: Client, table: string): Promise<boolean> {
+  const { rows } = await client.query<{ exists: boolean }>(
+    "SELECT to_regclass($1) IS NOT NULL AS exists",
+    [table],
+  );
+  return rows[0].exists;
 }
 
 async function quoteIdent(client: Client, name: string): Promise<string> {

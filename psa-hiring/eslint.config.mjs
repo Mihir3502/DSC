@@ -43,11 +43,63 @@ const eslintConfig = defineConfig([
     rules: { "no-console": "error" },
   },
   {
-    // Pages, layouts, boundaries, and components (excluding tests).
+    // Pages, layouts, boundaries, and components (excluding tests and route
+    // handlers, which are server-side HTTP adapters).
     files: ["src/app/**/*.{ts,tsx}", "src/components/**/*.{ts,tsx}"],
-    ignores: ["src/**/*.test.{ts,tsx}"],
+    ignores: ["src/**/*.test.{ts,tsx}", "src/app/api/**"],
     rules: {
-      "no-restricted-imports": ["error", { patterns: serverOnlyModules }],
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ...serverOnlyModules,
+            {
+              group: [
+                "@/modules/*/infrastructure",
+                "@/modules/*/infrastructure/*",
+              ],
+              message:
+                "UI code must use a module's public index, never its infrastructure.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Module domain layers stay framework-neutral (ARCHITECTURE §5.1).
+    files: ["src/modules/*/domain/**/*.ts"],
+    ignores: ["src/**/*.test.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "better-auth",
+                "better-auth/*",
+                "next",
+                "next/*",
+                "react",
+                "react/*",
+                "drizzle-orm",
+                "drizzle-orm/*",
+                "pg",
+                "pino",
+                "@/shared/database",
+                "@/shared/database/*",
+                "@/shared/http",
+                "@/shared/http/*",
+                "../infrastructure/*",
+                "../application/*",
+              ],
+              message:
+                "Domain code must not import frameworks, persistence, HTTP, or outer layers.",
+            },
+          ],
+        },
+      ],
     },
   },
   {

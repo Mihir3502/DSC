@@ -59,6 +59,10 @@ jobs:
         run: pnpm lint
       - name: Typecheck (strict)
         run: pnpm typecheck
+      - name: Better Auth schema check (pinned CLI)
+        run: pnpm auth:schema:check
+      - name: Migration drift check
+        run: pnpm db:check-drift
       - name: Dependency audit (production HIGH/CRITICAL gate)
         run: pnpm test:deps
 

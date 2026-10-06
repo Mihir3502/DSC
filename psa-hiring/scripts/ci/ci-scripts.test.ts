@@ -30,7 +30,8 @@ describe("ci-gate", () => {
   );
 
   it("fails when a required job is missing or an unknown job appears", () => {
-    const { build: _omit, ...withoutBuild } = allSuccess;
+    const withoutBuild: Record<string, { result: string }> = { ...allSuccess };
+    delete withoutBuild.build;
     expect(evaluateGate(withoutBuild, REQUIRED_JOBS)).toEqual([
       "build: missing",
     ]);

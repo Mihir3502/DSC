@@ -63,6 +63,9 @@ beforeAll(async () => {
   assertNoSecrets(ctx, migrate.output);
   expect(migrate.code, migrate.output).toBe(0);
   firstMigrateOutput = migrate.output;
+  // Second pass applies table-specific grants for newly created tables.
+  const regrant = await runDbScript("bootstrap", env);
+  expect(regrant.code, regrant.output).toBe(0);
   admin = await adminClient(ctx, db.name);
 });
 
@@ -315,12 +318,19 @@ describe("scope", () => {
     const { rows } = await admin.query<{ t: string }>(`
       SELECT schemaname || '.' || tablename AS t FROM pg_tables
       WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY 1`);
+    // M1.1 adds exactly the four Better Auth tables (ADR-0002).
     expect(rows.map((r) => r.t)).toEqual([
       "app.system_metadata",
+      "auth.account",
+      "auth.session",
+      "auth.user",
+      "auth.verification",
       "drizzle.__drizzle_migrations",
     ]);
     const forbidden =
       /candida|account|person|screening|offer|onboard|readiness|assignment|timesheet|payroll|leave|audit|job|outbox/;
-    expect(rows.filter((r) => forbidden.test(r.t))).toEqual([]);
+    expect(
+      rows.filter((r) => !r.t.startsWith("auth.") && forbidden.test(r.t)),
+    ).toEqual([]);
   });
 });

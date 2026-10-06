@@ -131,7 +131,20 @@ export const GET = withRouteHandler({ routeTemplate: "/api/example" }, async () 
 - `src/app/global-error.tsx` handles root-layout failures. It renders its own document and shows the Next.js digest as an **error reference**, which maps to the correlation ID through `request.error` logs.
 - Neither renders `error.message`, stacks, or other technical detail. No debug, throw, echo, or log-viewing route exists.
 
-## 5. Known limitations
+## 5. Authentication events (M1.1)
+
+| Event code | Meaning (no emails, tokens, cookies, or messages are logged) |
+|---|---|
+| `auth.session_created` | A session was created (`recordRef` = session ID) |
+| `auth.session_refused` | Session creation refused for a non-active or service account |
+| `auth.principal_rejected` | A request's session did not resolve to a principal (`resultCode`) |
+| `auth.account_create_refused` | Account creation refused for invalid type/status |
+| `auth.library_event` | Better Auth emitted a log message (level only; message dropped) |
+| `account.session_revoke`, `account.sessions_revoke_all`, `account.restricted` | Restriction primitives (`recordRef` = account ID, `resultCode`) |
+
+Auth route errors use the same closed problem codes (plus `RATE_LIMITED`, 429). Library messages are never returned, and session tokens are stripped from JSON bodies.
+
+## 6. Known limitations
 
 - Page requests log `request.received` only. Next.js 16 does not expose page status or duration to the proxy, and the project does not wrap the framework server.
 - On client-side navigation the root layout is not re-rendered, so the request reference shown by `error.tsx` is the one from the initial document request.

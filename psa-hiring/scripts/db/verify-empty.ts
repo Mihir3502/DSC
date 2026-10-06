@@ -126,6 +126,17 @@ void runScript("db:verify-empty", async () => {
       );
     });
 
+    // Second bootstrap pass: table-specific grants for tables the migrations
+    // just created (auth.session/auth.verification DELETE).
+    await withClient(
+      withDatabase(env.DATABASE_ADMIN_URL, target),
+      timeoutMs,
+      async (c) => {
+        await applyLocalDatabaseGrants(c, target);
+      },
+    );
+    ok("re-applied post-migration grants");
+
     await withClient(
       withDatabase(env.DATABASE_ADMIN_URL, target),
       timeoutMs,
@@ -134,20 +145,23 @@ void runScript("db:verify-empty", async () => {
         SELECT nspname AS name, pg_get_userbyid(nspowner) AS owner FROM pg_namespace
         WHERE nspname NOT LIKE 'pg\\_%' AND nspname <> 'information_schema' ORDER BY 1`);
         assertCheck(
-          schemas.rows.map((r) => r.name).join(",") === "app,drizzle,public",
+          schemas.rows.map((r) => r.name).join(",") ===
+            "app,auth,drizzle,public",
           `unexpected schemas: ${schemas.rows.map((r) => r.name).join(",")}`,
         );
-        ok("schemas are exactly app, drizzle, public");
+        ok("schemas are exactly app, auth, drizzle, public");
 
         const tables = await c.query<{ t: string }>(`
         SELECT schemaname || '.' || tablename AS t FROM pg_tables
         WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY 1`);
         assertCheck(
           tables.rows.map((r) => r.t).join(",") ===
-            "app.system_metadata,drizzle.__drizzle_migrations",
+            "app.system_metadata,auth.account,auth.session,auth.user,auth.verification,drizzle.__drizzle_migrations",
           `unexpected tables: ${tables.rows.map((r) => r.t).join(",")}`,
         );
-        ok("tables are exactly app.system_metadata and the migration journal");
+        ok(
+          "tables are exactly app.system_metadata, the four auth tables, and the migration journal",
+        );
 
         const columns = await c.query<{ c: string }>(`
         SELECT concat_ws('|', column_name, data_type, coalesce(character_maximum_length::text, ''),

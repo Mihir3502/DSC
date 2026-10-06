@@ -12,10 +12,14 @@ const migrationUrl = process.env.DATABASE_MIGRATION_URL;
 
 export default defineConfig({
   dialect: "postgresql",
-  schema: "./src/shared/database/schema/*.ts",
+  // Shared technical tables plus tables owned by business modules.
+  schema: [
+    "./src/shared/database/schema/*.ts",
+    "./src/modules/*/infrastructure/*-schema.ts",
+  ],
   out: "./drizzle",
-  // Only the application schema belongs to this project's model.
-  schemaFilter: ["app"],
+  // Application tables (app) and Better Auth tables (auth, ADR-0002).
+  schemaFilter: ["app", "auth"],
   migrations: {
     schema: "drizzle",
     table: "__drizzle_migrations",

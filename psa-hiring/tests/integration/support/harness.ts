@@ -122,6 +122,11 @@ export function buildHarnessEnv(
     SMTP_FROM: "test-sender@example.test",
     DOCUMENT_STORAGE_ROOT: "./.local/test-documents",
     PROVIDER_MODE: "fake",
+    // Synthetic, deterministic auth config valid only for APP_ENV=test.
+    BETTER_AUTH_SECRET: "TEST-auth-secret-for-disposable-db-only-0000",
+    BETTER_AUTH_URL: "http://127.0.0.1:3100",
+    AUTH_TRUSTED_ORIGINS: "http://127.0.0.1:3100",
+    AUTH_RATE_LIMIT_MAX: "1000",
     NEXT_TELEMETRY_DISABLED: "1",
   };
 }

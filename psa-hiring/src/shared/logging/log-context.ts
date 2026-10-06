@@ -69,6 +69,7 @@ const publicCodes = new Set<string>([
   "NOT_FOUND",
   "CONFLICT",
   "SERVICE_UNAVAILABLE",
+  "RATE_LIMITED",
   "INTERNAL_ERROR",
 ]);
 const errorCodes = new Set<string>([...internalErrorCodes, ...publicCodes]);

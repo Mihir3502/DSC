@@ -10,7 +10,7 @@ Workflow: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). Repository:
 
 | Job (check name) | Runs | Timeout |
 |---|---|---|
-| `static-and-security` | `test:secrets`, `test:data-guard`, `test:critical-guard`, `test:workflow-policy`, `format:check`, `lint`, `typecheck`, `test:deps` | 15 min |
+| `static-and-security` | `test:secrets`, `test:data-guard`, `test:critical-guard`, `test:workflow-policy`, `format:check`, `lint`, `typecheck`, `auth:schema:check`, `db:check-drift`, `test:deps` | 15 min |
 | `unit-component-coverage` | `test:coverage` (unit + component projects with V8 coverage), artifact guard, coverage upload | 15 min |
 | `database-integration` | `test:integration` (migrations from empty, seed, UTC, least privilege) | 20 min |
 | `build` | `build` | 15 min |
@@ -37,6 +37,8 @@ test:critical-guard
 format:check
 lint
 typecheck
+auth:schema:check    (Better Auth schema vs. committed Drizzle schema)
+db:check-drift       (schema vs. committed migrations)
 test:coverage        (unit + component)
 test:integration
 build
@@ -51,6 +53,7 @@ No `.env` file, Compose database, or volume is needed. Tests use only generated 
 | `guard:sensitive` | `test:data-guard` (plus `test:critical-guard` and `test:artifact-guard`) |
 | `test:unit` + `test:component` + `test:coverage` | `test:coverage` in CI (`test:unit` and `test:component` exist for local use) |
 | `test:security` | `test:security` |
+| `db:test:migrations` | `test:integration` (migration-from-empty in a disposable database, including the M1.1 auth tests) |
 
 ### Test environment variables
 
@@ -58,7 +61,7 @@ CI defines only `NEXT_TELEMETRY_DISABLED=1`. The integration harness generates `
 
 ## Disposable database isolation
 
-`test:integration` starts its own `postgres:18.6-trixie` container through Testcontainers, labeled `psa-hiring.test-harness-run=<run>`. The container listens on `127.0.0.1` on a random port with random credentials. Each test file creates a `psa_test_<run>_*` database, runs the real `db:bootstrap:local`, `db:migrate`, and `db:seed` scripts against it, and drops only databases it created. The container is removed at the end, with Ryuk as a backup. See `psa-hiring/tests/integration/support/`.
+`test:integration` starts its own `postgres:18.6-trixie` container through Testcontainers, labeled `psa-hiring.test-harness-run=<run>`. The container listens on `127.0.0.1` on a random port with random credentials. Each test file creates a `psa_test_<run>_*` database, runs the real `db:bootstrap:local` → `db:migrate` → `db:bootstrap:local` (and `db:seed` where tested) against it, and drops only databases it created. The container is removed at the end, with Ryuk as a backup. See `psa-hiring/tests/integration/support/`.
 
 ## Artifacts
 

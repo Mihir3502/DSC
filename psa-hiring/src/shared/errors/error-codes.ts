@@ -21,6 +21,7 @@ export type PublicErrorCode =
   | "NOT_FOUND"
   | "CONFLICT"
   | "SERVICE_UNAVAILABLE"
+  | "RATE_LIMITED"
   | "INTERNAL_ERROR";
 
 export type PublicErrorDefinition = Readonly<{
@@ -46,6 +47,7 @@ export const publicErrorRegistry: Readonly<
     status: 503,
     title: "The service is temporarily unavailable",
   },
+  RATE_LIMITED: { status: 429, title: "Too many requests; try again later" },
   INTERNAL_ERROR: { status: 500, title: "Unable to complete the request" },
 });
 

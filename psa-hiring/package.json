@@ -43,10 +43,13 @@
     "test:workflow-policy": "tsx scripts/ci/workflow-policy.ts",
     "test:artifact-guard": "tsx scripts/ci/artifact-guard.ts",
     "test:security": "pnpm test:secrets && pnpm test:deps && pnpm test:workflow-policy",
-    "ci:local": "pnpm test:security && pnpm test:data-guard && pnpm test:critical-guard && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm test:integration && pnpm build && pnpm test:e2e:critical && pnpm test:a11y"
+    "ci:local": "pnpm test:security && pnpm test:data-guard && pnpm test:critical-guard && pnpm format:check && pnpm lint && pnpm typecheck && pnpm auth:schema:check && pnpm db:check-drift && pnpm test:coverage && pnpm test:integration && pnpm build && pnpm test:e2e:critical && pnpm test:a11y",
+    "auth:schema:check": "auth check schema --config src/modules/identity-access/infrastructure/auth.cli.ts",
+    "db:check-drift": "tsx scripts/db/check-drift.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
+    "better-auth": "1.7.7",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
     "drizzle-orm": "0.45.3",
@@ -73,6 +76,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "5.0.3",
+    "auth": "1.7.7",
     "drizzle-kit": "0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",

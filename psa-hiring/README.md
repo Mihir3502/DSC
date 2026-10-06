@@ -4,7 +4,7 @@ Web application for managing hiring and compliance readiness for a Kentucky priv
 
 Release 1 covers candidate intake through **Ready for Assignment**. Scheduling, visit tracking, timesheets, payroll, billing, and leave are out of scope. See [`CLAUDE.md`](../CLAUDE.md) for the full scope.
 
-> **Current state: M0.6 CI baseline (M0 foundation complete pending review).** Placeholder pages, local PostgreSQL and Mailpit, a Drizzle migration workflow, a layered automated test suite, and structured logging with correlation IDs and safe error handling. The schema contains one technical table (`app.system_metadata`) and no business data; no page reads the database and the application does not send email. Authentication arrives in M1. CI runs on every pull request and push to `main`.
+> **Current state: M1.1 account and authentication schema.** Better Auth accounts, database sessions, and restriction primitives exist; there is no sign-in or registration UI yet. Placeholder pages, local PostgreSQL and Mailpit, a Drizzle migration workflow, a layered automated test suite, and structured logging with correlation IDs and safe error handling. The schema contains one technical table (`app.system_metadata`) and no business data; no page reads the database and the application does not send email. Authentication arrives in M1. CI runs on every pull request and push to `main`.
 
 ## Prerequisites
 
@@ -30,6 +30,7 @@ pnpm install --frozen-lockfile
 
 # Create your local environment file. -n never overwrites an existing file.
 cp -n .env.example .env.local
+# Then set BETTER_AUTH_SECRET in .env.local to the output of: openssl rand -hex 32
 
 pnpm local:setup        # create the private .local/documents directory
 pnpm infra:up           # start PostgreSQL and Mailpit and wait until healthy
@@ -37,6 +38,7 @@ pnpm infra:check        # verify both services
 pnpm config:check       # validate .env.local
 pnpm db:bootstrap:local # create/grant the local database roles (idempotent)
 pnpm db:migrate         # apply committed migrations
+pnpm db:bootstrap:local # again: grants on tables the migrations just created
 pnpm db:seed            # insert the technical seed record (idempotent)
 pnpm db:check           # verify connection, UTC, schema, least privilege
 pnpm dev
@@ -108,6 +110,10 @@ First-time browser setup: `pnpm exec playwright install chromium`. To run Firefo
 - **Browser tests** build the app and serve it on `http://127.0.0.1:3100`. Any request to another host is blocked and fails the test, as do page or console errors. Reports go to `playwright-report/`; traces, screenshots, and videos are kept only for failures in `test-results/`.
 - Shared synthetic fixture builders live in `tests/fixtures/`. Use reserved domains (`example.test`), `TEST` labels, and synthetic SSN ranges (area 000/666/9xx) only.
 - Coverage covers `src/` and has no threshold yet; thresholds come with real domain code.
+
+## Authentication (M1.1)
+
+Better Auth stores accounts, credentials, sessions, and verification records in the PostgreSQL `auth` schema (see [`docs/adr/ADR-0002-AUTHENTICATION-PERSISTENCE.md`](../docs/adr/ADR-0002-AUTHENTICATION-PERSISTENCE.md)). The account type (candidate/staff/service) and status (invited/active/locked/disabled/closed) are server-owned. Public sign-up is disabled, no accounts are seeded, and no email is sent. Server code uses `resolveCurrentAccount` and the revoke/restrict primitives from `@/modules/identity-access`. `pnpm auth:schema:check` validates the auth schema with the pinned Better Auth CLI, and `pnpm db:check-drift` fails when the schema and committed migrations differ.
 
 ## Logging and errors
 
