@@ -4,7 +4,7 @@ Web application for managing hiring and compliance readiness for a Kentucky priv
 
 Release 1 covers candidate intake through **Ready for Assignment**. Scheduling, visit tracking, timesheets, payroll, billing, and leave are out of scope. See [`CLAUDE.md`](../CLAUDE.md) for the full scope.
 
-> **Current state: M0.2 local infrastructure.** Placeholder pages plus local PostgreSQL and Mailpit. No database tables exist yet and the application does not send email. The database schema, authentication, tests, logging, and CI arrive in later M0 work items.
+> **Current state: M0.3 database foundation.** Placeholder pages, local PostgreSQL and Mailpit, and a Drizzle migration workflow. The schema contains one technical table (`app.system_metadata`) and no business data; no page reads the database and the application does not send email. Authentication, tests, logging, and CI arrive in later M0 work items.
 
 ## Prerequisites
 
@@ -31,10 +31,14 @@ pnpm install --frozen-lockfile
 # Create your local environment file. -n never overwrites an existing file.
 cp -n .env.example .env.local
 
-pnpm config:check   # validate .env.local
-pnpm local:setup    # create the private .local/documents directory
-pnpm infra:up       # start PostgreSQL and Mailpit and wait until healthy
-pnpm infra:check    # verify both services
+pnpm local:setup        # create the private .local/documents directory
+pnpm infra:up           # start PostgreSQL and Mailpit and wait until healthy
+pnpm infra:check        # verify both services
+pnpm config:check       # validate .env.local
+pnpm db:bootstrap:local # create/grant the local database roles (idempotent)
+pnpm db:migrate         # apply committed migrations
+pnpm db:seed            # insert the technical seed record (idempotent)
+pnpm db:check           # verify connection, UTC, schema, least privilege
 pnpm dev
 ```
 
@@ -42,23 +46,29 @@ Open <http://localhost:3000>.
 
 ## Commands
 
-| Command                 | Purpose                                                             |
-| ----------------------- | ------------------------------------------------------------------- |
-| `pnpm dev`              | Start the development server                                        |
-| `pnpm build`            | Create a production build                                           |
-| `pnpm start`            | Serve the production build                                          |
-| `pnpm lint`             | Run ESLint                                                          |
-| `pnpm typecheck`        | Generate route types and run strict TypeScript                      |
-| `pnpm format`           | Format files with Prettier                                          |
-| `pnpm format:check`     | Check formatting without writing                                    |
-| `pnpm config:check`     | Validate `.env.local` against the server configuration schema       |
-| `pnpm config:selfcheck` | Run the configuration and path-safety assertions (synthetic values) |
-| `pnpm local:setup`      | Create the private local document directory (never deletes)         |
-| `pnpm infra:up`         | Start PostgreSQL and Mailpit in the background and wait for health  |
-| `pnpm infra:status`     | Show service status and health                                      |
-| `pnpm infra:check`      | Verify PostgreSQL readiness/port and Mailpit `/readyz`              |
-| `pnpm infra:logs`       | Follow PostgreSQL and Mailpit logs (Ctrl+C to stop)                 |
-| `pnpm infra:down`       | Stop the services. **Database data is preserved.**                  |
+| Command                   | Purpose                                                             |
+| ------------------------- | ------------------------------------------------------------------- |
+| `pnpm dev`                | Start the development server                                        |
+| `pnpm build`              | Create a production build                                           |
+| `pnpm start`              | Serve the production build                                          |
+| `pnpm lint`               | Run ESLint                                                          |
+| `pnpm typecheck`          | Generate route types and run strict TypeScript                      |
+| `pnpm format`             | Format files with Prettier                                          |
+| `pnpm format:check`       | Check formatting without writing                                    |
+| `pnpm config:check`       | Validate `.env.local` against the server configuration schema       |
+| `pnpm config:selfcheck`   | Run the configuration and path-safety assertions (synthetic values) |
+| `pnpm local:setup`        | Create the private local document directory (never deletes)         |
+| `pnpm infra:up`           | Start PostgreSQL and Mailpit in the background and wait for health  |
+| `pnpm infra:status`       | Show service status and health                                      |
+| `pnpm infra:check`        | Verify PostgreSQL readiness/port and Mailpit `/readyz`              |
+| `pnpm infra:logs`         | Follow PostgreSQL and Mailpit logs (Ctrl+C to stop)                 |
+| `pnpm infra:down`         | Stop the services. **Database data is preserved.**                  |
+| `pnpm db:bootstrap:local` | Create/grant local database roles; local/test only, never drops     |
+| `pnpm db:generate`        | Generate a migration from TypeScript schema changes                 |
+| `pnpm db:migrate`         | Apply committed migrations with the migration role                  |
+| `pnpm db:seed`            | Insert/refresh the synthetic technical seed (idempotent)            |
+| `pnpm db:check`           | Verify runtime connection, UTC, schema, and least privilege         |
+| `pnpm db:verify-empty`    | Rebuild the schema in a temporary database to prove reproducibility |
 
 `tsx` is a development dependency used only to run the TypeScript scripts in `scripts/`.
 
@@ -78,23 +88,66 @@ Open <http://localhost:3000>.
 
 `.env.local` must define every variable in [`.env.example`](.env.example). `pnpm config:check` validates it with the same schema the application uses (`src/config/env-schema.ts`) and reports only variable names, never values.
 
-| Variable                | Rule                                                                  |
-| ----------------------- | --------------------------------------------------------------------- |
-| `APP_ENV`               | `local`, `test`, `staging`, or `production` (required, no default)    |
-| `DATABASE_URL`          | `postgres://` or `postgresql://` URL                                  |
-| `SMTP_HOST`             | Nonempty host                                                         |
-| `SMTP_PORT`             | Integer 1–65535                                                       |
-| `SMTP_FROM`             | Valid email; outside production it must use a reserved test domain    |
-| `DOCUMENT_STORAGE_ROOT` | Nonempty path; `pnpm local:setup` only accepts paths inside `.local/` |
-| `PROVIDER_MODE`         | `fake` or `production` (required, no default)                         |
+| Variable                         | Rule                                                                  |
+| -------------------------------- | --------------------------------------------------------------------- |
+| `APP_ENV`                        | `local`, `test`, `staging`, or `production` (required, no default)    |
+| `DATABASE_URL`                   | Runtime role URL (`psa_app` locally); required by the app             |
+| `DATABASE_MIGRATION_URL`         | Migration role URL (`psa_migrator`); migration tools only             |
+| `DATABASE_ADMIN_URL`             | Local admin URL (`psa_local`); bootstrap and verification only        |
+| `DATABASE_POOL_MAX`              | Runtime pool size 1–20 (default 5)                                    |
+| `DATABASE_CONNECTION_TIMEOUT_MS` | 500–30000 (default 5000)                                              |
+| `DATABASE_IDLE_TIMEOUT_MS`       | 1000–300000 (default 10000)                                           |
+| `SMTP_HOST`                      | Nonempty host                                                         |
+| `SMTP_PORT`                      | Integer 1–65535                                                       |
+| `SMTP_FROM`                      | Valid email; outside production it must use a reserved test domain    |
+| `DOCUMENT_STORAGE_ROOT`          | Nonempty path; `pnpm local:setup` only accepts paths inside `.local/` |
+| `PROVIDER_MODE`                  | `fake` or `production` (required, no default)                         |
 
-With `APP_ENV=production`, validation fails if `PROVIDER_MODE=fake`, if the database or SMTP host is a loopback address, or if the document path is relative or under `.local`.
+With `APP_ENV=production`, validation fails if `PROVIDER_MODE=fake`, if the database or SMTP host is a loopback address, or if the document path is relative or under `.local`. The runtime check also fails if `DATABASE_URL` reuses the migration or admin role.
+
+## Database
+
+### Identities
+
+| Identity       | Variable                 | Used by                                      | Can do                                                                 |
+| -------------- | ------------------------ | -------------------------------------------- | ---------------------------------------------------------------------- |
+| `psa_app`      | `DATABASE_URL`           | Web app and future worker                    | Read/write rows in `app` tables only. No DDL, no roles, no temp tables |
+| `psa_migrator` | `DATABASE_MIGRATION_URL` | `pnpm db:migrate`, `db:verify-empty`         | Owns the `app` and `drizzle` schemas; creates and alters tables        |
+| `psa_local`    | `DATABASE_ADMIN_URL`     | `pnpm db:bootstrap:local`, `db:verify-empty` | Local superuser from `compose.yaml`; creates roles and grants          |
+
+The application only ever reads `DATABASE_URL`. Migration tools only read `DATABASE_MIGRATION_URL` and never fall back to `DATABASE_URL`. The bootstrap refuses to run unless `APP_ENV` is `local` or `test` and every URL points at a loopback host. New tables created by migrations automatically grant `psa_app` read/write access through default privileges.
+
+### Migrations
+
+- The TypeScript schema in `src/shared/database/schema/` plus the committed SQL and snapshots in `drizzle/` are the source of truth.
+- Migrations **never run automatically**. `pnpm dev` and `pnpm start` do not touch the schema; run `pnpm db:migrate` deliberately.
+- **`drizzle-kit push` is prohibited.** It changes a live database directly from the TypeScript schema without a reviewed, committed migration, so other environments could not reproduce the change.
+- Never edit a migration that has been applied or accepted; add a new forward migration instead.
+
+To change the schema:
+
+1. Edit the TypeScript schema in `src/shared/database/schema/`.
+2. Run `pnpm db:generate --name=<short_description>`.
+3. Review the new SQL in `drizzle/` (no `DROP`, no data loss, no roles or secrets, only `app` objects) and commit it with the updated `drizzle/meta/` files.
+4. Run `pnpm db:migrate`, then `pnpm db:verify-empty`.
+
+### Empty-database verification
+
+`pnpm db:verify-empty` creates a new database named `psa_verify_<random>` on the local server, applies the local grants and every committed migration, checks the schemas, table, columns, primary key, and privileges, applies a throwaway forward migration to prove default privileges, then drops **only the database it created**. It refuses any other target (including `psa_hiring`) and refuses non-local environments. Your normal database is never modified.
+
+### Current schema
+
+M0.3 contains technical metadata only: `app.system_metadata` (`key`, `value` JSONB, `created_at`, `updated_at`) holding a single `foundation.seed` record. There are no people, accounts, or business tables.
 
 ## Troubleshooting
 
 - **Port already in use.** Find the process with `lsof -nP -iTCP:5432 -sTCP:LISTEN` (or `1025`, `8025`) and stop it, or export `POSTGRES_HOST_PORT`, `MAILPIT_SMTP_HOST_PORT`, or `MAILPIT_UI_HOST_PORT` before `pnpm infra:up` and update `DATABASE_URL` / `SMTP_PORT` in `.env.local` to match.
 - **Docker unavailable.** `Cannot connect to the Docker daemon` or `docker: command not found` means Docker Desktop is not running or its command-line tools are not on your PATH. Start Docker Desktop and wait until it reports that it is running.
 - **Service unhealthy.** Run `pnpm infra:status` and `pnpm infra:logs` to see which service failed and why, then `pnpm infra:down` and `pnpm infra:up`.
+- **`password authentication failed for user "psa_app"` (or `psa_migrator`).** The roles have not been created or their passwords differ from `.env.local`. Run `pnpm db:bootstrap:local`; it is safe to repeat and resets only those two roles' passwords to the values in `.env.local`.
+- **`app.system_metadata is missing`.** Run `pnpm db:migrate`.
+- **`permission denied` for the app role.** Expected for DDL. For data access, rerun `pnpm db:bootstrap:local` to reapply grants.
+- **Bootstrap reports a schema owned by another role.** Follow the printed manual step. Do not delete the volume to fix role or permission problems; `pnpm infra:down` and normal database commands always keep your data.
 - **Stale volume after an approved PostgreSQL major-version change.** A data volume created by an older major version will not start with a newer one. Only after the upgrade is approved, and only for disposable local data, remove the volume manually. **This permanently deletes your local database:**
 
   ```bash

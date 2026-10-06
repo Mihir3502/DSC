@@ -20,13 +20,21 @@
     "infra:down": "docker compose down",
     "infra:status": "docker compose ps",
     "infra:logs": "docker compose logs --tail=200 --follow postgres mailpit",
-    "infra:check": "tsx scripts/check-infra.ts"
+    "infra:check": "tsx scripts/check-infra.ts",
+    "db:bootstrap:local": "tsx --env-file-if-exists=.env.local scripts/db/bootstrap-local.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx --env-file-if-exists=.env.local scripts/db/migrate.ts",
+    "db:check": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/db/check.ts",
+    "db:seed": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/db/seed.ts",
+    "db:verify-empty": "tsx --env-file-if-exists=.env.local scripts/db/verify-empty.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
+    "drizzle-orm": "0.45.3",
     "next": "16.3.8",
+    "pg": "8.23.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "0.0.1",
@@ -37,8 +45,10 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^24.19.1",
+    "@types/pg": "8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "drizzle-kit": "0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
     "prettier": "3.9.9",

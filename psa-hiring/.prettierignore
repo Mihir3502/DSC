@@ -1,3 +1,5 @@
 # Generated or lockfile content
 pnpm-lock.yaml
 next-env.d.ts
+# Drizzle Kit output is committed exactly as generated
+drizzle/
