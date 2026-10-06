@@ -4,7 +4,7 @@ Web application for managing hiring and compliance readiness for a Kentucky priv
 
 Release 1 covers candidate intake through **Ready for Assignment**. Scheduling, visit tracking, timesheets, payroll, billing, and leave are out of scope. See [`CLAUDE.md`](../CLAUDE.md) for the full scope.
 
-> **Current state: M0.3 database foundation.** Placeholder pages, local PostgreSQL and Mailpit, and a Drizzle migration workflow. The schema contains one technical table (`app.system_metadata`) and no business data; no page reads the database and the application does not send email. Authentication, tests, logging, and CI arrive in later M0 work items.
+> **Current state: M0.4 test foundation.** Placeholder pages, local PostgreSQL and Mailpit, a Drizzle migration workflow, and a layered automated test suite. The schema contains one technical table (`app.system_metadata`) and no business data; no page reads the database and the application does not send email. Authentication, logging, and CI arrive in later M0 work items.
 
 ## Prerequisites
 
@@ -56,7 +56,6 @@ Open <http://localhost:3000>.
 | `pnpm format`             | Format files with Prettier                                          |
 | `pnpm format:check`       | Check formatting without writing                                    |
 | `pnpm config:check`       | Validate `.env.local` against the server configuration schema       |
-| `pnpm config:selfcheck`   | Run the configuration and path-safety assertions (synthetic values) |
 | `pnpm local:setup`        | Create the private local document directory (never deletes)         |
 | `pnpm infra:up`           | Start PostgreSQL and Mailpit in the background and wait for health  |
 | `pnpm infra:status`       | Show service status and health                                      |
@@ -71,6 +70,42 @@ Open <http://localhost:3000>.
 | `pnpm db:verify-empty`    | Rebuild the schema in a temporary database to prove reproducibility |
 
 `tsx` is a development dependency used only to run the TypeScript scripts in `scripts/`.
+
+## Testing
+
+All test data is synthetic. Tests never use your `.env.local`, never touch the Compose database, and never call third-party hosts.
+
+| Command                    | What it runs                                                                      |
+| -------------------------- | --------------------------------------------------------------------------------- |
+| `pnpm test`                | Unit and component tests once (no watch)                                          |
+| `pnpm test:watch`          | Unit and component tests in watch mode                                            |
+| `pnpm test:unit`           | Unit project only                                                                 |
+| `pnpm test:component`      | Component project only                                                            |
+| `pnpm test:integration`    | Real PostgreSQL tests in a disposable Docker container (Docker must be running)   |
+| `pnpm test:coverage`       | Unit/component tests with V8 coverage in `coverage/`                              |
+| `pnpm test:e2e`            | Playwright suite for the enabled browsers (Chromium by default)                   |
+| `pnpm test:e2e:critical`   | Critical Chromium smoke tests for `/`, `/candidate`, `/staff`                     |
+| `pnpm test:a11y`           | Chromium axe accessibility scans of the three routes                              |
+| `pnpm test:data-guard`     | Fails if test/fixture files contain real-looking personal data or live secrets    |
+| `pnpm test:critical-guard` | Fails if critical browser tests are focused (`.only`) or skipped without approval |
+| `pnpm test:foundation`     | All of the above in order: guards, coverage, integration, E2E, accessibility      |
+
+First-time browser setup: `pnpm exec playwright install chromium`. To run Firefox and WebKit too (main/nightly), install them with `pnpm exec playwright install firefox webkit` and run `E2E_BROWSERS=chromium,firefox,webkit pnpm test:e2e`.
+
+### Test projects
+
+| Project       | Environment | Files                                                                   |
+| ------------- | ----------- | ----------------------------------------------------------------------- |
+| `unit`        | Node        | `src/**/*.test.ts`, `scripts/**/*.test.ts`, `tests/guards/**/*.test.ts` |
+| `component`   | jsdom       | `src/**/*.test.tsx` (React Testing Library + user-event)                |
+| `integration` | Node        | `tests/integration/**/*.test.ts`                                        |
+| Playwright    | Chromium    | `tests/e2e/**/*.spec.ts`, `tests/accessibility/**/*.a11y.spec.ts`       |
+
+- Unit and component tests fail on any network request. Focused tests (`.only`) fail every run, and there are no automatic retries locally.
+- **Integration tests** start their own `postgres:18.6-trixie` container through Testcontainers on a random port with random test-only credentials. Each test file creates a `psa_test_<run>_*` database, runs the real `db:bootstrap:local`, `db:migrate`, and `db:seed` scripts against it, and drops only that database. The container is removed afterwards. Developer `DATABASE_*` variables are ignored.
+- **Browser tests** build the app and serve it on `http://127.0.0.1:3100`. Any request to another host is blocked and fails the test, as do page or console errors. Reports go to `playwright-report/`; traces, screenshots, and videos are kept only for failures in `test-results/`.
+- Shared synthetic fixture builders live in `tests/fixtures/`. Use reserved domains (`example.test`), `TEST` labels, and synthetic SSN ranges (area 000/666/9xx) only.
+- Coverage covers `src/` and has no threshold yet; thresholds come with real domain code.
 
 ## Local services
 

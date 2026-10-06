@@ -14,7 +14,6 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "config:check": "tsx --env-file-if-exists=.env.local scripts/check-env.ts",
-    "config:selfcheck": "tsx scripts/m02-selfcheck.ts",
     "local:setup": "tsx --env-file-if-exists=.env.local scripts/setup-local.ts",
     "infra:up": "docker compose up --detach --wait --wait-timeout 120",
     "infra:down": "docker compose down",
@@ -26,7 +25,19 @@
     "db:migrate": "tsx --env-file-if-exists=.env.local scripts/db/migrate.ts",
     "db:check": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/db/check.ts",
     "db:seed": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/db/seed.ts",
-    "db:verify-empty": "tsx --env-file-if-exists=.env.local scripts/db/verify-empty.ts"
+    "db:verify-empty": "tsx --env-file-if-exists=.env.local scripts/db/verify-empty.ts",
+    "test": "vitest run --project unit --project component",
+    "test:watch": "vitest --project unit --project component",
+    "test:unit": "vitest run --project unit",
+    "test:component": "vitest run --project component",
+    "test:integration": "vitest run --project integration",
+    "test:coverage": "vitest run --project unit --project component --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:critical": "playwright test tests/e2e --project=chromium --grep @critical",
+    "test:a11y": "playwright test tests/accessibility --project=chromium",
+    "test:data-guard": "tsx tests/guards/data-canary.ts",
+    "test:critical-guard": "tsx tests/guards/critical-tests.ts",
+    "test:foundation": "pnpm test:data-guard && pnpm test:critical-guard && pnpm test:coverage && pnpm test:integration && pnpm test:e2e:critical && pnpm test:a11y"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -43,18 +54,29 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "^4",
+    "@testcontainers/postgresql": "12.2.0",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
     "@types/node": "^24.19.1",
     "@types/pg": "8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "5.0.3",
     "drizzle-kit": "0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
+    "jsdom": "29.1.1",
     "prettier": "3.9.9",
     "tailwindcss": "^4",
     "tsx": "4.23.15",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite": "8.3.2",
+    "vitest": "5.0.3"
   },
   "packageManager": "pnpm@12.9.1"
 }
