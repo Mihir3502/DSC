@@ -8,7 +8,13 @@ import {
   validateExceptions,
   type AuditException,
 } from "./dependency-audit";
-import { scannedCommits, summarize } from "./secret-scan";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import {
+  scannedCommits,
+  summarize,
+  validateGitleaksConfig,
+} from "./secret-scan";
 
 const allSuccess = Object.fromEntries(
   REQUIRED_JOBS.map((j) => [j, { result: "success" }]),
@@ -138,6 +144,64 @@ describe("secret-scan", () => {
       },
     ]);
     expect(lines).toEqual(["generic-api-key src/x.ts:3 (commit 01234567)"]);
+  });
+
+  const repoConfig = readFileSync(
+    path.resolve(import.meta.dirname, "../../../.gitleaks.toml"),
+    "utf8",
+  );
+
+  it("accepts the committed .gitleaks.toml and a missing file", () => {
+    expect(validateGitleaksConfig(repoConfig, "2026-10-06")).toEqual([]);
+    expect(validateGitleaksConfig(undefined, "2026-10-06")).toEqual([]);
+  });
+
+  it("fails once an allowlist review-by date has passed", () => {
+    expect(validateGitleaksConfig(repoConfig, "2027-01-07")).toEqual([
+      "allowlist #1: review-by date 2027-01-06 has passed",
+    ]);
+  });
+
+  it.each([
+    [
+      "missing metadata",
+      (t: string) => t.replace(/^# owner:.*$/m, ""),
+      "owner",
+    ],
+    [
+      "OR condition",
+      (t: string) => t.replace(/^condition = "AND"$/m, 'condition = "OR"'),
+      'condition must be "AND"',
+    ],
+    [
+      "rule-wide entry",
+      (t: string) => t.replace(/^commits = .*$/m, ""),
+      "commits must list exactly one",
+    ],
+    [
+      "wildcard path",
+      (t: string) =>
+        t.replace(/^paths = .*$/m, "paths = ['''^psa-hiring/.*$''']"),
+      "paths must list exactly one",
+    ],
+    [
+      "disabled defaults",
+      (t: string) => t.replace("useDefault = true", "useDefault = false"),
+      "useDefault = true is required",
+    ],
+    [
+      "global allowlist",
+      (t: string) => `${t}\n[allowlist]\npaths = ['''.*''']\n`,
+      "global [allowlist]",
+    ],
+    [
+      "regex allowlist",
+      (t: string) => `${t}regexes = ['''.*''']\n`,
+      "regexes is not allowed",
+    ],
+  ])("rejects %s", (_label, mutate, message) => {
+    const problems = validateGitleaksConfig(mutate(repoConfig), "2026-10-06");
+    expect(problems.some((p) => p.includes(message))).toBe(true);
   });
 });
 

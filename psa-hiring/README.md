@@ -4,7 +4,7 @@ Web application for managing hiring and compliance readiness for a Kentucky priv
 
 Release 1 covers candidate intake through **Ready for Assignment**. Scheduling, visit tracking, timesheets, payroll, billing, and leave are out of scope. See [`CLAUDE.md`](../CLAUDE.md) for the full scope.
 
-> **Current state: M1.1 account and authentication schema.** Better Auth accounts, database sessions, and restriction primitives exist; there is no sign-in or registration UI yet. Placeholder pages, local PostgreSQL and Mailpit, a Drizzle migration workflow, a layered automated test suite, and structured logging with correlation IDs and safe error handling. The schema contains one technical table (`app.system_metadata`) and no business data; no page reads the database and the application does not send email. Authentication arrives in M1. CI runs on every pull request and push to `main`.
+> **Current state: M1.2 candidate registration and recovery.** Candidates can register (email-verified with a single-use code), sign in and out, recover and reset a password, change their password, and manage their own sessions. Staff sign-in arrives in M1.3. Local email goes to Mailpit only. The foundation also provides local PostgreSQL and Mailpit, a Drizzle migration workflow, a layered automated test suite, and structured logging with correlation IDs and safe error handling. Besides the `auth` schema there is one technical table (`app.system_metadata`) and no business data. CI runs on every pull request and push to `main`.
 
 ## Prerequisites
 
@@ -77,22 +77,22 @@ Open <http://localhost:3000>.
 
 All test data is synthetic. Tests never use your `.env.local`, never touch the Compose database, and never call third-party hosts.
 
-| Command                    | What it runs                                                                      |
-| -------------------------- | --------------------------------------------------------------------------------- |
-| `pnpm test`                | Unit and component tests once (no watch)                                          |
-| `pnpm test:watch`          | Unit and component tests in watch mode                                            |
-| `pnpm test:unit`           | Unit project only                                                                 |
-| `pnpm test:component`      | Component project only                                                            |
-| `pnpm test:integration`    | Real PostgreSQL tests in a disposable Docker container (Docker must be running)   |
-| `pnpm test:coverage`       | Unit/component tests with V8 coverage in `coverage/`                              |
-| `pnpm test:e2e`            | Playwright suite for the enabled browsers (Chromium by default)                   |
-| `pnpm test:e2e:critical`   | Critical Chromium smoke tests for `/`, `/candidate`, `/staff`                     |
-| `pnpm test:a11y`           | Chromium axe accessibility scans of the three routes                              |
-| `pnpm test:data-guard`     | Fails if test/fixture files contain real-looking personal data or live secrets    |
-| `pnpm test:critical-guard` | Fails if critical browser tests are focused (`.only`) or skipped without approval |
-| `pnpm test:foundation`     | All of the above in order: guards, coverage, integration, E2E, accessibility      |
-| `pnpm test:security`       | Secret scan (Gitleaks, Docker), production dependency audit, workflow policy      |
-| `pnpm ci:local`            | The exact CI sequence (see `docs/CI.md`)                                          |
+| Command                    | What it runs                                                                                                |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `pnpm test`                | Unit and component tests once (no watch)                                                                    |
+| `pnpm test:watch`          | Unit and component tests in watch mode                                                                      |
+| `pnpm test:unit`           | Unit project only                                                                                           |
+| `pnpm test:component`      | Component project only                                                                                      |
+| `pnpm test:integration`    | Real PostgreSQL tests in a disposable Docker container (Docker must be running)                             |
+| `pnpm test:coverage`       | Unit/component tests with V8 coverage in `coverage/`                                                        |
+| `pnpm test:e2e`            | Playwright suite for the enabled browsers (Chromium by default)                                             |
+| `pnpm test:e2e:critical`   | Critical Chromium journeys (foundation routes and candidate authentication) against a disposable PostgreSQL |
+| `pnpm test:a11y`           | Chromium axe accessibility scans of the three routes                                                        |
+| `pnpm test:data-guard`     | Fails if test/fixture files contain real-looking personal data or live secrets                              |
+| `pnpm test:critical-guard` | Fails if critical browser tests are focused (`.only`) or skipped without approval                           |
+| `pnpm test:foundation`     | All of the above in order: guards, coverage, integration, E2E, accessibility                                |
+| `pnpm test:security`       | Secret scan (Gitleaks, Docker), production dependency audit, workflow policy                                |
+| `pnpm ci:local`            | The exact CI sequence (see `docs/CI.md`)                                                                    |
 
 First-time browser setup: `pnpm exec playwright install chromium`. To run Firefox and WebKit too (main/nightly), install them with `pnpm exec playwright install firefox webkit` and run `E2E_BROWSERS=chromium,firefox,webkit pnpm test:e2e`.
 
@@ -113,7 +113,16 @@ First-time browser setup: `pnpm exec playwright install chromium`. To run Firefo
 
 ## Authentication (M1.1)
 
-Better Auth stores accounts, credentials, sessions, and verification records in the PostgreSQL `auth` schema (see [`docs/adr/ADR-0002-AUTHENTICATION-PERSISTENCE.md`](../docs/adr/ADR-0002-AUTHENTICATION-PERSISTENCE.md)). The account type (candidate/staff/service) and status (invited/active/locked/disabled/closed) are server-owned. Public sign-up is disabled, no accounts are seeded, and no email is sent. Server code uses `resolveCurrentAccount` and the revoke/restrict primitives from `@/modules/identity-access`. `pnpm auth:schema:check` validates the auth schema with the pinned Better Auth CLI, and `pnpm db:check-drift` fails when the schema and committed migrations differ.
+Better Auth stores accounts, credentials, sessions, and verification records in the PostgreSQL `auth` schema (see [`docs/adr/ADR-0002-AUTHENTICATION-PERSISTENCE.md`](../docs/adr/ADR-0002-AUTHENTICATION-PERSISTENCE.md)). The account type (candidate/staff/service) and status (invited/active/locked/disabled/closed) are server-owned. Generic sign-up is disabled (candidates register through the M1.2 flow below) and no accounts are seeded. Server code uses `resolveCurrentAccount` and the revoke/restrict primitives from `@/modules/identity-access`. `pnpm auth:schema:check` validates the auth schema with the pinned Better Auth CLI, and `pnpm db:check-drift` fails when the schema and committed migrations differ.
+
+## Candidate registration and recovery (M1.2)
+
+See [`docs/adr/ADR-0003-CANDIDATE-REGISTRATION-AND-RECOVERY.md`](../docs/adr/ADR-0003-CANDIDATE-REGISTRATION-AND-RECOVERY.md).
+
+- **Pages:** `/register`, `/verify-email`, `/sign-in`, `/recover`, `/reset-password`, and `/candidate/security`. All of them run same-origin server actions; the `/api/auth` route forwards only `GET /get-session`.
+- **Local email:** set `AUTH_EMAIL_TRANSPORT=smtp-local` (as in `.env.example`) and run `pnpm infra:up`. Verification codes and reset links then appear in Mailpit at <http://127.0.0.1:8025>. `pnpm auth:mailpit:check` sends every template to Mailpit and confirms it arrived.
+- **Invitations:** `pnpm auth:intent:local test.someone@example.test` prints a single-use invitation link. It works only locally and only for reserved domains.
+- **Browser tests:** `pnpm test:e2e*` and `pnpm test:a11y` start their own disposable PostgreSQL (Docker required). They capture email as files in a private temp directory and delete it afterwards. Traces are off for the candidate-auth specs because they handle one-time codes and links.
 
 ## Logging and errors
 
@@ -205,11 +214,13 @@ M0.3 contains technical metadata only: `app.system_metadata` (`key`, `value` JSO
 
 ## Routes
 
-| Route        | Page                         |
-| ------------ | ---------------------------- |
-| `/`          | Public landing page          |
-| `/candidate` | Candidate Portal placeholder |
-| `/staff`     | Staff Portal placeholder     |
+| Route                                                                   | Page                                              |
+| ----------------------------------------------------------------------- | ------------------------------------------------- |
+| `/`                                                                     | Public landing page                               |
+| `/candidate`                                                            | Candidate Portal placeholder                      |
+| `/staff`                                                                | Staff Portal placeholder                          |
+| `/register`, `/verify-email`, `/sign-in`, `/recover`, `/reset-password` | Candidate authentication                          |
+| `/candidate/security`                                                   | Candidate account security (signed-in candidates) |
 
 ## Data rule
 

@@ -1,4 +1,5 @@
 import { execFile, execFileSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -34,6 +35,62 @@ export function summarize(findings: Finding[]): string[] {
   );
 }
 
+/**
+ * Enforces the allowlist policy for `.gitleaks.toml` (docs/CI.md): the default
+ * rules stay enabled, and every `[[allowlists]]` entry targets exactly one
+ * rule, commit, and anchored file path (condition AND) with fingerprint,
+ * owner, approver, reason, and an unexpired review-by date. Returns problems
+ * (empty when compliant). A missing file is compliant (no exceptions).
+ */
+export function validateGitleaksConfig(
+  text: string | undefined,
+  today: string,
+): string[] {
+  if (text === undefined) return [];
+  const problems: string[] = [];
+  if (!/^\s*useDefault\s*=\s*true\s*$/m.test(text))
+    problems.push("[extend] useDefault = true is required");
+  if (/^\s*\[allowlist\]\s*$/m.test(text))
+    problems.push("global [allowlist] tables are not allowed");
+  if (/^\s*disabledRules\s*=/m.test(text))
+    problems.push("disabledRules is not allowed");
+  if (/^\s*\[\[rules\]\]\s*$/m.test(text))
+    problems.push("custom [[rules]] are not allowed");
+
+  const blocks = text.split(/^\s*\[\[allowlists\]\]\s*$/m).slice(1);
+  blocks.forEach((block, index) => {
+    const label = `allowlist #${index + 1}`;
+    const meta = (key: string) =>
+      block.match(new RegExp(`^#\\s*${key}:\\s*(\\S.*)$`, "m"))?.[1].trim();
+    for (const key of ["fingerprint", "owner", "approver", "reason"]) {
+      if (!meta(key)) problems.push(`${label}: missing "${key}" metadata`);
+    }
+    const review = meta("review-by");
+    if (!review || !/^\d{4}-\d{2}-\d{2}$/.test(review))
+      problems.push(`${label}: missing or invalid "review-by" date`);
+    else if (review < today)
+      problems.push(`${label}: review-by date ${review} has passed`);
+    if (!/^condition\s*=\s*"AND"\s*$/m.test(block))
+      problems.push(`${label}: condition must be "AND"`);
+    const single = (key: string, pattern: RegExp) => {
+      const value = block.match(
+        new RegExp(`^${key}\\s*=\\s*\\[(.*)\\]\\s*$`, "m"),
+      )?.[1];
+      const items = value?.split(",").map((item) => item.trim()) ?? [];
+      if (items.length !== 1 || !pattern.test(items[0]))
+        problems.push(`${label}: ${key} must list exactly one valid entry`);
+    };
+    single("targetRules", /^"[a-z0-9-]+"$/);
+    single("commits", /^"[0-9a-f]{40}"$/);
+    single("paths", /^'''\^[^*]+\$'''$/);
+    for (const key of ["regexes", "stopwords"]) {
+      if (new RegExp(`^${key}\\s*=`, "m").test(block))
+        problems.push(`${label}: ${key} is not allowed`);
+    }
+  });
+  return problems;
+}
+
 const run = promisify(execFile);
 
 async function main() {
@@ -41,6 +98,16 @@ async function main() {
     cwd: import.meta.dirname,
     encoding: "utf8",
   }).trim();
+  const configPath = path.join(repoRoot, ".gitleaks.toml");
+  const configProblems = validateGitleaksConfig(
+    existsSync(configPath) ? readFileSync(configPath, "utf8") : undefined,
+    new Date().toISOString().slice(0, 10),
+  );
+  if (configProblems.length > 0) {
+    throw new Error(
+      `.gitleaks.toml violates the allowlist policy: ${configProblems.join("; ")}`,
+    );
+  }
   const expected = Number(
     execFileSync("git", ["rev-list", "--count", "HEAD"], {
       cwd: repoRoot,

@@ -1,5 +1,5 @@
 import type { Client } from "pg";
-import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { resolveCurrentAccount } from "@/modules/identity-access/application/current-account";
 import {
   closeAccount,
@@ -9,13 +9,11 @@ import {
   revokeSession,
 } from "@/modules/identity-access/application/restrict-account";
 import { hasVerifiedEmail } from "@/modules/identity-access/domain/account-policy";
-import {
-  createAuth,
-  type Auth,
-} from "@/modules/identity-access/infrastructure/auth";
+import type { Auth } from "@/modules/identity-access/infrastructure/auth";
 import { parseAuthEnv } from "@/modules/identity-access/infrastructure/auth-env";
+import { InMemoryEmailCapture } from "@/modules/identity-access/infrastructure/auth-email";
 import { toSafeAuthResponse } from "@/modules/identity-access/infrastructure/auth-http";
-import { InMemoryEmailCapture } from "@/modules/identity-access/infrastructure/email-delivery";
+import { createIdentityRuntime } from "@/modules/identity-access/infrastructure/runtime";
 import { closeDatabasePool, getDatabase } from "@/shared/database";
 import { ConflictError } from "@/shared/errors";
 import { createLogger } from "@/shared/logging";
@@ -125,12 +123,12 @@ beforeAll(async () => {
   // In-process runtime code (getDatabase, factories) reads process.env.
   Object.assign(process.env, env);
   capture = new InMemoryEmailCapture();
-  auth = createAuth({
+  auth = createIdentityRuntime({
     env: parseAuthEnv(process.env),
     db: getDatabase(),
     logger,
-    emailDelivery: capture,
-  });
+    transport: capture,
+  }).auth;
   admin = await adminClient(ctx, db.name);
 });
 
@@ -445,7 +443,7 @@ describe("sessions and principal resolution", () => {
   });
 
   it("marks cookies Secure for https origins", async () => {
-    const httpsAuth = createAuth({
+    const httpsAuth = createIdentityRuntime({
       env: {
         ...parseAuthEnv(process.env),
         BETTER_AUTH_URL: "https://hiring.example.test",
@@ -454,8 +452,8 @@ describe("sessions and principal resolution", () => {
       },
       db: getDatabase(),
       logger,
-      emailDelivery: capture,
-    });
+      transport: capture,
+    }).auth;
     const account = await createTestAccount(httpsAuth);
     const response = await toSafeAuthResponse(
       await httpsAuth.handler(
@@ -481,12 +479,24 @@ describe("sessions and principal resolution", () => {
     expect(setCookie).toMatch(/HttpOnly/i);
   });
 
-  it("keeps verified email independent of account status", async () => {
-    const account = await createTestAccount(auth, { emailVerified: false });
-    const principal = await resolve((await signIn(account)).cookie);
+  it("keeps verified email a separate field, and requires it for candidates (M1.2)", async () => {
+    // Staff: status ACTIVE with an unverified email still resolves; the
+    // email flag is reported separately.
+    const staff = await createTestAccount(auth, {
+      accountType: "STAFF",
+      emailVerified: false,
+    });
+    const principal = await resolve((await signIn(staff)).cookie);
     expect(principal?.status).toBe("ACTIVE");
     expect(principal?.emailVerified).toBe(false);
     expect(hasVerifiedEmail(principal!)).toBe(false);
+
+    // Candidates: no session at all until the email is verified.
+    const candidate = await createTestAccount(auth, { emailVerified: false });
+    const { response, cookie } = await signIn(candidate);
+    expect(response.status).toBe(401);
+    expect(cookie).toBeNull();
+    expect(await sessionCount(candidate.id)).toBe(0);
   });
 
   it.each([
@@ -671,92 +681,9 @@ describe("sessions and principal resolution", () => {
   });
 });
 
-describe("email verification", () => {
-  async function requestVerification(account: TestAccount) {
-    await auth.api.sendVerificationEmail({ body: { email: account.email } });
-    const message = capture.latestFor(account.id);
-    expect(message).toBeDefined();
-    return new URL(message!.url).searchParams.get("token")!;
-  }
-
-  it("verifies once; replay changes nothing and creates no session", async () => {
-    const account = await createTestAccount(auth, { emailVerified: false });
-    const token = await requestVerification(account);
-    const first = await call(
-      `/api/auth/verify-email?token=${encodeURIComponent(token)}`,
-    );
-    expect(first.status).toBe(200);
-    const { rows } = await admin.query(
-      'SELECT email_verified FROM auth."user" WHERE id = $1',
-      [account.id],
-    );
-    expect(rows[0].email_verified).toBe(true);
-    expect(await sessionCount(account.id)).toBe(0);
-
-    const replay = await call(
-      `/api/auth/verify-email?token=${encodeURIComponent(token)}`,
-    );
-    expect(replay.status).toBe(200);
-    expect(await sessionCount(account.id)).toBe(0);
-  });
-
-  it("rejects expired, tampered, and wrong-purpose tokens without leaking them", async () => {
-    const account = await createTestAccount(auth, { emailVerified: false });
-    const token = await requestVerification(account);
-
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(Date.now() + 2 * 3600 * 1000);
-    const expired = await call(
-      `/api/auth/verify-email?token=${encodeURIComponent(token)}`,
-    );
-    vi.useRealTimers();
-    expect(expired.status).toBe(401);
-
-    const tampered = `${token.slice(0, -4)}AAAA`;
-    expect(
-      (
-        await call(
-          `/api/auth/verify-email?token=${encodeURIComponent(tampered)}`,
-        )
-      ).status,
-    ).toBe(401);
-
-    const otherAccount = await createTestAccount(auth);
-    const { cookie } = await signIn(otherAccount);
-    const sessionValue = decodeURIComponent(cookie!.split("=")[1]);
-    expect(
-      (
-        await call(
-          `/api/auth/verify-email?token=${encodeURIComponent(sessionValue)}`,
-        )
-      ).status,
-    ).toBe(401);
-
-    const { rows } = await admin.query(
-      'SELECT email_verified FROM auth."user" WHERE id = $1',
-      [account.id],
-    );
-    expect(rows[0].email_verified).toBe(false);
-    const all = responseBodies.join("\n");
-    expect(all.includes(token), "verification token echoed").toBe(false);
-  });
-
-  it("does not reveal whether an unrelated email exists", async () => {
-    const known = await createTestAccount(auth, { emailVerified: false });
-    const before = capture.count;
-    const unknownResponse = await call("/api/auth/send-verification-email", {
-      method: "POST",
-      body: JSON.stringify({ email: nextTestEmail("unknown") }),
-    });
-    const knownResponse = await call("/api/auth/send-verification-email", {
-      method: "POST",
-      body: JSON.stringify({ email: known.email }),
-    });
-    expect(unknownResponse.status).toBe(knownResponse.status);
-    expect(await unknownResponse.text()).toBe(await knownResponse.text());
-    expect(capture.count).toBe(before + 1);
-  });
-
+describe("verification records", () => {
+  // M1.2 replaced Better Auth's stateless verification links with the
+  // email-OTP plugin; those flows are covered in candidate-registration.test.ts.
   it("consumes database verification records once and expires them", async () => {
     const ctxAuth = await auth.$context;
     const identifier = `test-purpose:${crypto.randomUUID()}`;
@@ -832,6 +759,9 @@ describe("leakage", () => {
             "recordRef",
             "correlationId",
             "errorCode",
+            "eventCode",
+            "actorRef",
+            "action",
           ].includes(k),
         ),
         JSON.stringify(Object.keys(record)),

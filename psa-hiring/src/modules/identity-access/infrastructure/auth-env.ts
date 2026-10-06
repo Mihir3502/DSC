@@ -12,6 +12,12 @@ type AppEnv = (typeof appEnvs)[number];
 const weakSecretMarker =
   /change[_-]?me|replace|placeholder|example|test|local|dummy|not[_-]?a[_-]?secret|^(.)\1+$/i;
 
+/** Local/test-only transports; no production email provider exists yet. */
+const emailTransports = ["smtp-local", "capture-file", "refuse"] as const;
+/** Only a deterministic local denylist exists (no approved provider). */
+const compromisedPasswordAdapters = ["local-denylist"] as const;
+const loopbackSmtpHosts = new Set(["127.0.0.1", "localhost", "::1"]);
+
 const boundedSeconds = (min: number, max: number, fallback: number) => {
   const message = `must be an integer between ${min} and ${max}`;
   return z.coerce
@@ -47,6 +53,34 @@ const authEnvSchema = z
     AUTH_VERIFICATION_EXPIRES_IN_SECONDS: boundedSeconds(300, 86_400, 3_600),
     AUTH_RATE_LIMIT_WINDOW_SECONDS: boundedSeconds(10, 3_600, 60),
     AUTH_RATE_LIMIT_MAX: boundedSeconds(1, 1_000, 10),
+    // M1.2 candidate registration and recovery (ADR-0003).
+    AUTH_OTP_EXPIRES_IN_SECONDS: boundedSeconds(300, 1_800, 600),
+    AUTH_RESET_EXPIRES_IN_SECONDS: boundedSeconds(300, 3_600, 1_800),
+    AUTH_PUBLIC_INTENT_EXPIRES_IN_SECONDS: boundedSeconds(600, 86_400, 3_600),
+    AUTH_INVITATION_EXPIRES_IN_SECONDS: boundedSeconds(
+      3_600,
+      1_209_600,
+      604_800,
+    ),
+    AUTH_EMAIL_TRANSPORT: z
+      .enum(emailTransports, {
+        error: `must be one of: ${emailTransports.join(", ")}`,
+      })
+      .default("refuse"),
+    AUTH_EMAIL_CAPTURE_DIR: z.string().optional(),
+    SMTP_HOST: z.string().optional(),
+    SMTP_PORT: z.coerce
+      .number({ error: "must be a port number" })
+      .int({ error: "must be a port number" })
+      .min(1, { error: "must be a port number" })
+      .max(65_535, { error: "must be a port number" })
+      .optional(),
+    SMTP_FROM: z.email({ error: "must be a valid email address" }).optional(),
+    AUTH_COMPROMISED_PASSWORD_CHECK: z
+      .enum(compromisedPasswordAdapters, {
+        error: `must be one of: ${compromisedPasswordAdapters.join(", ")}`,
+      })
+      .default("local-denylist"),
   })
   .superRefine((env, ctx) => {
     const fail = (path: string, message: string) =>
@@ -94,6 +128,39 @@ const authEnvSchema = z
       fail(
         "AUTH_SESSION_UPDATE_AGE_SECONDS",
         "must be less than AUTH_SESSION_EXPIRES_IN_SECONDS",
+      );
+    }
+    if (env.AUTH_EMAIL_TRANSPORT === "smtp-local") {
+      if (productionLike) {
+        fail(
+          "AUTH_EMAIL_TRANSPORT",
+          "smtp-local (Mailpit) is not allowed in staging/production",
+        );
+      }
+      if (!env.SMTP_HOST || !loopbackSmtpHosts.has(env.SMTP_HOST)) {
+        fail("SMTP_HOST", "must be a loopback host for smtp-local");
+      }
+      if (!env.SMTP_PORT) fail("SMTP_PORT", "is required for smtp-local");
+      if (!env.SMTP_FROM) fail("SMTP_FROM", "is required for smtp-local");
+    }
+    if (env.AUTH_EMAIL_TRANSPORT === "capture-file") {
+      if (env.APP_ENV !== "test") {
+        fail("AUTH_EMAIL_TRANSPORT", "capture-file is allowed only in test");
+      }
+      if (
+        !env.AUTH_EMAIL_CAPTURE_DIR ||
+        !env.AUTH_EMAIL_CAPTURE_DIR.startsWith("/")
+      ) {
+        fail(
+          "AUTH_EMAIL_CAPTURE_DIR",
+          "must be an absolute path for capture-file",
+        );
+      }
+    }
+    if (productionLike) {
+      fail(
+        "AUTH_COMPROMISED_PASSWORD_CHECK",
+        "staging/production requires an approved privacy-preserving compromised-password provider (not yet configured)",
       );
     }
     if (productionLike) {

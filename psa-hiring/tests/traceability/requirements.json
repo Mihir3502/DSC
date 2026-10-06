@@ -1,0 +1,337 @@
+{
+  "$comment": "Requirement-to-test traceability (TEST_STRATEGY §5). Each test reference names a file and a substring of a test title in it; tests/guards/traceability.test.ts verifies both exist. Status 'partial' means remaining scope belongs to a later work item.",
+  "requirements": [
+    {
+      "id": "PRD-AUTH-001",
+      "title": "Staff and candidate accounts",
+      "status": "partial",
+      "note": "Candidate self-registration delivered in M1.2; staff invitation/sign-in is M1.3.",
+      "tests": [
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "creates an INVITED, unverified CANDIDATE"
+        },
+        {
+          "file": "tests/integration/auth/authentication.test.ts",
+          "title": "persists every approved type/status"
+        },
+        {
+          "file": "tests/e2e/candidate-auth.spec.ts",
+          "title": "registers, verifies with a code, signs in"
+        }
+      ]
+    },
+    {
+      "id": "PRD-AUTH-002",
+      "title": "Candidates access only their own information",
+      "status": "partial",
+      "note": "Own-session management only; object-level authorization is M1.5.",
+      "tests": [
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "lists only the candidate's own sessions"
+        },
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "rejects foreign or stale references"
+        },
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "does not show the candidate security overview to staff sessions"
+        }
+      ]
+    },
+    {
+      "id": "PRD-AUTH-004",
+      "title": "Recent authentication for sensitive actions",
+      "status": "deferred",
+      "note": "Password change requires the current password; configurable recent-auth step-up is M1.3.",
+      "tests": [
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "changes the password with the current one"
+        }
+      ]
+    },
+    {
+      "id": "PRD-AUTH-005",
+      "title": "Recovery does not expose account existence",
+      "status": "covered",
+      "tests": [
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "returns the same outcome for every account and emails only an eligible candidate"
+        },
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "returns the same outcome for duplicates"
+        },
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "returns the same resend outcome"
+        },
+        {
+          "file": "tests/e2e/candidate-auth.spec.ts",
+          "title": "gives generic outcomes and ignores unsafe redirects"
+        }
+      ]
+    },
+    {
+      "id": "PRD-AUTH-006",
+      "title": "Disabled accounts lose access immediately",
+      "status": "covered",
+      "tests": [
+        {
+          "file": "tests/integration/auth/authentication.test.ts",
+          "title": "invalidates existing sessions immediately"
+        },
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "gives one generic failure and no session for every ineligible case"
+        }
+      ]
+    },
+    {
+      "id": "PRD-AUTH-007",
+      "title": "Authentication events are auditable",
+      "status": "partial",
+      "note": "M1.2 emits allowlisted security event codes through the logger only; immutable audit persistence is M1.6. Not satisfied until then.",
+      "tests": [
+        {
+          "file": "src/modules/identity-access/infrastructure/candidate-auth-adapters.test.ts",
+          "title": "logs allowlisted codes with an opaque reference"
+        }
+      ]
+    }
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-M1.2-01",
+      "tests": [
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "creates an INVITED, unverified CANDIDATE"
+        },
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "Better Auth refuses"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.2-02",
+      "tests": [
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "no business records"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.2-03",
+      "tests": [
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "returns the same outcome for duplicates"
+        },
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "gives one generic failure"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.2-04",
+      "tests": [
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "verifies once, activates the candidate, and creates no session"
+        },
+        {
+          "file": "src/modules/identity-access/domain/domain.test.ts",
+          "title": "requires a verified email before a candidate session"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.2-05",
+      "tests": [
+        {
+          "file": "src/modules/identity-access/domain/candidate-registration-policy.test.ts",
+          "title": "accepts long passphrases"
+        },
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "rejects invalid passwords (including compromised ones)"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.2-06",
+      "tests": [
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "stores reset tokens only as hashes"
+        },
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "allows at most one of two racing resets"
+        },
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "rejects wrong-purpose, malformed, expired, and restricted-account tokens"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.2-07",
+      "tests": [
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "resets once, revokes every session"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.2-08",
+      "tests": [
+        {
+          "file": "src/modules/identity-access/infrastructure/candidate-auth-adapters.test.ts",
+          "title": "puts the reset token only in a fragment"
+        },
+        {
+          "file": "src/modules/identity-access/infrastructure/infrastructure.test.ts",
+          "title": "accepts a loopback Mailpit transport locally"
+        },
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "captured emails carry only the intended secret"
+        }
+      ],
+      "manual": [
+        "pnpm auth:mailpit:check (local Mailpit receives every template)"
+      ]
+    },
+    {
+      "id": "AC-M1.2-09",
+      "tests": [
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "signs in an active verified candidate"
+        },
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "revokes the current session on sign-out"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.2-10",
+      "tests": [
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "revokes one other session"
+        },
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "revokes all other sessions, then signs out everywhere"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.2-11",
+      "tests": [
+        {
+          "file": "src/modules/identity-access/domain/candidate-registration-policy.test.ts",
+          "title": "falls back to the candidate default"
+        },
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "rate limits"
+        },
+        {
+          "file": "tests/e2e/candidate-auth.spec.ts",
+          "title": "recovers by email link"
+        },
+        {
+          "file": "tests/e2e/candidate-auth.spec.ts",
+          "title": "rejects a cross-origin server action submission"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.2-12",
+      "tests": [
+        {
+          "file": "src/modules/identity-access/ui/candidate-auth-forms.test.tsx",
+          "title": "reads the token from the fragment, strips it"
+        },
+        {
+          "file": "tests/e2e/candidate-auth.spec.ts",
+          "title": "strips the token from the URL"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.2-13",
+      "tests": [
+        {
+          "file": "tests/accessibility/candidate-auth.a11y.spec.ts",
+          "title": "has no serious or critical axe violations"
+        },
+        {
+          "file": "src/modules/identity-access/ui/candidate-auth-forms.test.tsx",
+          "title": "moves focus to the error summary"
+        }
+      ],
+      "manual": [
+        "Keyboard-only and screen-reader pass recorded in the M1.2 completion report"
+      ]
+    },
+    {
+      "id": "AC-M1.2-14",
+      "tests": [
+        {
+          "file": "tests/e2e/candidate-auth.spec.ts",
+          "title": "registers, verifies with a code, signs in"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.2-15",
+      "tests": [
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "keeps passwords, codes, tokens, cookies, and emails out of logs"
+        },
+        {
+          "file": "tests/guards/traceability.test.ts",
+          "title": "every traced test exists"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.2-16",
+      "tests": [
+        {
+          "file": "tests/integration/auth/authentication.test.ts",
+          "title": "creates the auth tables"
+        },
+        {
+          "file": "tests/e2e/foundation.spec.ts",
+          "title": "every page response carries a valid correlation ID"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.2-17",
+      "tests": [
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "no business records"
+        }
+      ],
+      "manual": ["Scope review in the M1.2 completion report"]
+    }
+  ]
+}

@@ -39,7 +39,7 @@ test.describe("foundation routes", { tag: "@critical" }, () => {
     {
       path: "/candidate",
       heading: "Candidate Portal",
-      note: /does not collect any information/,
+      note: /Create a candidate account or sign in/,
     },
     {
       path: "/staff",

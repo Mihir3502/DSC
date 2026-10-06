@@ -2,7 +2,7 @@ import "server-only";
 import { toNextJsHandler } from "better-auth/next-js";
 import { publicErrorRegistry, type PublicErrorCode } from "@/shared/errors";
 import { problemResponse } from "@/shared/http/route-handler";
-import { getAuth } from "./auth";
+import { getAuth } from "./runtime";
 
 // HTTP delivery for Better Auth (packet M1.1 §9.1, AC-M1.1-11). Library
 // error bodies are replaced with closed public problem codes, and session
@@ -70,11 +70,34 @@ export async function toSafeAuthResponse(
   });
 }
 
-/** Handles any /api/auth/* request through the shared Better Auth instance. */
+/**
+ * The only Better Auth HTTP paths the application forwards (packet M1.2
+ * §6.1, §11). Registration, verification, sign-in, sign-out, recovery,
+ * reset, password change, and session management run as same-origin server
+ * actions through auth.api, so no generic, staff, or OTP endpoint is
+ * reachable over HTTP. Everything else is a closed 404.
+ */
+export const forwardedAuthPaths: Readonly<Record<string, readonly string[]>> =
+  Object.freeze({ GET: Object.freeze(["/get-session"]), POST: [] });
+
+export function isForwardedAuthPath(method: string, pathname: string): boolean {
+  const prefix = "/api/auth";
+  if (!pathname.startsWith(`${prefix}/`)) return false;
+  const path = pathname.slice(prefix.length).replace(/\/+$/, "");
+  return (forwardedAuthPaths[method] ?? []).includes(path);
+}
+
+/** Handles an allowlisted /api/auth/* request through Better Auth. */
 export async function handleAuthRequest(
   request: Request,
   correlationId: string,
 ): Promise<Response> {
+  if (!isForwardedAuthPath(request.method, new URL(request.url).pathname)) {
+    return toSafeAuthResponse(
+      new Response(null, { status: 404 }),
+      correlationId,
+    );
+  }
   const { GET, POST } = toNextJsHandler(getAuth());
   const response = await (request.method === "GET"
     ? GET(request)

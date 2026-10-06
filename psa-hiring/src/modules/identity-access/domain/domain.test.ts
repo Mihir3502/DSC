@@ -57,12 +57,29 @@ describe("account policy", () => {
         if (canResolvePrincipal({ accountType, status })) {
           resolvable.push(`${accountType}/${status}`);
         }
-        expect(canSignInInteractively({ accountType, status })).toBe(
-          canResolvePrincipal({ accountType, status }),
-        );
+        expect(
+          canSignInInteractively({ accountType, status, emailVerified: true }),
+        ).toBe(canResolvePrincipal({ accountType, status }));
       }
     }
     expect(resolvable).toEqual(["CANDIDATE/ACTIVE", "STAFF/ACTIVE"]);
+  });
+
+  it("requires a verified email before a candidate session (M1.2)", () => {
+    const active = { status: "ACTIVE" as const, emailVerified: false };
+    expect(
+      canSignInInteractively({ ...active, accountType: "CANDIDATE" }),
+    ).toBe(false);
+    expect(canSignInInteractively({ ...active, accountType: "STAFF" })).toBe(
+      true,
+    );
+    expect(
+      canSignInInteractively({
+        accountType: "CANDIDATE",
+        status: "INVITED",
+        emailVerified: true,
+      }),
+    ).toBe(false);
   });
 
   it("treats CLOSED as terminal and re-application as idempotent", () => {

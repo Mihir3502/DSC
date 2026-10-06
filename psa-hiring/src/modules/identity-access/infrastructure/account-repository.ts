@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, gt, sql } from "drizzle-orm";
+import { and, desc, eq, gt, ne, sql } from "drizzle-orm";
 import type { Database } from "@/shared/database";
 import {
   isAccountStatus,
@@ -9,7 +9,7 @@ import {
   type RestrictedStatus,
   type RestrictionReasonCode,
 } from "../domain/account-types";
-import { session, user } from "./auth-schema";
+import { account, session, user } from "./auth-schema";
 
 // Authoritative account/session data access for the identity-access module.
 // Runs on the least-privileged runtime connection (DATABASE_URL). Returns
@@ -23,7 +23,7 @@ export type AccountRecord = Readonly<{
   version: number;
 }>;
 
-type Executor = Pick<Database, "select" | "update" | "delete">;
+type Executor = Pick<Database, "select" | "update" | "delete" | "insert">;
 
 function toRecord(row: {
   id: string;
@@ -152,4 +152,139 @@ export async function countActiveSessions(
       and(eq(session.userId, accountId), gt(session.expiresAt, new Date())),
     );
   return row?.n ?? 0;
+}
+
+/** Loads current account state by normalized login email. */
+export async function findAccountByEmail(
+  db: Executor,
+  normalizedEmail: string,
+): Promise<AccountRecord | null> {
+  const [row] = await db
+    .select(accountColumns)
+    .from(user)
+    .where(eq(user.email, normalizedEmail))
+    .limit(1);
+  return row ? toRecord(row) : null;
+}
+
+/** The normalized login email of an account (owner-facing display only). */
+export async function findAccountEmail(
+  db: Executor,
+  accountId: string,
+): Promise<string | null> {
+  if (!uuidPattern.test(accountId)) return null;
+  const [row] = await db
+    .select({ email: user.email })
+    .from(user)
+    .where(eq(user.id, accountId))
+    .limit(1);
+  return row?.email ?? null;
+}
+
+/**
+ * Creates an INVITED, unverified CANDIDATE account and its credential in one
+ * transaction (packet M1.2 §6.1). Type, status, and verification are fixed
+ * here, never taken from input. The password hash comes from Better Auth's
+ * maintained hasher. Returns null, without error, when the normalized email
+ * already exists (including a concurrent insert), so callers can respond
+ * generically.
+ */
+export async function createCandidateWithCredential(
+  db: Database,
+  input: { email: string; emailDisplay: string; passwordHash: string },
+): Promise<string | null> {
+  return db.transaction(async (tx) => {
+    const now = new Date();
+    const [created] = await tx
+      .insert(user)
+      .values({
+        name: "Candidate",
+        email: input.email,
+        emailDisplay: input.emailDisplay,
+        emailVerified: false,
+        accountType: "CANDIDATE",
+        status: "INVITED",
+        createdAt: now,
+        updatedAt: now,
+      })
+      .onConflictDoNothing({ target: user.email })
+      .returning({ id: user.id });
+    if (!created) return null;
+    await tx.insert(account).values({
+      accountId: created.id,
+      providerId: "credential",
+      userId: created.id,
+      password: input.passwordHash,
+      createdAt: now,
+      updatedAt: now,
+    });
+    return created.id;
+  });
+}
+
+/**
+ * The approved INVITED → ACTIVE transition for a candidate whose email is
+ * verified. A single conditional UPDATE, so it can never overwrite a
+ * concurrent restriction (LOCKED/DISABLED/CLOSED) and is idempotent.
+ */
+export async function activateVerifiedCandidate(
+  db: Executor,
+  accountId: string,
+): Promise<boolean> {
+  if (!uuidPattern.test(accountId)) return false;
+  const updated = await db
+    .update(user)
+    .set({ status: "ACTIVE", version: sql`${user.version} + 1` })
+    .where(
+      and(
+        eq(user.id, accountId),
+        eq(user.accountType, "CANDIDATE"),
+        eq(user.status, "INVITED"),
+        eq(user.emailVerified, true),
+      ),
+    )
+    .returning({ id: user.id });
+  return updated.length === 1;
+}
+
+export type SessionSummaryRow = Readonly<{
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  expiresAt: Date;
+  userAgent: string | null;
+}>;
+
+/** Unexpired sessions of one account, newest first; never tokens. */
+export async function listActiveSessions(
+  db: Executor,
+  accountId: string,
+): Promise<SessionSummaryRow[]> {
+  if (!uuidPattern.test(accountId)) return [];
+  return db
+    .select({
+      id: session.id,
+      createdAt: session.createdAt,
+      updatedAt: session.updatedAt,
+      expiresAt: session.expiresAt,
+      userAgent: session.userAgent,
+    })
+    .from(session)
+    .where(
+      and(eq(session.userId, accountId), gt(session.expiresAt, new Date())),
+    )
+    .orderBy(desc(session.createdAt));
+}
+
+/** Deletes every session of an account except one; returns the count. */
+export async function deleteSessionsExcept(
+  tx: Executor,
+  accountId: string,
+  keepSessionId: string,
+): Promise<number> {
+  const deleted = await tx
+    .delete(session)
+    .where(and(eq(session.userId, accountId), ne(session.id, keepSessionId)))
+    .returning({ id: session.id });
+  return deleted.length;
 }

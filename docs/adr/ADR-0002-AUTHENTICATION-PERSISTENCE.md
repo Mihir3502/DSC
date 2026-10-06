@@ -66,7 +66,9 @@ The local bootstrap gives `psa_app` `USAGE` on `auth` and `SELECT/INSERT/UPDATE`
 - `revokeSession`, `revokeAllSessions`, and `lockAccount`/`disableAccount`/`closeAccount` run in **one transaction** on the runtime connection: `SELECT … FOR UPDATE`, policy and version check, status update, and session deletion. They're idempotent, and results contain only safe codes and the account ID.
 - A sign-in racing a restriction may insert a session after the restriction commits; the resolver's authoritative status recheck still rejects it.
 
-### Email verification (accepted risk)
+### Email verification (accepted risk — superseded)
+
+> **Superseded by ADR-0003 (M1.2, 2026-10-06):** email verification now uses Better Auth's email-OTP plugin with hashed, single-use, attempt-limited codes, and the verification-link endpoints are disabled. The text below records the M1.1 decision.
 
 Better Auth 1.7.7 verification links are **stateless HS256 JWTs**. They're signed with the auth secret, carry the email, expire after `AUTH_VERIFICATION_EXPIRES_IN_SECONDS` (default 1 h), and aren't stored.
 
@@ -82,7 +84,7 @@ Database-backed single-use records (`auth.verification`, atomically consumed thr
 
 - **Session timeout policy** for candidates and staff (idle and absolute): local defaults only, not approved for production.
 - **Distributed rate-limit store:** rate limiting uses per-process memory, so staging/production auth startup is **refused** until a store is chosen with the hosting decision.
-- **Compromised-password checking:** deferred until a privacy-preserving approach is approved. Not implemented.
+- **Compromised-password checking:** M1.2 added a port with a local denylist only (ADR-0003); a privacy-preserving production provider is still undecided, so production-like startup fails closed.
 - **Internationalized email addresses:** login emails are ASCII because Better Auth's sign-in validator accepts ASCII only.
 - **Staff MFA** (M1.3) and **recent-authentication enforcement**: not implemented.
 

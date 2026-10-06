@@ -14,7 +14,7 @@ Workflow: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). Repository:
 | `unit-component-coverage` | `test:coverage` (unit + component projects with V8 coverage), artifact guard, coverage upload | 15 min |
 | `database-integration` | `test:integration` (migrations from empty, seed, UTC, least privilege) | 20 min |
 | `build` | `build` | 15 min |
-| `critical-e2e` | `playwright install --with-deps chromium`, `test:e2e:critical`, `test:a11y` | 25 min |
+| `critical-e2e` | `playwright install --with-deps chromium`, `test:e2e:critical`, `test:a11y` (each starts its own disposable PostgreSQL through Testcontainers) | 25 min |
 | `ci-gate` | `if: always()`; fails unless all five jobs report `success` | 5 min |
 
 There are no retries (Vitest and Playwright both use `retries: 0`) and no `continue-on-error`.
@@ -57,7 +57,7 @@ No `.env` file, Compose database, or volume is needed. Tests use only generated 
 
 ### Test environment variables
 
-CI defines only `NEXT_TELEMETRY_DISABLED=1`. The integration harness generates `APP_ENV=test`, `NODE_ENV=test`, and runtime, migration, and admin URLs pointing to its own container (for example `postgresql://psa_app:<generated>@127.0.0.1:<random-port>/psa_test_<run>_<label>`). Playwright's server receives `APP_ENV=test`. No developer `DATABASE_*` value is ever read.
+CI defines only `NEXT_TELEMETRY_DISABLED=1`. `tests/e2e/support/run-with-database.ts` gives Playwright's production server the same disposable database settings, a fresh random `TEST-` auth secret, and `AUTH_EMAIL_TRANSPORT=capture-file` writing to a private temp directory (never under `test-results/` or `playwright-report/`). Traces are off for the candidate-auth specs. The integration harness generates `APP_ENV=test`, `NODE_ENV=test`, and runtime, migration, and admin URLs pointing to its own container (for example `postgresql://psa_app:<generated>@127.0.0.1:<random-port>/psa_test_<run>_<label>`). Playwright's server receives `APP_ENV=test`. No developer `DATABASE_*` value is ever read.
 
 ## Disposable database isolation
 
@@ -82,7 +82,13 @@ CI defines only `NEXT_TELEMETRY_DISABLED=1`. The integration harness generates `
 
 ### Secret-scan findings
 
-Gitleaks v8.30.1 runs from its official image pinned by digest, scanning the full history reachable from the tested commit with `--redact` and no network. Treat every finding as a real credential until proven otherwise: rotate it, remove it from reachable history following the incident process, then rerun. A false positive may be allowlisted only through a committed `.gitleaks.toml` entry that names the exact file, rule, and fingerprint, plus owner, reason, approver, and review date. Never disable rules or exclude whole directories. There are currently **no** allowlist entries.
+Gitleaks v8.30.1 runs from its official image pinned by digest, scanning the full history reachable from the tested commit with `--redact` and no network. Treat every finding as a real credential until proven otherwise: rotate it, remove it from reachable history following the incident process, then rerun. A false positive may be allowlisted only through a committed `.gitleaks.toml` entry that names the exact file, rule, and fingerprint, plus owner, reason, approver, and review date. Never disable rules or exclude whole directories. `pnpm test:secrets` enforces this before scanning: each `[[allowlists]]` entry must use `condition = "AND"` with exactly one rule, one full commit SHA, and one anchored file path, must carry `fingerprint`, `owner`, `approver`, `reason`, and `review-by` comments, and fails once its review date passes. Global allowlists, `regexes`, `stopwords`, `disabledRules`, and custom rules are refused.
+
+Current entries (repository root [`.gitleaks.toml`](../.gitleaks.toml)):
+
+| Fingerprint | Reason | Approver | Review by |
+|---|---|---|---|
+| `74632e3c…:psa-hiring/src/modules/identity-access/infrastructure/infrastructure.test.ts:generic-api-key:9` | Synthetic hex test value for the auth-config validator in the M1.1 commit; the literal was replaced by a runtime-built value afterwards | Project owner (2026-10-06) | 2027-01-06 |
 
 ### Dependency advisories
 

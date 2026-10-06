@@ -23,17 +23,25 @@ export default function CandidatePortalPage() {
       <Card>
         <CardHeader>
           <CardTitle>
-            <h2>Not yet available</h2>
+            <h2>Your candidate account</h2>
           </CardTitle>
           <CardDescription>
-            Foundation build only. This page does not collect any information.
+            Create a candidate account or sign in. Applications and hiring tasks
+            will be added in later work items.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p>
-            Candidate sign-in and application tasks will be added in later work
-            items.
-          </p>
+          <nav aria-label="Candidate account" className="flex flex-wrap gap-3">
+            <Link href="/register" className={buttonVariants({ size: "lg" })}>
+              Create a candidate account
+            </Link>
+            <Link
+              href="/sign-in"
+              className={buttonVariants({ size: "lg", variant: "outline" })}
+            >
+              Sign in
+            </Link>
+          </nav>
         </CardContent>
       </Card>
 

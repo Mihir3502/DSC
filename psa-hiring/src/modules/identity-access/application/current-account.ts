@@ -4,7 +4,8 @@ import { getLogger, getRequestContext, type AppLogger } from "@/shared/logging";
 import { canResolvePrincipal } from "../domain/account-policy";
 import type { AccountStatus, AccountType } from "../domain/account-types";
 import { findAccountById } from "../infrastructure/account-repository";
-import { getAuth, type Auth } from "../infrastructure/auth";
+import type { Auth } from "../infrastructure/auth";
+import { getAuth } from "../infrastructure/runtime";
 
 // Application-owned current-account resolver (packet M1.1 §10). Converts a
 // Better Auth database session into the minimal principal later

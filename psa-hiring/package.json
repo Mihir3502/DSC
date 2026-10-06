@@ -32,9 +32,9 @@
     "test:component": "vitest run --project component",
     "test:integration": "vitest run --project integration",
     "test:coverage": "vitest run --project unit --project component --coverage",
-    "test:e2e": "playwright test",
-    "test:e2e:critical": "playwright test tests/e2e --project=chromium --grep @critical",
-    "test:a11y": "playwright test tests/accessibility --project=chromium",
+    "test:e2e": "tsx tests/e2e/support/run-with-database.ts",
+    "test:e2e:critical": "tsx tests/e2e/support/run-with-database.ts tests/e2e --project=chromium --grep @critical",
+    "test:a11y": "tsx tests/e2e/support/run-with-database.ts tests/accessibility --project=chromium",
     "test:data-guard": "tsx tests/guards/data-canary.ts",
     "test:critical-guard": "tsx tests/guards/critical-tests.ts",
     "test:foundation": "pnpm test:data-guard && pnpm test:critical-guard && pnpm test:coverage && pnpm test:integration && pnpm test:e2e:critical && pnpm test:a11y",
@@ -45,7 +45,9 @@
     "test:security": "pnpm test:secrets && pnpm test:deps && pnpm test:workflow-policy",
     "ci:local": "pnpm test:security && pnpm test:data-guard && pnpm test:critical-guard && pnpm format:check && pnpm lint && pnpm typecheck && pnpm auth:schema:check && pnpm db:check-drift && pnpm test:coverage && pnpm test:integration && pnpm build && pnpm test:e2e:critical && pnpm test:a11y",
     "auth:schema:check": "auth check schema --config src/modules/identity-access/infrastructure/auth.cli.ts",
-    "db:check-drift": "tsx scripts/db/check-drift.ts"
+    "db:check-drift": "tsx scripts/db/check-drift.ts",
+    "auth:mailpit:check": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/auth/check-mailpit.ts",
+    "auth:intent:local": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/auth/issue-candidate-invitation.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -54,6 +56,7 @@
     "cn": "^0.4.0",
     "drizzle-orm": "0.45.3",
     "next": "16.3.8",
+    "nodemailer": "10.0.15",
     "pg": "8.23.1",
     "pino": "10.4.0",
     "react": "19.2.8",

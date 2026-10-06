@@ -19,9 +19,15 @@ export function canResolvePrincipal(account: AccountState): boolean {
   return account.status === "ACTIVE" && account.accountType !== "SERVICE";
 }
 
-/** Interactive email/password sign-in follows the same rule. */
-export function canSignInInteractively(account: AccountState): boolean {
-  return canResolvePrincipal(account);
+/**
+ * Interactive sign-in follows the same rule, and a candidate must also have
+ * a verified email before any session exists (packet M1.2 §10, AC-M1.2-04).
+ */
+export function canSignInInteractively(
+  account: AccountState & { emailVerified: boolean },
+): boolean {
+  if (!canResolvePrincipal(account)) return false;
+  return account.accountType !== "CANDIDATE" || account.emailVerified;
 }
 
 export type RestrictionDecision =

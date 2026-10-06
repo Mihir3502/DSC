@@ -1,0 +1,20 @@
+# Gitleaks configuration (see docs/CI.md, "Secret-scan findings").
+# The default rule set stays fully enabled. Every allowlist entry must target
+# one rule, one commit, and one exact file (condition = "AND"), and carry the
+# metadata comments below. scripts/ci/secret-scan.ts enforces this and fails
+# once a review-by date has passed.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+# fingerprint: 74632e3ca84b5be7467c2e7f0e9b68ba85b11fc7:psa-hiring/src/modules/identity-access/infrastructure/infrastructure.test.ts:generic-api-key:9
+# owner: Project owner
+# approver: Project owner (approved in session 2026-10-06)
+# reason: Synthetic hex test value for the auth-config validator, never a credential; removed from the file in a later commit.
+# review-by: 2027-01-06
+description = "M1.1 synthetic auth-config test value (historical commit only)"
+condition = "AND"
+targetRules = ["generic-api-key"]
+commits = ["74632e3ca84b5be7467c2e7f0e9b68ba85b11fc7"]
+paths = ['''^psa-hiring/src/modules/identity-access/infrastructure/infrastructure\.test\.ts$''']

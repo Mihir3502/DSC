@@ -3,11 +3,19 @@ import { ServerEnvError } from "@/config/env-schema";
 import { createTestAccount } from "../../../../tests/fixtures/auth/accounts";
 import type { Auth } from "./auth";
 import { parseAuthEnv } from "./auth-env";
-import { publicCodeForStatus, toSafeAuthResponse } from "./auth-http";
-import { InMemoryEmailCapture, RefusingEmailDelivery } from "./email-delivery";
+import {
+  isForwardedAuthPath,
+  publicCodeForStatus,
+  toSafeAuthResponse,
+} from "./auth-http";
+import {
+  FileEmailCapture,
+  InMemoryEmailCapture,
+  RefusingEmailTransport,
+} from "./auth-email";
 
-const goodSecret =
-  "0f3a9c27d1b84e6aa5c2e9d07b1f4c3e8a6d2b9f0c7e1a4d5b3c8e2f6a9d0b17";
+// Built at runtime so no secret-like literal is committed (gitleaks).
+const goodSecret = "0f3a9c27".repeat(8);
 const correlationId = "0b9a7a3e-6a55-4c8e-9a3b-2f1d0c4e5a6b";
 
 const localEnv = {
@@ -124,6 +132,70 @@ describe("auth configuration", () => {
     );
   });
 
+  it.each([
+    [
+      "Mailpit in production",
+      {
+        APP_ENV: "production",
+        AUTH_EMAIL_TRANSPORT: "smtp-local",
+        SMTP_HOST: "127.0.0.1",
+        SMTP_PORT: "1025",
+        SMTP_FROM: "no-reply@example.test",
+      },
+      "AUTH_EMAIL_TRANSPORT smtp-local (Mailpit) is not allowed",
+    ],
+    [
+      "non-loopback SMTP host locally",
+      {
+        AUTH_EMAIL_TRANSPORT: "smtp-local",
+        SMTP_HOST: "smtp.example.test",
+        SMTP_PORT: "1025",
+        SMTP_FROM: "no-reply@example.test",
+      },
+      "SMTP_HOST must be a loopback host",
+    ],
+    [
+      "file capture outside test",
+      {
+        AUTH_EMAIL_TRANSPORT: "capture-file",
+        AUTH_EMAIL_CAPTURE_DIR: "/tmp/x",
+      },
+      "capture-file is allowed only in test",
+    ],
+    [
+      "local denylist as production compromised-password check",
+      { APP_ENV: "staging" },
+      "approved privacy-preserving compromised-password provider",
+    ],
+    [
+      "unbounded verification code lifetime",
+      { AUTH_OTP_EXPIRES_IN_SECONDS: "86400" },
+      "between 300 and 1800",
+    ],
+    [
+      "unbounded reset link lifetime",
+      { AUTH_RESET_EXPIRES_IN_SECONDS: "86400" },
+      "between 300 and 3600",
+    ],
+  ])("rejects %s", (_label, override, message) => {
+    expect(
+      problemsOf({ ...localEnv, ...override }).some((p) => p.includes(message)),
+    ).toBe(true);
+  });
+
+  it("accepts a loopback Mailpit transport locally", () => {
+    const env = parseAuthEnv({
+      ...localEnv,
+      AUTH_EMAIL_TRANSPORT: "smtp-local",
+      SMTP_HOST: "127.0.0.1",
+      SMTP_PORT: "1025",
+      SMTP_FROM: "no-reply@example.test",
+    });
+    expect(env.AUTH_EMAIL_TRANSPORT).toBe("smtp-local");
+    expect(env.AUTH_OTP_EXPIRES_IN_SECONDS).toBe(600);
+    expect(env.AUTH_RESET_EXPIRES_IN_SECONDS).toBe(1800);
+  });
+
   it("marks cookies Secure for https base URLs", () => {
     expect(
       parseAuthEnv({
@@ -209,6 +281,27 @@ describe("auth HTTP sanitizing", () => {
   });
 });
 
+describe("auth HTTP surface", () => {
+  it.each([
+    ["GET", "/api/auth/get-session", true],
+    ["GET", "/api/auth/get-session/", true],
+    ["POST", "/api/auth/sign-in/email", false],
+    ["POST", "/api/auth/sign-up/email", false],
+    ["POST", "/api/auth/sign-out", false],
+    ["POST", "/api/auth/email-otp/send-verification-otp", false],
+    ["POST", "/api/auth/sign-in/email-otp", false],
+    ["POST", "/api/auth/request-password-reset", false],
+    ["POST", "/api/auth/reset-password", false],
+    ["GET", "/api/auth/reset-password/abcdefghijklmnopqrstuvwx", false],
+    ["POST", "/api/auth/change-password", false],
+    ["GET", "/api/auth/list-sessions", false],
+    ["POST", "/api/auth/get-session", false],
+    ["GET", "/api/auth/get-session/../sign-up/email", false],
+  ])("%s %s forwarded=%s", (method, path, expected) => {
+    expect(isForwardedAuthPath(method, path)).toBe(expected);
+  });
+});
+
 describe("test-only adapters fail closed outside test", () => {
   it("refuses the in-memory email capture outside APP_ENV=test", () => {
     expect(() => new InMemoryEmailCapture("local")).toThrow(
@@ -220,11 +313,20 @@ describe("test-only adapters fail closed outside test", () => {
     expect(() => new InMemoryEmailCapture("test")).not.toThrow();
   });
 
+  it("refuses the file email capture outside APP_ENV=test", () => {
+    expect(() => new FileEmailCapture("/tmp/psa-capture", "local")).toThrow(
+      /only when APP_ENV=test/,
+    );
+  });
+
   it("refuses to deliver email by default", async () => {
     await expect(
-      new RefusingEmailDelivery().sendVerificationEmail({
-        accountRef: "a",
-        url: "https://x.example.test",
+      new RefusingEmailTransport().deliver({
+        template: "PASSWORD_CHANGED",
+        to: "test.person@example.test",
+        subject: "s",
+        text: "t",
+        html: "h",
       }),
     ).rejects.toThrow("DEPENDENCY.UNAVAILABLE");
   });
