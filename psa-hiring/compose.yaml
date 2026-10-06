@@ -1,0 +1,44 @@
+# Local development infrastructure only. The Next.js app and future worker
+# run on the host. Never use these values in staging or production.
+name: psa-hiring
+
+services:
+  postgres:
+    image: postgres:18.6-trixie
+    environment:
+      # LOCAL DEVELOPMENT DEFAULTS ONLY - do not reuse anywhere else.
+      POSTGRES_DB: psa_hiring
+      POSTGRES_USER: psa_local
+      POSTGRES_PASSWORD: psa_local_only_change_me
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      # PostgreSQL 18+ images keep PGDATA in a version-specific subdirectory
+      # (/var/lib/postgresql/18/docker), so mount the parent directory.
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test:
+        ["CMD-SHELL", 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  mailpit:
+    # Captures all mail locally. No relay is configured, so nothing is
+    # delivered to real recipients. Messages are not persisted.
+    image: axllent/mailpit:v1.31.4
+    ports:
+      - "127.0.0.1:${MAILPIT_SMTP_HOST_PORT:-1025}:1025"
+      - "127.0.0.1:${MAILPIT_UI_HOST_PORT:-8025}:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
