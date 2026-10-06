@@ -7,6 +7,7 @@ import type { Database } from "@/shared/database";
 import type { AppLogger } from "@/shared/logging";
 import { canSignInInteractively } from "../domain/account-policy";
 import { isAccountStatus, isAccountType } from "../domain/account-types";
+import { decideSessionIssuance } from "../domain/session-issuance-policy";
 import {
   activateVerifiedCandidate,
   findAccountByEmail,
@@ -16,14 +17,21 @@ import {
 import type { AuthEnv } from "./auth-env";
 import type { AuthEmailPort } from "./auth-email";
 import * as authSchema from "./auth-schema";
-import { AUTH_SCHEMA_NAME, staticAuthOptions } from "./auth-options";
+import {
+  AUTH_SCHEMA_NAME,
+  staffTwoFactorPlugin,
+  staticAuthOptions,
+} from "./auth-options";
 import type { SecurityEventPort } from "./security-events";
+import { currentSessionIssuance } from "./session-issuance";
+import { staffSessionPlugin } from "./staff-session-plugin";
 
-// Server-only Better Auth factory (packets M1.1 §9, M1.2). Better Auth owns
-// password hashing, credential linkage, sessions, reset tokens, and email
-// OTPs. The application owns account type/status, decides in the
-// session-creation hook whether a session may exist at all, and decides
-// which accounts may receive verification or reset email.
+// Server-only Better Auth factory (packets M1.1 §9, M1.2, M1.3). Better Auth
+// owns password hashing, credential linkage, sessions, reset tokens, email
+// OTPs, TOTP, and backup codes. The application owns account type/status,
+// decides in the session-creation hook whether a session may exist at all
+// and what assurance it carries, and decides which accounts may receive
+// verification or reset email.
 
 export type AuthDependencies = {
   env: AuthEnv;
@@ -120,6 +128,7 @@ export function createAuth({
       },
     },
     session: {
+      ...staticAuthOptions.session,
       expiresIn: env.AUTH_SESSION_EXPIRES_IN_SECONDS,
       updateAge: env.AUTH_SESSION_UPDATE_AGE_SECONDS,
       // Every request validates the session against the database so account
@@ -138,6 +147,14 @@ export function createAuth({
       max: env.AUTH_RATE_LIMIT_MAX,
     },
     plugins: [
+      // Mandatory staff TOTP + backup codes (M1.3, ADR-0004). No OTP sender
+      // is configured, so email/SMS two-factor cannot be enabled or sent.
+      staffTwoFactorPlugin({
+        challengeSeconds: env.AUTH_STAFF_MFA_CHALLENGE_SECONDS,
+        maxFailedAttempts: env.AUTH_STAFF_MFA_MAX_FAILURES,
+        lockoutSeconds: env.AUTH_STAFF_MFA_LOCKOUT_SECONDS,
+      }),
+      staffSessionPlugin(),
       emailOTP({
         overrideDefaultEmailVerification: true,
         disableSignUp: true,
@@ -207,18 +224,28 @@ export function createAuth({
       session: {
         create: {
           // Authoritative gate: no session for unknown, non-active, service,
-          // or unverified candidate accounts, whatever endpoint asked.
+          // or unverified candidate accounts, whatever endpoint asked. Staff
+          // sessions exist only inside an approved staff command's declared
+          // issuance intent, and every session is stamped with server-owned
+          // assurance evidence (M1.3).
           before: async (newSession) => {
             const account = await findAccountById(db, newSession.userId);
-            if (!account || !canSignInInteractively(account)) {
+            const stamp = decideSessionIssuance(
+              account,
+              currentSessionIssuance(),
+              new Date(),
+            );
+            if (!stamp) {
               log.warn("auth.session_refused", {
                 resultCode: "account_not_eligible",
               });
               return false;
             }
-            return { data: newSession };
+            return { data: { ...newSession, ...stamp } };
           },
           after: async (created) => {
+            const purpose = (created as { authPurpose?: unknown }).authPurpose;
+            if (purpose !== "STANDARD" && purpose !== "STAFF") return;
             await recordAuthentication(
               db,
               created.userId,

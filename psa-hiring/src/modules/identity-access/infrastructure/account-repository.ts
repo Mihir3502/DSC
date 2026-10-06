@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, gt, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, ne, sql } from "drizzle-orm";
 import type { Database } from "@/shared/database";
 import {
   isAccountStatus,
@@ -20,6 +20,8 @@ export type AccountRecord = Readonly<{
   accountType: AccountType;
   status: AccountStatus;
   emailVerified: boolean;
+  /** Better Auth two-factor flag (verified TOTP enrollment exists). */
+  twoFactorEnabled: boolean;
   version: number;
 }>;
 
@@ -30,6 +32,7 @@ function toRecord(row: {
   accountType: string;
   status: string;
   emailVerified: boolean;
+  twoFactorEnabled: boolean;
   version: number;
 }): AccountRecord | null {
   // Database CHECK constraints make these always valid; fail closed anyway.
@@ -40,6 +43,7 @@ function toRecord(row: {
     accountType: row.accountType,
     status: row.status,
     emailVerified: row.emailVerified,
+    twoFactorEnabled: row.twoFactorEnabled,
     version: row.version,
   });
 }
@@ -49,10 +53,11 @@ const accountColumns = {
   accountType: user.accountType,
   status: user.status,
   emailVerified: user.emailVerified,
+  twoFactorEnabled: user.twoFactorEnabled,
   version: user.version,
 };
 
-const uuidPattern =
+export const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Loads current account state, or null for unknown/malformed IDs. */
@@ -285,6 +290,178 @@ export async function deleteSessionsExcept(
   const deleted = await tx
     .delete(session)
     .where(and(eq(session.userId, accountId), ne(session.id, keepSessionId)))
+    .returning({ id: session.id });
+  return deleted.length;
+}
+
+// ---------------------------------------------------------------------------
+// Staff accounts (packet M1.3 §9, §14). Type, status, and verification are
+// fixed here, never taken from input; password hashes come from Better
+// Auth's maintained hasher.
+// ---------------------------------------------------------------------------
+
+/**
+ * Creates the single INVITED STAFF account for an accepted invitation
+ * proof (email ownership verified by the emailed capability) together with
+ * its credential. Returns null when the normalized email already exists.
+ */
+export async function createInvitedStaffWithCredential(
+  tx: Executor,
+  input: { email: string; emailDisplay: string; passwordHash: string },
+  now: Date,
+): Promise<string | null> {
+  const [created] = await tx
+    .insert(user)
+    .values({
+      name: "Staff member",
+      email: input.email,
+      emailDisplay: input.emailDisplay,
+      emailVerified: true,
+      accountType: "STAFF",
+      status: "INVITED",
+      twoFactorEnabled: false,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoNothing({ target: user.email })
+    .returning({ id: user.id });
+  if (!created) return null;
+  await tx.insert(account).values({
+    accountId: created.id,
+    providerId: "credential",
+    userId: created.id,
+    password: input.passwordHash,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return created.id;
+}
+
+/**
+ * Replaces the credential of an INVITED staff account resuming activation
+ * or reenrolling after an approved reset (creates it if missing).
+ */
+export async function replaceInvitedStaffCredential(
+  tx: Executor,
+  accountId: string,
+  passwordHash: string,
+  now: Date,
+): Promise<void> {
+  const updated = await tx
+    .update(account)
+    .set({ password: passwordHash, updatedAt: now })
+    .where(
+      and(eq(account.userId, accountId), eq(account.providerId, "credential")),
+    )
+    .returning({ id: account.id });
+  if (updated.length === 0) {
+    await tx.insert(account).values({
+      accountId,
+      providerId: "credential",
+      userId: accountId,
+      password: passwordHash,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+  await tx
+    .update(user)
+    .set({ emailVerified: true, updatedAt: now })
+    .where(
+      and(
+        eq(user.id, accountId),
+        eq(user.accountType, "STAFF"),
+        eq(user.status, "INVITED"),
+      ),
+    );
+}
+
+/**
+ * INVITED → ACTIVE for a staff account only after verified MFA enrollment.
+ * A single conditional UPDATE: it can never overwrite a concurrent
+ * restriction and succeeds at most once.
+ */
+export async function activateEnrolledStaff(
+  tx: Executor,
+  accountId: string,
+  now: Date,
+): Promise<boolean> {
+  if (!uuidPattern.test(accountId)) return false;
+  const updated = await tx
+    .update(user)
+    .set({
+      status: "ACTIVE",
+      version: sql`${user.version} + 1`,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(user.id, accountId),
+        eq(user.accountType, "STAFF"),
+        eq(user.status, "INVITED"),
+        eq(user.emailVerified, true),
+        eq(user.twoFactorEnabled, true),
+      ),
+    )
+    .returning({ id: user.id });
+  return updated.length === 1;
+}
+
+/**
+ * ACTIVE (or already INVITED) STAFF → INVITED for an approved MFA reset. The
+ * version increment invalidates every assurance record issued before it.
+ * Restricted accounts (LOCKED/DISABLED/CLOSED) are never reopened here.
+ */
+export async function returnStaffToInvited(
+  tx: Executor,
+  accountId: string,
+  now: Date,
+): Promise<boolean> {
+  const updated = await tx
+    .update(user)
+    .set({
+      status: "INVITED",
+      version: sql`${user.version} + 1`,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(user.id, accountId),
+        eq(user.accountType, "STAFF"),
+        inArray(user.status, ["ACTIVE", "INVITED"]),
+      ),
+    )
+    .returning({ id: user.id });
+  return updated.length === 1;
+}
+
+/** Increments the account version (invalidates issued assurance). */
+export async function bumpAccountVersion(
+  tx: Executor,
+  accountId: string,
+  now: Date,
+): Promise<void> {
+  await tx
+    .update(user)
+    .set({ version: sql`${user.version} + 1`, updatedAt: now })
+    .where(eq(user.id, accountId));
+}
+
+/** Deletes an account's sessions with the given assurance purposes. */
+export async function deleteSessionsByPurpose(
+  tx: Executor,
+  accountId: string,
+  purposes: readonly string[],
+): Promise<number> {
+  if (!uuidPattern.test(accountId) || purposes.length === 0) return 0;
+  const deleted = await tx
+    .delete(session)
+    .where(
+      and(
+        eq(session.userId, accountId),
+        inArray(session.authPurpose, [...purposes]),
+      ),
+    )
     .returning({ id: session.id });
   return deleted.length;
 }

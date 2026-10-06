@@ -15,6 +15,13 @@
       "when": 1791291498324,
       "tag": "0001_authentication_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791308843446,
+      "tag": "0002_staff_invitation_mfa",
+      "breakpoints": true
     }
   ]
 }

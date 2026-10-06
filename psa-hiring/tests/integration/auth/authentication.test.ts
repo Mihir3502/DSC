@@ -147,9 +147,15 @@ describe("schema and migration", () => {
     const tables = await admin.query<{ t: string }>(
       "SELECT tablename AS t FROM pg_tables WHERE schemaname = 'auth' ORDER BY 1",
     );
+    // M1.3 adds the two-factor plugin table and the staff invitation,
+    // recovery-case, and TOTP replay-guard tables (ADR-0004).
     expect(tables.rows.map((r) => r.t)).toEqual([
       "account",
       "session",
+      "staff_invitation",
+      "staff_recovery_case",
+      "totp_replay_guard",
+      "two_factor",
       "user",
       "verification",
     ]);
@@ -162,7 +168,11 @@ describe("schema and migration", () => {
     expect(constraints.rows.map((r) => r.name)).toEqual([
       "account_pkey",
       "account_user_id_user_id_fk",
+      "session_auth_method_check",
+      "session_auth_purpose_check",
       "session_pkey",
+      "session_reauthentication_check",
+      "session_staff_assurance_check",
       "session_token_unique",
       "session_user_id_user_id_fk",
       "user_account_type_check",
@@ -480,16 +490,21 @@ describe("sessions and principal resolution", () => {
   });
 
   it("keeps verified email a separate field, and requires it for candidates (M1.2)", async () => {
-    // Staff: status ACTIVE with an unverified email still resolves; the
-    // email flag is reported separately.
+    // The flag is reported separately on a resolved principal.
+    const verified = await createTestAccount(auth);
+    const principal = await resolve((await signIn(verified)).cookie);
+    expect(principal?.status).toBe("ACTIVE");
+    expect(hasVerifiedEmail(principal!)).toBe(true);
+
+    // Staff (M1.3): no session at all from a password alone, verified or not.
     const staff = await createTestAccount(auth, {
       accountType: "STAFF",
       emailVerified: false,
     });
-    const principal = await resolve((await signIn(staff)).cookie);
-    expect(principal?.status).toBe("ACTIVE");
-    expect(principal?.emailVerified).toBe(false);
-    expect(hasVerifiedEmail(principal!)).toBe(false);
+    const staffAttempt = await signIn(staff);
+    expect(staffAttempt.response.status).toBe(401);
+    expect(staffAttempt.cookie).toBeNull();
+    expect(await sessionCount(staff.id)).toBe(0);
 
     // Candidates: no session at all until the email is verified.
     const candidate = await createTestAccount(auth, { emailVerified: false });

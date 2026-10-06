@@ -1,0 +1,1286 @@
+{
+  "id": "b7a93488-6b39-465d-ac64-3e388b5d4cff",
+  "prevId": "1a613af9-7900-47c2-81b8-c989dbf9ff54",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "app.system_metadata": {
+      "name": "system_metadata",
+      "schema": "app",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "varchar(100)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "auth.account": {
+      "name": "account",
+      "schema": "auth",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "access_token": {
+          "name": "access_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refresh_token": {
+          "name": "refresh_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_token": {
+          "name": "id_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "access_token_expires_at": {
+          "name": "access_token_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refresh_token_expires_at": {
+          "name": "refresh_token_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "account_userId_idx": {
+          "name": "account_userId_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "account_user_id_user_id_fk": {
+          "name": "account_user_id_user_id_fk",
+          "tableFrom": "account",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "auth.session": {
+      "name": "session",
+      "schema": "auth",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ip_address": {
+          "name": "ip_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "auth_purpose": {
+          "name": "auth_purpose",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "auth_method": {
+          "name": "auth_method",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "primary_authenticated_at": {
+          "name": "primary_authenticated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mfa_authenticated_at": {
+          "name": "mfa_authenticated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "account_version": {
+          "name": "account_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reauthenticated_at": {
+          "name": "reauthenticated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reauthentication_method": {
+          "name": "reauthentication_method",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reauthentication_purpose": {
+          "name": "reauthentication_purpose",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "session_userId_idx": {
+          "name": "session_userId_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "session_user_id_user_id_fk": {
+          "name": "session_user_id_user_id_fk",
+          "tableFrom": "session",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "session_token_unique": {
+          "name": "session_token_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "session_auth_purpose_check": {
+          "name": "session_auth_purpose_check",
+          "value": "\"auth\".\"session\".\"auth_purpose\" IS NULL OR \"auth\".\"session\".\"auth_purpose\" IN ('STANDARD', 'STAFF_FIRST_FACTOR', 'STAFF_ACTIVATION', 'STAFF')"
+        },
+        "session_auth_method_check": {
+          "name": "session_auth_method_check",
+          "value": "\"auth\".\"session\".\"auth_method\" IS NULL OR \"auth\".\"session\".\"auth_method\" IN ('PASSWORD', 'PASSWORD_TOTP', 'PASSWORD_BACKUP_CODE')"
+        },
+        "session_staff_assurance_check": {
+          "name": "session_staff_assurance_check",
+          "value": "\"auth\".\"session\".\"auth_purpose\" IS DISTINCT FROM 'STAFF' OR (\"auth\".\"session\".\"auth_method\" IN ('PASSWORD_TOTP', 'PASSWORD_BACKUP_CODE') AND \"auth\".\"session\".\"primary_authenticated_at\" IS NOT NULL AND \"auth\".\"session\".\"mfa_authenticated_at\" IS NOT NULL AND \"auth\".\"session\".\"account_version\" IS NOT NULL)"
+        },
+        "session_reauthentication_check": {
+          "name": "session_reauthentication_check",
+          "value": "(\"auth\".\"session\".\"reauthenticated_at\" IS NULL AND \"auth\".\"session\".\"reauthentication_method\" IS NULL AND \"auth\".\"session\".\"reauthentication_purpose\" IS NULL) OR (\"auth\".\"session\".\"reauthenticated_at\" IS NOT NULL AND \"auth\".\"session\".\"reauthentication_method\" = 'PASSWORD_TOTP' AND \"auth\".\"session\".\"reauthentication_purpose\" ~ '^[A-Z_]{1,64}$')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "auth.two_factor": {
+      "name": "two_factor",
+      "schema": "auth",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "secret": {
+          "name": "secret",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "backup_codes": {
+          "name": "backup_codes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verified": {
+          "name": "verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "failed_verification_count": {
+          "name": "failed_verification_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "locked_until": {
+          "name": "locked_until",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "twoFactor_secret_idx": {
+          "name": "twoFactor_secret_idx",
+          "columns": [
+            {
+              "expression": "secret",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "twoFactor_userId_idx": {
+          "name": "twoFactor_userId_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "two_factor_user_id_user_id_fk": {
+          "name": "two_factor_user_id_user_id_fk",
+          "tableFrom": "two_factor",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "two_factor_user_id_unique": {
+          "name": "two_factor_user_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "two_factor_failed_count_check": {
+          "name": "two_factor_failed_count_check",
+          "value": "\"auth\".\"two_factor\".\"failed_verification_count\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "auth.user": {
+      "name": "user",
+      "schema": "auth",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email_verified": {
+          "name": "email_verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "image": {
+          "name": "image",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "email_display": {
+          "name": "email_display",
+          "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "account_type": {
+          "name": "account_type",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_authenticated_at": {
+          "name": "last_authenticated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "disabled_at": {
+          "name": "disabled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "disabled_reason_code": {
+          "name": "disabled_reason_code",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "two_factor_enabled": {
+          "name": "two_factor_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "user_email_unique": {
+          "name": "user_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "user_account_type_check": {
+          "name": "user_account_type_check",
+          "value": "\"auth\".\"user\".\"account_type\" IN ('CANDIDATE', 'STAFF', 'SERVICE')"
+        },
+        "user_status_check": {
+          "name": "user_status_check",
+          "value": "\"auth\".\"user\".\"status\" IN ('INVITED', 'ACTIVE', 'LOCKED', 'DISABLED', 'CLOSED')"
+        },
+        "user_disabled_reason_code_check": {
+          "name": "user_disabled_reason_code_check",
+          "value": "\"auth\".\"user\".\"disabled_reason_code\" IS NULL OR \"auth\".\"user\".\"disabled_reason_code\" IN ('SECURITY_LOCK', 'ADMINISTRATIVE_DISABLE', 'ACCOUNT_CLOSED')"
+        },
+        "user_restriction_metadata_check": {
+          "name": "user_restriction_metadata_check",
+          "value": "(\"auth\".\"user\".\"status\" IN ('LOCKED', 'DISABLED', 'CLOSED')) = (\"auth\".\"user\".\"disabled_at\" IS NOT NULL AND \"auth\".\"user\".\"disabled_reason_code\" IS NOT NULL)"
+        },
+        "user_email_normalized_check": {
+          "name": "user_email_normalized_check",
+          "value": "\"auth\".\"user\".\"email\" = lower(\"auth\".\"user\".\"email\") AND \"auth\".\"user\".\"email\" = btrim(\"auth\".\"user\".\"email\") AND char_length(\"auth\".\"user\".\"email\") BETWEEN 3 AND 254"
+        },
+        "user_name_length_check": {
+          "name": "user_name_length_check",
+          "value": "char_length(\"auth\".\"user\".\"name\") BETWEEN 1 AND 200"
+        },
+        "user_version_check": {
+          "name": "user_version_check",
+          "value": "\"auth\".\"user\".\"version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "auth.verification": {
+      "name": "verification",
+      "schema": "auth",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "identifier": {
+          "name": "identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "verification_identifier_idx": {
+          "name": "verification_identifier_idx",
+          "columns": [
+            {
+              "expression": "identifier",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "auth.staff_invitation": {
+      "name": "staff_invitation",
+      "schema": "auth",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email_display": {
+          "name": "email_display",
+          "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_digest": {
+          "name": "token_digest",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sequence": {
+          "name": "sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "issuer_account_id": {
+          "name": "issuer_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "issuer_reason_code": {
+          "name": "issuer_reason_code",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recovery_case_id": {
+          "name": "recovery_case_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "issued_at": {
+          "name": "issued_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accepted_at": {
+          "name": "accepted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "superseded_at": {
+          "name": "superseded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expired_at": {
+          "name": "expired_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "superseded_by_id": {
+          "name": "superseded_by_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "staff_invitation_one_pending_per_email": {
+          "name": "staff_invitation_one_pending_per_email",
+          "columns": [
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"auth\".\"staff_invitation\".\"status\" = 'PENDING'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "staff_invitation_account_idx": {
+          "name": "staff_invitation_account_idx",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "staff_invitation_account_id_user_id_fk": {
+          "name": "staff_invitation_account_id_user_id_fk",
+          "tableFrom": "staff_invitation",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "staff_invitation_issuer_account_id_user_id_fk": {
+          "name": "staff_invitation_issuer_account_id_user_id_fk",
+          "tableFrom": "staff_invitation",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "issuer_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "staff_invitation_recovery_case_id_staff_recovery_case_id_fk": {
+          "name": "staff_invitation_recovery_case_id_staff_recovery_case_id_fk",
+          "tableFrom": "staff_invitation",
+          "tableTo": "staff_recovery_case",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "recovery_case_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "staff_invitation_superseded_by_id_staff_invitation_id_fk": {
+          "name": "staff_invitation_superseded_by_id_staff_invitation_id_fk",
+          "tableFrom": "staff_invitation",
+          "tableTo": "staff_invitation",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "superseded_by_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "staff_invitation_token_digest_unique": {
+          "name": "staff_invitation_token_digest_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token_digest"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "staff_invitation_status_check": {
+          "name": "staff_invitation_status_check",
+          "value": "\"auth\".\"staff_invitation\".\"status\" IN ('PENDING', 'ACCEPTED', 'REVOKED', 'EXPIRED', 'SUPERSEDED')"
+        },
+        "staff_invitation_purpose_check": {
+          "name": "staff_invitation_purpose_check",
+          "value": "\"auth\".\"staff_invitation\".\"purpose\" IN ('STAFF_ACTIVATION', 'STAFF_REENROLLMENT')"
+        },
+        "staff_invitation_issuer_reason_check": {
+          "name": "staff_invitation_issuer_reason_check",
+          "value": "\"auth\".\"staff_invitation\".\"issuer_reason_code\" IN ('LOCAL_BOOTSTRAP', 'TEST_HARNESS', 'RECOVERY_REENROLLMENT')"
+        },
+        "staff_invitation_email_normalized_check": {
+          "name": "staff_invitation_email_normalized_check",
+          "value": "\"auth\".\"staff_invitation\".\"email\" = lower(\"auth\".\"staff_invitation\".\"email\") AND \"auth\".\"staff_invitation\".\"email\" = btrim(\"auth\".\"staff_invitation\".\"email\") AND char_length(\"auth\".\"staff_invitation\".\"email\") BETWEEN 3 AND 254"
+        },
+        "staff_invitation_token_digest_check": {
+          "name": "staff_invitation_token_digest_check",
+          "value": "\"auth\".\"staff_invitation\".\"token_digest\" ~ '^[A-Za-z0-9_-]{43}$'"
+        },
+        "staff_invitation_sequence_check": {
+          "name": "staff_invitation_sequence_check",
+          "value": "\"auth\".\"staff_invitation\".\"sequence\" >= 1"
+        },
+        "staff_invitation_version_check": {
+          "name": "staff_invitation_version_check",
+          "value": "\"auth\".\"staff_invitation\".\"version\" >= 1"
+        },
+        "staff_invitation_expiry_check": {
+          "name": "staff_invitation_expiry_check",
+          "value": "\"auth\".\"staff_invitation\".\"expires_at\" > \"auth\".\"staff_invitation\".\"issued_at\""
+        },
+        "staff_invitation_accepted_check": {
+          "name": "staff_invitation_accepted_check",
+          "value": "(\"auth\".\"staff_invitation\".\"status\" = 'ACCEPTED') = (\"auth\".\"staff_invitation\".\"accepted_at\" IS NOT NULL) AND (\"auth\".\"staff_invitation\".\"status\" <> 'ACCEPTED' OR (\"auth\".\"staff_invitation\".\"account_id\" IS NOT NULL AND \"auth\".\"staff_invitation\".\"accepted_at\" <= \"auth\".\"staff_invitation\".\"expires_at\"))"
+        },
+        "staff_invitation_revoked_check": {
+          "name": "staff_invitation_revoked_check",
+          "value": "(\"auth\".\"staff_invitation\".\"status\" = 'REVOKED') = (\"auth\".\"staff_invitation\".\"revoked_at\" IS NOT NULL)"
+        },
+        "staff_invitation_superseded_check": {
+          "name": "staff_invitation_superseded_check",
+          "value": "(\"auth\".\"staff_invitation\".\"status\" = 'SUPERSEDED') = (\"auth\".\"staff_invitation\".\"superseded_at\" IS NOT NULL)"
+        },
+        "staff_invitation_expired_check": {
+          "name": "staff_invitation_expired_check",
+          "value": "(\"auth\".\"staff_invitation\".\"status\" = 'EXPIRED') = (\"auth\".\"staff_invitation\".\"expired_at\" IS NOT NULL)"
+        },
+        "staff_invitation_reenrollment_check": {
+          "name": "staff_invitation_reenrollment_check",
+          "value": "\"auth\".\"staff_invitation\".\"purpose\" <> 'STAFF_REENROLLMENT' OR (\"auth\".\"staff_invitation\".\"account_id\" IS NOT NULL AND \"auth\".\"staff_invitation\".\"recovery_case_id\" IS NOT NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "auth.staff_recovery_case": {
+      "name": "staff_recovery_case",
+      "schema": "auth",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason_code": {
+          "name": "reason_code",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolution_code": {
+          "name": "resolution_code",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "requested_at": {
+          "name": "requested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verification_started_at": {
+          "name": "verification_started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "identity_verified_at": {
+          "name": "identity_verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approved_at": {
+          "name": "approved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approval_expires_at": {
+          "name": "approval_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resolved_at": {
+          "name": "resolved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "verifier_account_id": {
+          "name": "verifier_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approver_account_id": {
+          "name": "approver_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "completed_by_account_id": {
+          "name": "completed_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "staff_recovery_case_one_open_per_account": {
+          "name": "staff_recovery_case_one_open_per_account",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"auth\".\"staff_recovery_case\".\"status\" IN ('REQUESTED', 'IDENTITY_VERIFICATION_PENDING', 'APPROVAL_PENDING', 'APPROVED')",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "staff_recovery_case_account_id_user_id_fk": {
+          "name": "staff_recovery_case_account_id_user_id_fk",
+          "tableFrom": "staff_recovery_case",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "staff_recovery_case_verifier_account_id_user_id_fk": {
+          "name": "staff_recovery_case_verifier_account_id_user_id_fk",
+          "tableFrom": "staff_recovery_case",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "verifier_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "staff_recovery_case_approver_account_id_user_id_fk": {
+          "name": "staff_recovery_case_approver_account_id_user_id_fk",
+          "tableFrom": "staff_recovery_case",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "approver_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "staff_recovery_case_completed_by_account_id_user_id_fk": {
+          "name": "staff_recovery_case_completed_by_account_id_user_id_fk",
+          "tableFrom": "staff_recovery_case",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "completed_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "staff_recovery_case_status_check": {
+          "name": "staff_recovery_case_status_check",
+          "value": "\"auth\".\"staff_recovery_case\".\"status\" IN ('REQUESTED', 'IDENTITY_VERIFICATION_PENDING', 'APPROVAL_PENDING', 'APPROVED', 'COMPLETED', 'REJECTED', 'EXPIRED', 'CANCELLED')"
+        },
+        "staff_recovery_case_reason_check": {
+          "name": "staff_recovery_case_reason_check",
+          "value": "\"auth\".\"staff_recovery_case\".\"reason_code\" IN ('LOST_AUTHENTICATOR', 'FORGOTTEN_PASSWORD', 'SUSPECTED_COMPROMISE', 'UNSPECIFIED')"
+        },
+        "staff_recovery_case_resolution_check": {
+          "name": "staff_recovery_case_resolution_check",
+          "value": "(\"auth\".\"staff_recovery_case\".\"status\" IN ('COMPLETED', 'REJECTED', 'EXPIRED', 'CANCELLED')) = (\"auth\".\"staff_recovery_case\".\"resolved_at\" IS NOT NULL AND \"auth\".\"staff_recovery_case\".\"resolution_code\" IS NOT NULL)"
+        },
+        "staff_recovery_case_resolution_code_check": {
+          "name": "staff_recovery_case_resolution_code_check",
+          "value": "\"auth\".\"staff_recovery_case\".\"resolution_code\" IS NULL OR \"auth\".\"staff_recovery_case\".\"resolution_code\" IN ('RESET_COMPLETED', 'IDENTITY_NOT_VERIFIED', 'APPROVAL_DENIED', 'REQUEST_CANCELLED', 'REQUEST_EXPIRED', 'APPROVAL_EXPIRED')"
+        },
+        "staff_recovery_case_expiry_check": {
+          "name": "staff_recovery_case_expiry_check",
+          "value": "\"auth\".\"staff_recovery_case\".\"expires_at\" > \"auth\".\"staff_recovery_case\".\"requested_at\""
+        },
+        "staff_recovery_case_separation_check": {
+          "name": "staff_recovery_case_separation_check",
+          "value": "(\"auth\".\"staff_recovery_case\".\"verifier_account_id\" IS NULL OR \"auth\".\"staff_recovery_case\".\"verifier_account_id\" <> \"auth\".\"staff_recovery_case\".\"account_id\") AND (\"auth\".\"staff_recovery_case\".\"approver_account_id\" IS NULL OR (\"auth\".\"staff_recovery_case\".\"approver_account_id\" <> \"auth\".\"staff_recovery_case\".\"account_id\" AND \"auth\".\"staff_recovery_case\".\"approver_account_id\" IS DISTINCT FROM \"auth\".\"staff_recovery_case\".\"verifier_account_id\"))"
+        },
+        "staff_recovery_case_approval_check": {
+          "name": "staff_recovery_case_approval_check",
+          "value": "(\"auth\".\"staff_recovery_case\".\"approved_at\" IS NULL) = (\"auth\".\"staff_recovery_case\".\"approver_account_id\" IS NULL) AND (\"auth\".\"staff_recovery_case\".\"approved_at\" IS NULL) = (\"auth\".\"staff_recovery_case\".\"approval_expires_at\" IS NULL)"
+        },
+        "staff_recovery_case_version_check": {
+          "name": "staff_recovery_case_version_check",
+          "value": "\"auth\".\"staff_recovery_case\".\"version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "auth.totp_replay_guard": {
+      "name": "totp_replay_guard",
+      "schema": "auth",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code_digest": {
+          "name": "code_digest",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "totp_replay_guard_expires_idx": {
+          "name": "totp_replay_guard_expires_idx",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "totp_replay_guard_user_id_user_id_fk": {
+          "name": "totp_replay_guard_user_id_user_id_fk",
+          "tableFrom": "totp_replay_guard",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "totp_replay_guard_pk": {
+          "name": "totp_replay_guard_pk",
+          "columns": [
+            "user_id",
+            "code_digest"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "app": "app",
+    "auth": "auth"
+  },
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

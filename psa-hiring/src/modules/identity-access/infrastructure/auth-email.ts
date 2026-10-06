@@ -14,6 +14,8 @@ export const authEmailTemplates = [
   "EMAIL_VERIFICATION_CODE",
   "PASSWORD_RESET",
   "PASSWORD_CHANGED",
+  "STAFF_INVITATION",
+  "STAFF_SECURITY_NOTICE",
 ] as const;
 export type AuthEmailTemplate = (typeof authEmailTemplates)[number];
 
@@ -31,7 +33,21 @@ export type AuthEmailMessage =
       token: string;
       expiresInMinutes: number;
     }>
-  | Readonly<{ template: "PASSWORD_CHANGED"; to: string }>;
+  | Readonly<{ template: "PASSWORD_CHANGED"; to: string }>
+  | Readonly<{
+      template: "STAFF_INVITATION";
+      to: string;
+      /** Single-use invitation capability; placed only in the link fragment. */
+      token: string;
+      /** Reenrollment follows an approved administrative MFA reset. */
+      purpose: "STAFF_ACTIVATION" | "STAFF_REENROLLMENT";
+      expiresInMinutes: number;
+    }>
+  | Readonly<{
+      template: "STAFF_SECURITY_NOTICE";
+      to: string;
+      notice: "PASSWORD_CHANGED" | "BACKUP_CODES_REGENERATED";
+    }>;
 
 export type RenderedAuthEmail = Readonly<{
   template: AuthEmailTemplate;
@@ -64,6 +80,34 @@ export function resetPasswordLink(origin: string, token: string): string {
     throw new Error("invalid reset token shape");
   }
   return `${new URL(origin).origin}/reset-password#token=${token}`;
+}
+
+/**
+ * Builds the staff activation link: the capability is in the fragment only,
+ * so it never reaches a server log, history entry, or Referer header.
+ */
+export function staffActivationLink(origin: string, token: string): string {
+  if (!/^[A-Za-z0-9_-]{43}$/.test(token)) {
+    throw new Error("invalid invitation token shape");
+  }
+  return `${new URL(origin).origin}/staff/activate#invite=${token}`;
+}
+
+function linkEmail(lines: {
+  before: string[];
+  linkText: string;
+  link: string;
+  after: string[];
+}): { text: string; html: string } {
+  const text = [...lines.before, lines.link, ...lines.after].join("\n\n");
+  const html = `<!doctype html><html lang="en"><body>${lines.before
+    .map((line) => `<p>${escapeHtml(line)}</p>`)
+    .join("")}<p><a href="${escapeHtml(lines.link)}">${escapeHtml(
+    lines.linkText,
+  )}</a></p>${lines.after
+    .map((line) => `<p>${escapeHtml(line)}</p>`)
+    .join("")}</body></html>`;
+  return { text, html };
 }
 
 function paragraphs(lines: string[]): { text: string; html: string } {
@@ -131,6 +175,53 @@ export function renderAuthEmail(
         template: message.template,
         to: message.to,
         subject: "Your password was changed",
+        ...body,
+      });
+    }
+    case "STAFF_INVITATION": {
+      // Generic by design (packet M1.3 §8): no role, branch, candidate data,
+      // or internal system detail; no backup codes or authenticator keys.
+      const minutes = boundedMinutes(message.expiresInMinutes);
+      const reset = message.purpose === "STAFF_REENROLLMENT";
+      const body = linkEmail({
+        before: [
+          reset
+            ? `An approved request reset the sign-in security for your ${productName} staff account. Set a new password and set up your authenticator app again before you can sign in.`
+            : `You have been invited to activate a ${productName} staff account.`,
+          `Open this link to continue. It expires in ${minutes} minutes and can be used once:`,
+        ],
+        linkText: reset
+          ? "Set up sign-in again"
+          : "Activate your staff account",
+        link: staffActivationLink(origin, message.token),
+        after: [
+          reset
+            ? "If you did not request this, contact your administrator immediately."
+            : "If you were not expecting this invitation, you can ignore this message.",
+        ],
+      });
+      return Object.freeze({
+        template: message.template,
+        to: message.to,
+        subject: reset
+          ? "Your staff sign-in security was reset"
+          : "Activate your staff account",
+        ...body,
+      });
+    }
+    case "STAFF_SECURITY_NOTICE": {
+      const what =
+        message.notice === "PASSWORD_CHANGED"
+          ? "The password for your staff account was changed and every signed-in session was ended."
+          : "New backup codes were created for your staff account. Earlier backup codes no longer work.";
+      const body = paragraphs([
+        `${productName}: ${what}`,
+        "If you did not make this change, contact your administrator immediately.",
+      ]);
+      return Object.freeze({
+        template: message.template,
+        to: message.to,
+        subject: "Staff account security change",
         ...body,
       });
     }

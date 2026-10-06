@@ -4,7 +4,7 @@ Web application for managing hiring and compliance readiness for a Kentucky priv
 
 Release 1 covers candidate intake through **Ready for Assignment**. Scheduling, visit tracking, timesheets, payroll, billing, and leave are out of scope. See [`CLAUDE.md`](../CLAUDE.md) for the full scope.
 
-> **Current state: M1.2 candidate registration and recovery.** Candidates can register (email-verified with a single-use code), sign in and out, recover and reset a password, change their password, and manage their own sessions. Staff sign-in arrives in M1.3. Local email goes to Mailpit only. The foundation also provides local PostgreSQL and Mailpit, a Drizzle migration workflow, a layered automated test suite, and structured logging with correlation IDs and safe error handling. Besides the `auth` schema there is one technical table (`app.system_metadata`) and no business data. CI runs on every pull request and push to `main`.
+> **Current state: M1.3 staff invitation and multifactor authentication.** Candidates can register (email-verified with a single-use code), sign in and out, recover and reset a password, change their password, and manage their own sessions (M1.2). Invitation-only staff activate with a password plus a mandatory authenticator app (TOTP) and one-time backup codes, sign in with password plus a second factor, and manage only their own account security (M1.3). Staff have no roles, permissions, or record access until M1.4–M1.5. Local email goes to Mailpit only. The foundation also provides local PostgreSQL and Mailpit, a Drizzle migration workflow, a layered automated test suite, and structured logging with correlation IDs and safe error handling. Besides the `auth` schema there is one technical table (`app.system_metadata`) and no business data. CI runs on every pull request and push to `main`.
 
 ## Prerequisites
 
@@ -124,6 +124,17 @@ See [`docs/adr/ADR-0003-CANDIDATE-REGISTRATION-AND-RECOVERY.md`](../docs/adr/ADR
 - **Invitations:** `pnpm auth:intent:local test.someone@example.test` prints a single-use invitation link. It works only locally and only for reserved domains.
 - **Browser tests:** `pnpm test:e2e*` and `pnpm test:a11y` start their own disposable PostgreSQL (Docker required). They capture email as files in a private temp directory and delete it afterwards. Traces are off for the candidate-auth specs because they handle one-time codes and links.
 
+## Staff invitation and MFA (M1.3)
+
+See [`docs/adr/ADR-0004-STAFF-INVITATION-MFA.md`](../docs/adr/ADR-0004-STAFF-INVITATION-MFA.md).
+
+- **Pages:** `/staff/activate` (invitation link), `/staff/sign-in`, `/staff/mfa`, `/staff/recover`, `/staff/security`, and `/staff/reauthenticate`. Every staff account must use an authenticator app; there is no email/SMS code, no "trust this device", and no way to turn two-step verification off.
+- **No production administration yet:** the application has no page or API to issue invitations or approve/complete a recovery. Those arrive with authorization and audit (M1.4–M1.6). There is no default staff or admin account.
+- **Local invitation (local/test only):** `pnpm auth:staff:invite:local --reason=LOCAL_BOOTSTRAP test.someone@example.test` (or omit the email to be prompted). The invitation email goes to Mailpit; nothing is printed. Add `--revoke` to revoke the pending invitation. Run it again to resend (the earlier link stops working).
+- **Activation:** open the Mailpit link, create a password, add the account to an authenticator app by QR code or setup key, enter a code, then save the 10 backup codes (shown once).
+- **Local recovery harness (local/test only):** after `/staff/recover`, drive the case with `pnpm auth:staff:recovery:local --target=<staff email> --actor=<another staff email> --step=START_VERIFICATION|CONFIRM_IDENTITY|APPROVE|COMPLETE|REJECT|CANCEL`. The verifier and approver must be different people, and neither can be the target. Completion signs the staff member out everywhere, removes their authenticator and backup codes, and emails a reenrollment link.
+- **Browser tests** use `--reason=TEST_HARNESS`, file-captured email, and test-only 5-second lockout and 20-second recent-authentication windows. Traces, screenshots, and videos are off for staff specs because pages show setup keys and backup codes.
+
 ## Logging and errors
 
 Server logs are JSON lines on stdout with an allowlisted set of fields. Every request gets an `x-correlation-id` response header, and error pages show that ID as the request reference. Route handlers should be wrapped with `withRouteHandler` so failures return `application/problem+json` without internal details. See [`docs/OPERATIONS.md`](../docs/OPERATIONS.md) for the field allowlist, forbidden data, and error codes.
@@ -221,6 +232,8 @@ M0.3 contains technical metadata only: `app.system_metadata` (`key`, `value` JSO
 | `/staff`                                                                | Staff Portal placeholder                          |
 | `/register`, `/verify-email`, `/sign-in`, `/recover`, `/reset-password` | Candidate authentication                          |
 | `/candidate/security`                                                   | Candidate account security (signed-in candidates) |
+| `/staff/activate`, `/staff/sign-in`, `/staff/mfa`, `/staff/recover`     | Staff activation and sign-in (M1.3)               |
+| `/staff/security`, `/staff/reauthenticate`                              | Staff account security (MFA-complete staff only)  |
 
 ## Data rule
 

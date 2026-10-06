@@ -16,6 +16,10 @@ import {
 } from "./compromised-password";
 import { RegistrationIntentRepository } from "./registration-intent-repository";
 import { LogSecurityEvents, type SecurityEventPort } from "./security-events";
+import {
+  RefusingStaffAdministrationGate,
+  type StaffAdministrationGate,
+} from "./staff-administration-gate";
 import { LocalSmtpEmailTransport } from "./smtp-auth-email-adapter";
 
 // Composition root for the identity-access module: one place that turns
@@ -32,6 +36,8 @@ export type IdentityRuntime = Readonly<{
   compromised: CompromisedPasswordPort;
   intents: RegistrationIntentRepository;
   limiter: FixedWindowRateLimiter;
+  /** Staff administration authorization (refusing until M1.4–M1.6). */
+  staffAdmin: StaffAdministrationGate;
 }>;
 
 /** The configured local/test email transport (auth-env validated it). */
@@ -56,6 +62,8 @@ export function createIdentityRuntime(options: {
   logger: AppLogger;
   transport?: AuthEmailTransport;
   limiter?: FixedWindowRateLimiter;
+  /** Only local/test harnesses pass a non-refusing gate. */
+  staffAdmin?: StaffAdministrationGate;
 }): IdentityRuntime {
   const { env, db, logger } = options;
   const email = new AuthEmailDispatcher(
@@ -83,6 +91,7 @@ export function createIdentityRuntime(options: {
     compromised: new LocalDenylistCompromisedPassword(),
     intents,
     limiter: options.limiter ?? new FixedWindowRateLimiter(),
+    staffAdmin: options.staffAdmin ?? new RefusingStaffAdministrationGate(),
   });
 }
 

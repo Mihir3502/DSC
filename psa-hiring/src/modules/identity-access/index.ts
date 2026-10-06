@@ -53,6 +53,64 @@ export {
   issueCandidateInvitation,
   issuePublicRegistrationIntent,
 } from "./application/registration-intents";
+// M1.3 staff invitation, activation, MFA, security, recent authentication,
+// and recovery. Invitation issuance/revocation and recovery-case steps are
+// exported for the local/test harness only; they require an explicit actor
+// and the staff administration gate, which refuses in the application.
+export {
+  beginStaffActivation,
+  completeStaffActivation,
+  verifyStaffEnrollment,
+  type BeginActivationResult,
+  type CompleteActivationResult,
+  type StaffEnrollment,
+  type VerifyEnrollmentResult,
+} from "./application/activate-staff-account";
+export {
+  completeStaffMfa,
+  hasStaffChallenge,
+  signInStaff,
+  signOutStaff,
+  type StaffMfaResult,
+  type StaffSignInResult,
+} from "./application/sign-in-staff";
+export {
+  changeStaffPassword,
+  getStaffSecurityOverview,
+  regenerateStaffBackupCodes,
+  revokeOtherStaffSessions,
+  revokeStaffSession,
+  signOutStaffEverywhere,
+  type StaffSecurityOverview,
+  type StaffSessionSummary,
+} from "./application/manage-staff-security";
+export {
+  evaluateStaffAssurance,
+  reauthenticateStaff,
+  resolveCurrentStaff,
+  type ReauthenticateResult,
+} from "./application/reauthenticate-staff";
+export {
+  advanceStaffRecovery,
+  requestStaffRecovery,
+} from "./application/recover-staff-account";
+export {
+  issueStaffInvitation,
+  revokeStaffInvitation,
+} from "./application/issue-staff-invitation";
+export {
+  assurancePolicies,
+  evaluateAssurance,
+  isReauthenticationPurpose,
+  type AssuranceDecision,
+  type AssuranceEvidence,
+  type AssurancePolicy,
+  type ReauthenticationPurpose,
+} from "./domain/authentication-assurance";
+export {
+  isRecoveryReasonCode,
+  recoveryReasonCodes,
+} from "./domain/staff-recovery";
 export {
   accountStatuses,
   accountTypes,

@@ -45,6 +45,10 @@ async function main() {
       // A fresh random secret per run (test marker allowed only in test).
       BETTER_AUTH_SECRET: `TEST-e2e-${randomBytes(24).toString("hex")}`,
       AUTH_EMAIL_TRANSPORT: "capture-file",
+      // M1.3: short, test-only lockout and recent-auth windows so browser
+      // tests observe recovery and expiry (rejected outside APP_ENV=test).
+      AUTH_STAFF_MFA_LOCKOUT_SECONDS: "5",
+      AUTH_STAFF_RECENT_AUTH_SECONDS: "20",
       AUTH_EMAIL_CAPTURE_DIR: captureDir,
       E2E_EMAIL_CAPTURE_DIR: captureDir,
     };

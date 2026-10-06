@@ -4,8 +4,8 @@
     {
       "id": "PRD-AUTH-001",
       "title": "Staff and candidate accounts",
-      "status": "partial",
-      "note": "Candidate self-registration delivered in M1.2; staff invitation/sign-in is M1.3.",
+      "status": "covered",
+      "note": "Candidate self-registration (M1.2) and invitation-only staff accounts with mandatory MFA (M1.3). Staff permissions are PRD-AUTH-003 (M1.4).",
       "tests": [
         {
           "file": "tests/integration/auth/candidate-registration.test.ts",
@@ -18,6 +18,14 @@
         {
           "file": "tests/e2e/candidate-auth.spec.ts",
           "title": "registers, verifies with a code, signs in"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "activates only after verified TOTP enrollment"
+        },
+        {
+          "file": "tests/e2e/staff-auth.spec.ts",
+          "title": "invite → activate → TOTP → backup codes → staff security"
         }
       ]
     },
@@ -42,14 +50,42 @@
       ]
     },
     {
+      "id": "PRD-AUTH-003",
+      "title": "Staff permissions are role based",
+      "status": "deferred",
+      "note": "Roles, permissions, and scopes are M1.4; authorization enforcement is M1.5. M1.3 grants staff no roles, scopes, or record access.",
+      "tests": [
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "shows only account, MFA, and session controls"
+        }
+      ]
+    },
+    {
       "id": "PRD-AUTH-004",
       "title": "Recent authentication for sensitive actions",
-      "status": "deferred",
-      "note": "Password change requires the current password; configurable recent-auth step-up is M1.3.",
+      "status": "partial",
+      "note": "M1.3 delivers the server-owned recent-authentication primitive (named policies, purpose binding, /staff/reauthenticate) and applies it to staff password change and backup-code regeneration. Business high-risk actions adopt it in their own work items; candidate step-up is not configured.",
       "tests": [
         {
           "file": "tests/integration/auth/candidate-registration.test.ts",
           "title": "changes the password with the current one"
+        },
+        {
+          "file": "src/modules/identity-access/domain/staff-authentication-policy.test.ts",
+          "title": "dates sign-in by the older factor and expires exactly at the boundary"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "requires recent auth for password change"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "binds reauthentication to purpose"
+        },
+        {
+          "file": "tests/e2e/staff-auth.spec.ts",
+          "title": "recent-auth challenge after expiry"
         }
       ]
     },
@@ -73,6 +109,10 @@
         {
           "file": "tests/e2e/candidate-auth.spec.ts",
           "title": "gives generic outcomes and ignores unsafe redirects"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "returns one generic outcome and opens a case only for active staff"
         }
       ]
     },
@@ -88,6 +128,10 @@
         {
           "file": "tests/integration/auth/candidate-registration.test.ts",
           "title": "gives one generic failure and no session for every ineligible case"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "invalidates assurance on session revocation and account restriction"
         }
       ]
     },
@@ -95,11 +139,15 @@
       "id": "PRD-AUTH-007",
       "title": "Authentication events are auditable",
       "status": "partial",
-      "note": "M1.2 emits allowlisted security event codes through the logger only; immutable audit persistence is M1.6. Not satisfied until then.",
+      "note": "M1.2 and M1.3 emit allowlisted, future-audit-ready security event codes (opaque account/record references only) through the logger; immutable audit persistence is M1.6. Not satisfied until then.",
       "tests": [
         {
           "file": "src/modules/identity-access/infrastructure/candidate-auth-adapters.test.ts",
           "title": "logs allowlisted codes with an opaque reference"
+        },
+        {
+          "file": "src/modules/identity-access/infrastructure/staff-auth-adapters.test.ts",
+          "title": "logs only the allowlisted code, result, and opaque references"
         }
       ]
     }
@@ -332,6 +380,318 @@
         }
       ],
       "manual": ["Scope review in the M1.2 completion report"]
+    },
+    {
+      "id": "AC-M1.3-01",
+      "title": "Invitation-only staff",
+      "tests": [
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "never converts candidate/service accounts or duplicates existing staff"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "activates only after verified TOTP enrollment"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.3-02",
+      "title": "Protected invitation lifecycle",
+      "tests": [
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "issues an email-bound invitation stored only as a digest"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "supersedes the live invitation on resend"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "revokes immediately"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "expires exactly at the expiry instant"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "allows only one live invitation under concurrent issuance"
+        },
+        {
+          "file": "tests/e2e/staff-auth.spec.ts",
+          "title": "resent, revoked, and expired invitations fail safely"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.3-03",
+      "title": "No premature production administration",
+      "tests": [
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "is unavailable through the application's own (refusing) administration gate"
+        },
+        {
+          "file": "src/modules/identity-access/infrastructure/staff-auth-adapters.test.ts",
+          "title": "cannot be constructed as a harness outside local/test"
+        },
+        {
+          "file": "src/modules/identity-access/infrastructure/staff-auth-adapters.test.ts",
+          "title": "refuses everything in the application's own runtime"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.3-04",
+      "title": "MFA before activation",
+      "tests": [
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "activates only after verified TOTP enrollment"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "leaves an abandoned activation INVITED"
+        },
+        {
+          "file": "src/modules/identity-access/domain/staff-authentication-policy.test.ts",
+          "title": "refuses any staff session without a declared staff command"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.3-05",
+      "title": "Mandatory TOTP",
+      "tests": [
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "never yields a staff principal from the password alone"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "ignores trusted-device requests and forged trusted-device cookies"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "offers no email/SMS OTP and routes no two-factor or backup-code endpoint"
+        },
+        {
+          "file": "tests/e2e/staff-auth.spec.ts",
+          "title": "password alone never reaches staff pages"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.3-06",
+      "title": "Protected MFA secrets",
+      "tests": [
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "stores the TOTP seed and backup codes only as ciphertext"
+        },
+        {
+          "file": "src/modules/identity-access/infrastructure/staff-auth-adapters.test.ts",
+          "title": "configures TOTP + encrypted backup codes, lockout, and no OTP sender"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "keeps secrets, codes, tokens, emails, and cookies out of logs, results, and email"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.3-07",
+      "title": "Single-use backup recovery",
+      "tests": [
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "accepts each backup code once"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "regenerates backup codes after password + TOTP"
+        },
+        {
+          "file": "tests/e2e/staff-auth.spec.ts",
+          "title": "accepts a backup code once; replay fails"
+        },
+        {
+          "file": "tests/e2e/staff-auth.spec.ts",
+          "title": "regenerated backup codes invalidate every earlier code"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.3-08",
+      "title": "Safe staff session",
+      "tests": [
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "signs in with password + TOTP and stamps server-owned assurance"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "invalidates assurance on session revocation and account restriction"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "uses one generic failure for every ineligible account at the staff entry"
+        },
+        {
+          "file": "src/modules/identity-access/domain/staff-authentication-policy.test.ts",
+          "title": "binds the intent to one account and the right state"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.3-09",
+      "title": "Recent-auth primitive",
+      "tests": [
+        {
+          "file": "src/modules/identity-access/domain/staff-authentication-policy.test.ts",
+          "title": "denies missing, foreign, non-MFA, stale, and impossible evidence"
+        },
+        {
+          "file": "src/modules/identity-access/domain/staff-authentication-policy.test.ts",
+          "title": "dates sign-in by the older factor and expires exactly at the boundary"
+        },
+        {
+          "file": "src/modules/identity-access/domain/staff-authentication-policy.test.ts",
+          "title": "never lets a backup code satisfy the strongest policy"
+        },
+        {
+          "file": "src/modules/identity-access/domain/staff-authentication-policy.test.ts",
+          "title": "binds purpose-specific checks to reauthentication for that purpose"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "binds reauthentication to purpose"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.3-10",
+      "title": "Controlled staff recovery",
+      "tests": [
+        {
+          "file": "src/modules/identity-access/domain/staff-authentication-policy.test.ts",
+          "title": "walks the approved path with distinct verifier and approver"
+        },
+        {
+          "file": "src/modules/identity-access/domain/staff-authentication-policy.test.ts",
+          "title": "denies self-action, invalid transitions, and terminal changes"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "enforces separation of duties and completes with full reset effects"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "expires an approval that is not completed in time"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.3-11",
+      "title": "Minimal staff surface",
+      "tests": [
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "shows only account, MFA, and session controls"
+        },
+        {
+          "file": "tests/e2e/staff-auth.spec.ts",
+          "title": "invite → activate → TOTP → backup codes → staff security"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.3-12",
+      "title": "Accessible secure UI",
+      "tests": [
+        {
+          "file": "tests/accessibility/staff-auth.a11y.spec.ts",
+          "title": "activation steps, errors, and backup codes are accessible"
+        },
+        {
+          "file": "tests/accessibility/staff-auth.a11y.spec.ts",
+          "title": "MFA, security, and reauthentication screens are accessible"
+        },
+        {
+          "file": "tests/accessibility/staff-auth.a11y.spec.ts",
+          "title": "reflow at a narrow (320 px) viewport"
+        },
+        {
+          "file": "src/modules/identity-access/ui/staff-auth-forms.test.tsx",
+          "title": "removes the invitation from the URL and walks password"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.3-13",
+      "title": "Safe email and events",
+      "tests": [
+        {
+          "file": "src/modules/identity-access/infrastructure/staff-auth-adapters.test.ts",
+          "title": "renders minimal, escaped invitation and notice emails"
+        },
+        {
+          "file": "src/modules/identity-access/infrastructure/staff-auth-adapters.test.ts",
+          "title": "logs only the allowlisted code, result, and opaque references"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "keeps secrets, codes, tokens, emails, and cookies out of logs, results, and email"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.3-14",
+      "title": "Real integration and E2E proof",
+      "tests": [
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "permits one account and one activation under parallel attempts"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "locks temporarily after bounded failures"
+        },
+        {
+          "file": "tests/e2e/staff-auth.spec.ts",
+          "title": "bounds invalid codes with a temporary lockout that recovers"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.3-15",
+      "title": "Regression and traceability",
+      "tests": [
+        {
+          "file": "tests/guards/traceability.test.ts",
+          "title": "keeps PRD-AUTH-007 incomplete until immutable audit (M1.6)"
+        },
+        {
+          "file": "tests/guards/traceability.test.ts",
+          "title": "keeps roles and authorization incomplete until M1.4–M1.5"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.3-16",
+      "title": "Scope containment",
+      "tests": [
+        {
+          "file": "tests/integration/database/foundation.test.ts",
+          "title": "contains no business-domain, audit, or job tables"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "shows only account, MFA, and session controls"
+        }
+      ]
     }
   ]
 }

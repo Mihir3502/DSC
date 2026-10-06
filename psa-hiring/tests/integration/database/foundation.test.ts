@@ -318,11 +318,17 @@ describe("scope", () => {
     const { rows } = await admin.query<{ t: string }>(`
       SELECT schemaname || '.' || tablename AS t FROM pg_tables
       WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY 1`);
-    // M1.1 adds exactly the four Better Auth tables (ADR-0002).
+    // M1.1 adds the four Better Auth tables (ADR-0002); M1.3 adds the
+    // two-factor table and staff identity tables (ADR-0004). No role,
+    // scope, audit, or business table exists yet.
     expect(rows.map((r) => r.t)).toEqual([
       "app.system_metadata",
       "auth.account",
       "auth.session",
+      "auth.staff_invitation",
+      "auth.staff_recovery_case",
+      "auth.totp_replay_guard",
+      "auth.two_factor",
       "auth.user",
       "auth.verification",
       "drizzle.__drizzle_migrations",

@@ -103,13 +103,26 @@ export async function applyLocalDatabaseGrants(
   // Table-specific DELETE, applied once the auth migration has created the
   // tables (run db:bootstrap:local again after db:migrate). Sessions and
   // verification records are deleted on revocation/consumption; accounts and
-  // credentials are never deleted by the application.
-  for (const table of ["session", "verification"]) {
+  // credentials are never deleted by the application. M1.3: the
+  // two-factor enrollment is removed by MFA reset and expired TOTP replay
+  // markers are pruned; staff invitations and recovery cases are security
+  // evidence and are never deleted.
+  for (const table of [
+    "session",
+    "verification",
+    "two_factor",
+    "totp_replay_guard",
+  ]) {
     if (await tableExists(admin, `auth.${table}`)) {
       statements.push(`GRANT DELETE ON auth.${table} TO ${app}`);
     }
   }
-  for (const table of ["user", "account"]) {
+  for (const table of [
+    "user",
+    "account",
+    "staff_invitation",
+    "staff_recovery_case",
+  ]) {
     if (await tableExists(admin, `auth.${table}`)) {
       statements.push(`REVOKE DELETE, TRUNCATE ON auth."${table}" FROM ${app}`);
     }
@@ -127,7 +140,7 @@ export async function applyLocalDatabaseGrants(
     `database ${database}: CONNECT for ${app}; CONNECT, CREATE for ${migrator}; PUBLIC access revoked`,
     `schemas app, drizzle, auth: owned by ${migrator}; ${app} has USAGE on app and auth`,
     `${app}: SELECT/INSERT/UPDATE/DELETE on app tables, including future ones (default privileges)`,
-    `schema auth: owned by ${migrator}; ${app} has SELECT/INSERT/UPDATE, DELETE only on auth.session and auth.verification`,
+    `schema auth: owned by ${migrator}; ${app} has SELECT/INSERT/UPDATE, DELETE only on auth.session, auth.verification, auth.two_factor, and auth.totp_replay_guard`,
   ];
 }
 

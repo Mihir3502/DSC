@@ -127,7 +127,8 @@ void runScript("db:verify-empty", async () => {
     });
 
     // Second bootstrap pass: table-specific grants for tables the migrations
-    // just created (auth.session/auth.verification DELETE).
+    // just created (DELETE on auth.session/verification/two_factor/
+    // totp_replay_guard).
     await withClient(
       withDatabase(env.DATABASE_ADMIN_URL, target),
       timeoutMs,
@@ -156,11 +157,11 @@ void runScript("db:verify-empty", async () => {
         WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY 1`);
         assertCheck(
           tables.rows.map((r) => r.t).join(",") ===
-            "app.system_metadata,auth.account,auth.session,auth.user,auth.verification,drizzle.__drizzle_migrations",
+            "app.system_metadata,auth.account,auth.session,auth.staff_invitation,auth.staff_recovery_case,auth.totp_replay_guard,auth.two_factor,auth.user,auth.verification,drizzle.__drizzle_migrations",
           `unexpected tables: ${tables.rows.map((r) => r.t).join(",")}`,
         );
         ok(
-          "tables are exactly app.system_metadata, the four auth tables, and the migration journal",
+          "tables are exactly app.system_metadata, the M1.1–M1.3 auth tables, and the migration journal",
         );
 
         const columns = await c.query<{ c: string }>(`

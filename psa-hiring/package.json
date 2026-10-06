@@ -47,7 +47,9 @@
     "auth:schema:check": "auth check schema --config src/modules/identity-access/infrastructure/auth.cli.ts",
     "db:check-drift": "tsx scripts/db/check-drift.ts",
     "auth:mailpit:check": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/auth/check-mailpit.ts",
-    "auth:intent:local": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/auth/issue-candidate-invitation.ts"
+    "auth:intent:local": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/auth/issue-candidate-invitation.ts",
+    "auth:staff:invite:local": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/auth/create-local-staff-invitation.ts",
+    "auth:staff:recovery:local": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/auth/staff-recovery-local.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -63,10 +65,12 @@
     "react-dom": "19.2.8",
     "server-only": "0.0.1",
     "tw-animate-css": "^1.4.0",
+    "uqr": "0.1.3",
     "zod": "4.6.5"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
+    "@better-auth/utils": "0.4.2",
     "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "^4",
     "@testcontainers/postgresql": "12.2.0",

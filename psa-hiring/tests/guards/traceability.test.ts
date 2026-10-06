@@ -41,15 +41,30 @@ describe("requirement traceability", () => {
     expect(missing).toEqual([]);
   });
 
-  it("covers every M1.2 acceptance criterion exactly once", () => {
-    const ids = data.acceptanceCriteria.map((e) => e.id);
-    expect(ids).toEqual(
-      Array.from(
-        { length: 17 },
-        (_, i) => `AC-M1.2-${String(i + 1).padStart(2, "0")}`,
-      ),
-    );
-    expect(entries.every((e) => e.tests.length > 0)).toBe(true);
+  it.each([
+    ["M1.2", 17],
+    ["M1.3", 16],
+  ] as const)(
+    "covers every %s acceptance criterion exactly once",
+    (item, count) => {
+      const ids = data.acceptanceCriteria
+        .map((e) => e.id)
+        .filter((id) => id.startsWith(`AC-${item}-`));
+      expect(ids).toEqual(
+        Array.from(
+          { length: count },
+          (_, i) => `AC-${item}-${String(i + 1).padStart(2, "0")}`,
+        ),
+      );
+      expect(entries.every((e) => e.tests.length > 0)).toBe(true);
+    },
+  );
+
+  it("keeps roles and authorization incomplete until M1.4–M1.5", () => {
+    const roles = data.requirements.find((e) => e.id === "PRD-AUTH-003");
+    expect(roles?.status).toBe("deferred");
+    const recent = data.requirements.find((e) => e.id === "PRD-AUTH-004");
+    expect(recent?.status).not.toBe("covered");
   });
 
   it("keeps PRD-AUTH-007 incomplete until immutable audit (M1.6)", () => {

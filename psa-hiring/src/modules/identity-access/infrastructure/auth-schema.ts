@@ -7,6 +7,7 @@ import {
   pgSchema,
   text,
   timestamp,
+  unique,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -16,8 +17,9 @@ import {
 // columns, indexes, unique constraints, and foreign keys are kept as
 // generated; timestamps use `timestamptz` (DATA_MODEL §2.2); application-owned
 // account fields and closed CHECK constraints are added on the single
-// authoritative `auth.user` record (ADR-0002). Validated by
-// `pnpm auth:schema:check`.
+// authoritative `auth.user` record (ADR-0002). M1.3 adds the two-factor
+// plugin table and server-owned session assurance columns (ADR-0004).
+// Validated by `pnpm auth:schema:check`.
 
 export const authSchema = pgSchema("auth");
 
@@ -47,6 +49,8 @@ export const user = authSchema.table(
     disabledAt: timestamp("disabled_at", tz),
     disabledReasonCode: varchar("disabled_reason_code", { length: 40 }),
     version: integer("version").default(1).notNull(),
+    // Two-factor plugin (M1.3). input:false in the plugin schema.
+    twoFactorEnabled: boolean("two_factor_enabled").default(false).notNull(),
   },
   (table) => [
     check(
@@ -94,8 +98,40 @@ export const session = authSchema.table(
     userId: uuid("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    // Server-owned assurance evidence (M1.3, ADR-0004); input:false and
+    // returned:false, written only by the session hook and reauth command.
+    authPurpose: varchar("auth_purpose", { length: 24 }),
+    authMethod: varchar("auth_method", { length: 32 }),
+    primaryAuthenticatedAt: timestamp("primary_authenticated_at", tz),
+    mfaAuthenticatedAt: timestamp("mfa_authenticated_at", tz),
+    accountVersion: integer("account_version"),
+    reauthenticatedAt: timestamp("reauthenticated_at", tz),
+    reauthenticationMethod: varchar("reauthentication_method", {
+      length: 32,
+    }),
+    reauthenticationPurpose: varchar("reauthentication_purpose", {
+      length: 64,
+    }),
   },
-  (table) => [index("session_userId_idx").on(table.userId)],
+  (table) => [
+    index("session_userId_idx").on(table.userId),
+    check(
+      "session_auth_purpose_check",
+      sql`${table.authPurpose} IS NULL OR ${table.authPurpose} IN ('STANDARD', 'STAFF_FIRST_FACTOR', 'STAFF_ACTIVATION', 'STAFF')`,
+    ),
+    check(
+      "session_auth_method_check",
+      sql`${table.authMethod} IS NULL OR ${table.authMethod} IN ('PASSWORD', 'PASSWORD_TOTP', 'PASSWORD_BACKUP_CODE')`,
+    ),
+    check(
+      "session_staff_assurance_check",
+      sql`${table.authPurpose} IS DISTINCT FROM 'STAFF' OR (${table.authMethod} IN ('PASSWORD_TOTP', 'PASSWORD_BACKUP_CODE') AND ${table.primaryAuthenticatedAt} IS NOT NULL AND ${table.mfaAuthenticatedAt} IS NOT NULL AND ${table.accountVersion} IS NOT NULL)`,
+    ),
+    check(
+      "session_reauthentication_check",
+      sql`(${table.reauthenticatedAt} IS NULL AND ${table.reauthenticationMethod} IS NULL AND ${table.reauthenticationPurpose} IS NULL) OR (${table.reauthenticatedAt} IS NOT NULL AND ${table.reauthenticationMethod} = 'PASSWORD_TOTP' AND ${table.reauthenticationPurpose} ~ '^[A-Z_]{1,64}$')`,
+    ),
+  ],
 );
 
 export const account = authSchema.table(
@@ -143,9 +179,45 @@ export const verification = authSchema.table(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
+// Two-factor plugin table (M1.3). `secret` (TOTP seed) and `backup_codes`
+// hold only Better Auth XChaCha20-Poly1305 ciphertext under the versioned
+// auth secret; both are returned:false. One enrollment per account.
+export const twoFactor = authSchema.table(
+  "two_factor",
+  {
+    id: uuid("id")
+      .default(sql`pg_catalog.gen_random_uuid()`)
+      .primaryKey(),
+    secret: text("secret").notNull(),
+    backupCodes: text("backup_codes").notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    verified: boolean("verified").default(true).notNull(),
+    failedVerificationCount: integer("failed_verification_count")
+      .default(0)
+      .notNull(),
+    lockedUntil: timestamp("locked_until", tz),
+  },
+  (table) => [
+    index("twoFactor_secret_idx").on(table.secret),
+    index("twoFactor_userId_idx").on(table.userId),
+    unique("two_factor_user_id_unique").on(table.userId),
+    check(
+      "two_factor_failed_count_check",
+      sql`${table.failedVerificationCount} >= 0`,
+    ),
+  ],
+);
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
+  twoFactors: many(twoFactor),
+}));
+
+export const twoFactorRelations = relations(twoFactor, ({ one }) => ({
+  user: one(user, { fields: [twoFactor.userId], references: [user.id] }),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({

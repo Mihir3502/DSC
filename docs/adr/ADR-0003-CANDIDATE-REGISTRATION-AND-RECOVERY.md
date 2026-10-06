@@ -92,7 +92,7 @@ Decided by the project owner on 2026-10-06, replacing the stateless verification
 - Session timeout policy (local defaults only).
 - Optional duplicate-registration security notification (not approved; not sent).
 - Candidate notices/terms text (none approved; no acceptance step).
-- Recent-authentication step-up and MFA (M1.3).
+- Recent-authentication step-up and MFA (M1.3): staff only, see ADR-0004. Candidate MFA and candidate step-up are not in scope.
 
 ## Consequences
 

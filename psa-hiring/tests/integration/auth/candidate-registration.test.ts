@@ -1039,8 +1039,9 @@ describe("authenticated password change and session management", () => {
       headers: headers(),
       asResponse: true,
     });
+    // M1.3: a staff password alone never yields a session.
     const cookie = sessionCookieFrom(response);
-    expect(cookie).not.toBeNull();
+    expect(cookie).toBeNull();
     expect(
       await getCandidateSecurityOverview(headers(cookie), runtime),
     ).toBeNull();

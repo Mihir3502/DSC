@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
-// Per-process fixed-window limiter for candidate authentication actions
-// (packet M1.2 §11.1, §12.1, AC-M1.2-11). Better Auth's own limiter guards
+// Per-process fixed-window limiter for candidate (packet M1.2 §11.1, §12.1,
+// AC-M1.2-11) and staff (M1.3) authentication actions. Better Auth's own limiter guards
 // only HTTP routes, and these flows run as server actions, so the
 // application limits them here. Keys are SHA-256 digests: no email or
 // client address is kept in memory in clear text, and nothing is logged.
@@ -21,6 +21,19 @@ export const candidateRateLimits = Object.freeze({
   sendPerClient: { limit: 20, windowMs: 60 * 60_000 },
   resetPerClient: { limit: 20, windowMs: 15 * 60_000 },
   changePasswordPerAccount: { limit: 10, windowMs: 15 * 60_000 },
+  // M1.3 staff authentication (ADR-0004). The MFA challenge itself is also
+  // bounded per challenge and per account by Better Auth's lockout.
+  staffSignInPerClient: { limit: 50, windowMs: 15 * 60_000 },
+  staffSignInPerClientEmail: { limit: 10, windowMs: 15 * 60_000 },
+  staffMfaPerClient: { limit: 30, windowMs: 15 * 60_000 },
+  staffActivatePerClient: { limit: 20, windowMs: 15 * 60_000 },
+  staffEnrollPerAccount: { limit: 10, windowMs: 15 * 60_000 },
+  /** Reauth has no library lockout (session path); this is its lockout. */
+  staffReauthPerAccount: { limit: 5, windowMs: 15 * 60_000 },
+  staffChangePasswordPerAccount: { limit: 10, windowMs: 15 * 60_000 },
+  staffRecoveryPerClient: { limit: 10, windowMs: 60 * 60_000 },
+  /** Silent cap: the public response stays generic. */
+  staffRecoveryPerEmail: { limit: 3, windowMs: 24 * 60 * 60_000 },
 } satisfies Record<string, RateLimitPolicy>);
 
 export type RateLimitBucket = keyof typeof candidateRateLimits;

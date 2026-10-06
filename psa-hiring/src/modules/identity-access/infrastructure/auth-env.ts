@@ -62,6 +62,29 @@ const authEnvSchema = z
       1_209_600,
       604_800,
     ),
+    // M1.3 staff invitation, MFA, recent authentication, and recovery
+    // (ADR-0004). Values below 60 seconds are accepted only in test, so
+    // browser tests can observe lockout recovery and recent-auth expiry.
+    AUTH_STAFF_INVITATION_EXPIRES_IN_SECONDS: boundedSeconds(
+      3_600,
+      604_800,
+      259_200,
+    ),
+    AUTH_STAFF_REENROLLMENT_EXPIRES_IN_SECONDS: boundedSeconds(
+      900,
+      86_400,
+      14_400,
+    ),
+    AUTH_STAFF_MFA_CHALLENGE_SECONDS: boundedSeconds(60, 600, 300),
+    AUTH_STAFF_MFA_MAX_FAILURES: boundedSeconds(3, 10, 5),
+    AUTH_STAFF_MFA_LOCKOUT_SECONDS: boundedSeconds(5, 3_600, 900),
+    AUTH_STAFF_RECENT_AUTH_SECONDS: boundedSeconds(5, 1_800, 300),
+    AUTH_STAFF_RECOVERY_EXPIRES_IN_SECONDS: boundedSeconds(
+      3_600,
+      604_800,
+      259_200,
+    ),
+    AUTH_STAFF_RECOVERY_APPROVAL_SECONDS: boundedSeconds(600, 86_400, 3_600),
     AUTH_EMAIL_TRANSPORT: z
       .enum(emailTransports, {
         error: `must be one of: ${emailTransports.join(", ")}`,
@@ -129,6 +152,20 @@ const authEnvSchema = z
         "AUTH_SESSION_UPDATE_AGE_SECONDS",
         "must be less than AUTH_SESSION_EXPIRES_IN_SECONDS",
       );
+    }
+    if (env.APP_ENV !== "test") {
+      if (env.AUTH_STAFF_MFA_LOCKOUT_SECONDS < 60) {
+        fail(
+          "AUTH_STAFF_MFA_LOCKOUT_SECONDS",
+          "must be at least 60 outside test",
+        );
+      }
+      if (env.AUTH_STAFF_RECENT_AUTH_SECONDS < 60) {
+        fail(
+          "AUTH_STAFF_RECENT_AUTH_SECONDS",
+          "must be at least 60 outside test",
+        );
+      }
     }
     if (env.AUTH_EMAIL_TRANSPORT === "smtp-local") {
       if (productionLike) {

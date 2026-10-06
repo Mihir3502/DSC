@@ -24,6 +24,12 @@ const knownRoutes = new Set([
   "/recover",
   "/reset-password",
   "/candidate/security",
+  "/staff/activate",
+  "/staff/sign-in",
+  "/staff/mfa",
+  "/staff/recover",
+  "/staff/security",
+  "/staff/reauthenticate",
 ]);
 
 /**
@@ -37,6 +43,9 @@ const noStorePaths = [
   "/recover",
   "/reset-password",
   "/candidate",
+  // M1.3: every staff page (activation, sign-in, MFA, recovery, security,
+  // reauthentication) carries one-time capabilities or personal state.
+  "/staff",
 ];
 
 export function isNoStorePath(pathname: string): boolean {

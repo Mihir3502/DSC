@@ -54,14 +54,15 @@ export async function resolveCurrentCandidate(
   return principal;
 }
 
-function sessionRef(deps: CandidateAuthDependencies, sessionId: string) {
+/** HMAC-derived opaque session reference (shared with staff, M1.3). */
+export function sessionRef(deps: CandidateAuthDependencies, sessionId: string) {
   return createHmac("sha256", deps.env.BETTER_AUTH_SECRET)
     .update(`session-ref.v1:${sessionId}`)
     .digest("base64url")
     .slice(0, 32);
 }
 
-function sameRef(a: string, b: string): boolean {
+export function sameRef(a: string, b: string): boolean {
   const left = Buffer.from(a);
   const right = Buffer.from(b);
   return left.length === right.length && timingSafeEqual(left, right);

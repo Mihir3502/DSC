@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// Reads a one-time capability (reset token or invitation intent) from the
-// URL fragment, then removes the fragment from the address bar and browser
-// history before any interactive content renders (packet M1.2 §9.2).
+// Reads a one-time capability (reset token, invitation intent, or M1.3 staff
+// invitation) from the URL fragment, then removes the fragment from the
+// address bar and browser history before any interactive content renders
+// (packet M1.2 §9.2).
 // Fragments are never sent to the server or in Referer headers, so the
 // capability does not reach access logs. It stays in memory only.
 
@@ -14,7 +15,7 @@ export type FragmentCapability =
   { ready: false; value: null } | { ready: true; value: string | null };
 
 export function useFragmentCapability(
-  name: "token" | "intent",
+  name: "token" | "intent" | "invite",
 ): FragmentCapability {
   const [state, setState] = useState<FragmentCapability>({
     ready: false,

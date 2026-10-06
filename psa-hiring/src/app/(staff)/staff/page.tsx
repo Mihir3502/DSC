@@ -29,8 +29,15 @@ export default function StaffPortalPage() {
         </CardHeader>
         <CardContent>
           <p>
-            Invitation-only staff sign-in and work queues will be added in later
-            work items.
+            Staff accounts are invitation-only and require two-step
+            verification.{" "}
+            <Link
+              href="/staff/sign-in"
+              className="font-medium text-primary underline underline-offset-4"
+            >
+              Staff sign in
+            </Link>
+            . Work queues and records will be added in later work items.
           </p>
         </CardContent>
       </Card>

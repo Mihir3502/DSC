@@ -68,6 +68,20 @@ describe("proxy (trusted web boundary)", () => {
   });
 
   it.each([
+    "/staff/activate",
+    "/staff/sign-in",
+    "/staff/mfa",
+    "/staff/recover",
+    "/staff/security",
+    "/staff/reauthenticate",
+  ])("marks staff page %s no-store with no referrer (M1.3)", (path) => {
+    const { response } = run(path);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+    expect(routeLabel(path)).toBe(path);
+  });
+
+  it.each([
     ["/", "/"],
     ["/staff", "/staff"],
     ["/candidate/123", "/(other)"],

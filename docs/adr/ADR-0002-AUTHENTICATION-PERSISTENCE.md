@@ -86,7 +86,7 @@ Database-backed single-use records (`auth.verification`, atomically consumed thr
 - **Distributed rate-limit store:** rate limiting uses per-process memory, so staging/production auth startup is **refused** until a store is chosen with the hosting decision.
 - **Compromised-password checking:** M1.2 added a port with a local denylist only (ADR-0003); a privacy-preserving production provider is still undecided, so production-like startup fails closed.
 - **Internationalized email addresses:** login emails are ASCII because Better Auth's sign-in validator accepts ASCII only.
-- **Staff MFA** (M1.3) and **recent-authentication enforcement**: not implemented.
+- **Staff MFA** (M1.3) and **recent-authentication enforcement**: implemented by ADR-0004 (staff only; business actions adopt the primitive in later work items).
 
 ## Consequences
 

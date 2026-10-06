@@ -53,6 +53,15 @@ void runScript("auth:mailpit:check", async () => {
       expiresInMinutes: 30,
     },
     { template: "PASSWORD_CHANGED", to },
+    // M1.3 staff templates (synthetic capability; never a real invitation).
+    {
+      template: "STAFF_INVITATION",
+      to,
+      token: randomBytes(32).toString("base64url"),
+      purpose: "STAFF_ACTIVATION",
+      expiresInMinutes: 4320,
+    },
+    { template: "STAFF_SECURITY_NOTICE", to, notice: "PASSWORD_CHANGED" },
   ];
   for (const message of messages) dispatcher.enqueue(message);
   await dispatcher.idle();

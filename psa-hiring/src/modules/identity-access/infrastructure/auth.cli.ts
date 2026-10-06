@@ -2,7 +2,11 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/node-postgres";
 import * as authSchema from "./auth-schema";
-import { AUTH_SCHEMA_NAME, staticAuthOptions } from "./auth-options";
+import {
+  AUTH_SCHEMA_NAME,
+  staffTwoFactorPlugin,
+  staticAuthOptions,
+} from "./auth-options";
 
 // Configuration used ONLY by the pinned Better Auth CLI (`pnpm
 // auth:schema:check`). It shares the runtime's static options and the
@@ -19,4 +23,5 @@ export const auth = betterAuth({
     schemaName: AUTH_SCHEMA_NAME,
     schema: authSchema,
   }),
+  plugins: [staffTwoFactorPlugin()],
 });

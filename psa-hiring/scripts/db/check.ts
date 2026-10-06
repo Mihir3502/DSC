@@ -84,7 +84,12 @@ void runScript("db:check", async () => {
         has_table_privilege('auth.verification', 'DELETE') AS verification_delete,
         has_table_privilege('auth.user', 'DELETE') AS user_delete,
         has_table_privilege('auth.account', 'DELETE') AS account_delete,
-        has_table_privilege('auth.user', 'UPDATE') AS user_update`);
+        has_table_privilege('auth.user', 'UPDATE') AS user_update,
+        has_table_privilege('auth.two_factor', 'DELETE') AS two_factor_delete,
+        has_table_privilege('auth.totp_replay_guard', 'DELETE') AS replay_delete,
+        has_table_privilege('auth.staff_invitation', 'DELETE') AS invitation_delete,
+        has_table_privilege('auth.staff_recovery_case', 'DELETE') AS recovery_delete,
+        has_table_privilege('auth.staff_invitation', 'UPDATE') AS invitation_update`);
     assertCheck(
       authPrivileges.tables_present,
       "auth tables are missing (run pnpm db:migrate)",
@@ -106,8 +111,20 @@ void runScript("db:check", async () => {
       authPrivileges.user_update,
       "application role lacks UPDATE on auth.user",
     );
+    // Staff MFA (M1.3): enrollment removal and replay-marker pruning need
+    // DELETE; invitations and recovery cases are evidence and must not.
+    assertCheck(
+      authPrivileges.two_factor_delete && authPrivileges.replay_delete,
+      "application role lacks DELETE on auth.two_factor/auth.totp_replay_guard (run pnpm db:bootstrap:local after db:migrate)",
+    );
+    assertCheck(
+      authPrivileges.invitation_delete === false &&
+        authPrivileges.recovery_delete === false &&
+        authPrivileges.invitation_update,
+      "application role must update but never delete staff invitations/recovery cases",
+    );
     ok(
-      "auth schema privileges: DML as designed, DELETE only on sessions/verifications, no DDL",
+      "auth schema privileges: DML as designed, DELETE only on sessions/verifications/two-factor/replay markers, no DDL",
     );
 
     // DML round trip inside a transaction that is always rolled back.

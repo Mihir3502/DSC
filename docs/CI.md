@@ -53,11 +53,11 @@ No `.env` file, Compose database, or volume is needed. Tests use only generated 
 | `guard:sensitive` | `test:data-guard` (plus `test:critical-guard` and `test:artifact-guard`) |
 | `test:unit` + `test:component` + `test:coverage` | `test:coverage` in CI (`test:unit` and `test:component` exist for local use) |
 | `test:security` | `test:security` |
-| `db:test:migrations` | `test:integration` (migration-from-empty in a disposable database, including the M1.1 auth tests) |
+| `db:test:migrations` | `test:integration` (migration-from-empty in a disposable database, including the M1.1–M1.3 auth tests) |
 
 ### Test environment variables
 
-CI defines only `NEXT_TELEMETRY_DISABLED=1`. `tests/e2e/support/run-with-database.ts` gives Playwright's production server the same disposable database settings, a fresh random `TEST-` auth secret, and `AUTH_EMAIL_TRANSPORT=capture-file` writing to a private temp directory (never under `test-results/` or `playwright-report/`). Traces are off for the candidate-auth specs. The integration harness generates `APP_ENV=test`, `NODE_ENV=test`, and runtime, migration, and admin URLs pointing to its own container (for example `postgresql://psa_app:<generated>@127.0.0.1:<random-port>/psa_test_<run>_<label>`). Playwright's server receives `APP_ENV=test`. No developer `DATABASE_*` value is ever read.
+CI defines only `NEXT_TELEMETRY_DISABLED=1`. `tests/e2e/support/run-with-database.ts` gives Playwright's production server the same disposable database settings, a fresh random `TEST-` auth secret, and `AUTH_EMAIL_TRANSPORT=capture-file` writing to a private temp directory (never under `test-results/` or `playwright-report/`). Traces are off for the candidate-auth specs; traces, screenshots, and videos are off for the staff-auth specs (setup keys and backup codes are on screen). M1.3 adds test-only `AUTH_STAFF_MFA_LOCKOUT_SECONDS=5` and `AUTH_STAFF_RECENT_AUTH_SECONDS=20` (rejected outside `APP_ENV=test`). The integration harness generates `APP_ENV=test`, `NODE_ENV=test`, and runtime, migration, and admin URLs pointing to its own container (for example `postgresql://psa_app:<generated>@127.0.0.1:<random-port>/psa_test_<run>_<label>`). Playwright's server receives `APP_ENV=test`. No developer `DATABASE_*` value is ever read.
 
 ## Disposable database isolation
 
