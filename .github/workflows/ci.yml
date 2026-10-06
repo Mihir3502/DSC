@@ -1,0 +1,197 @@
+# Foundation CI (M0.6). Runs untrusted pull-request code with a read-only
+# token, no secrets, no deployment, and synthetic/disposable resources only.
+# Policy is enforced by psa-hiring/scripts/ci/workflow-policy.ts.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+    working-directory: psa-hiring
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  static-and-security:
+    name: static-and-security
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # full history for the secret scan
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: psa-hiring/.nvmrc
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: psa-hiring/package.json
+          cache: true
+          cache_dependency_path: psa-hiring/pnpm-lock.yaml
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      - name: Secret scan (gitleaks, full history)
+        run: pnpm test:secrets
+      - name: Prohibited real-data guard
+        run: pnpm test:data-guard
+      - name: Critical-test skip guard
+        run: pnpm test:critical-guard
+      - name: Workflow policy
+        run: pnpm test:workflow-policy
+      - name: Format check
+        run: pnpm format:check
+      - name: Lint (module boundaries, no-console)
+        run: pnpm lint
+      - name: Typecheck (strict)
+        run: pnpm typecheck
+      - name: Dependency audit (production HIGH/CRITICAL gate)
+        run: pnpm test:deps
+
+  unit-component-coverage:
+    name: unit-component-coverage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: psa-hiring/.nvmrc
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: psa-hiring/package.json
+          cache: true
+          cache_dependency_path: psa-hiring/pnpm-lock.yaml
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      - name: Unit and component tests with V8 coverage
+        run: pnpm test:coverage
+      - name: Artifact guard (coverage)
+        run: pnpm test:artifact-guard coverage
+      - name: Upload coverage report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-${{ github.run_id }}-${{ github.run_attempt }}
+          path: psa-hiring/coverage/
+          retention-days: 7
+          if-no-files-found: error
+
+  database-integration:
+    name: database-integration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: psa-hiring/.nvmrc
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: psa-hiring/package.json
+          cache: true
+          cache_dependency_path: psa-hiring/pnpm-lock.yaml
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      - name: Migrations from empty + PostgreSQL integration (disposable Testcontainers)
+        run: pnpm test:integration
+
+  build:
+    name: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: psa-hiring/.nvmrc
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: psa-hiring/package.json
+          cache: true
+          cache_dependency_path: psa-hiring/pnpm-lock.yaml
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      - name: Production build
+        run: pnpm build
+
+  critical-e2e:
+    name: critical-e2e
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: psa-hiring/.nvmrc
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: psa-hiring/package.json
+          cache: true
+          cache_dependency_path: psa-hiring/pnpm-lock.yaml
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium (lockfile-pinned Playwright)
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Critical Chromium smoke tests
+        run: pnpm test:e2e:critical
+      - name: Accessibility (axe) checks
+        run: pnpm test:a11y
+      - name: Artifact guard (Playwright evidence)
+        id: artifact-guard
+        if: failure()
+        run: pnpm test:artifact-guard playwright-report test-results
+      - name: Upload Playwright evidence (failure only)
+        if: failure() && steps.artifact-guard.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            psa-hiring/playwright-report/
+            psa-hiring/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  ci-gate:
+    name: ci-gate
+    if: always()
+    needs:
+      - static-and-security
+      - unit-component-coverage
+      - database-integration
+      - build
+      - critical-e2e
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: psa-hiring/.nvmrc
+      - name: Require every job to succeed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/ci-gate.ts

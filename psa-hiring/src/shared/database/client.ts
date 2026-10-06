@@ -2,6 +2,7 @@ import "server-only";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { getServerEnv } from "@/config/server-env";
+import { getLogger } from "@/shared/logging/pino-logger";
 import * as schema from "./schema";
 
 export type Database = NodePgDatabase<typeof schema>;
@@ -43,12 +44,13 @@ function createDatabase(): DatabaseState {
     options: "-c TimeZone=UTC",
   });
 
-  // Idle-client errors would otherwise crash the process. Report only safe
-  // context; never the connection string. (Structured logging is M0.5.)
-  pool.on("error", (error: Error & { code?: string }) => {
-    console.error(
-      `[database] idle client error${error.code ? ` (${error.code})` : ""}`,
-    );
+  // Idle-client errors would otherwise crash the process. Log only a stable
+  // code through the M0.5 logger; never the error message or connection string.
+  pool.on("error", () => {
+    getLogger().error("database.idle_client_error", {
+      module: "database",
+      errorCode: "DEPENDENCY.UNAVAILABLE",
+    });
   });
 
   return { pool, db: drizzle({ client: pool, schema }) };

@@ -4,7 +4,7 @@ Web application for managing hiring and compliance readiness for a Kentucky priv
 
 Release 1 covers candidate intake through **Ready for Assignment**. Scheduling, visit tracking, timesheets, payroll, billing, and leave are out of scope. See [`CLAUDE.md`](../CLAUDE.md) for the full scope.
 
-> **Current state: M0.5 logging, errors, and correlation.** Placeholder pages, local PostgreSQL and Mailpit, a Drizzle migration workflow, a layered automated test suite, and structured logging with correlation IDs and safe error handling. The schema contains one technical table (`app.system_metadata`) and no business data; no page reads the database and the application does not send email. Authentication and CI arrive in later work items.
+> **Current state: M0.6 CI baseline (M0 foundation complete pending review).** Placeholder pages, local PostgreSQL and Mailpit, a Drizzle migration workflow, a layered automated test suite, and structured logging with correlation IDs and safe error handling. The schema contains one technical table (`app.system_metadata`) and no business data; no page reads the database and the application does not send email. Authentication arrives in M1. CI runs on every pull request and push to `main`.
 
 ## Prerequisites
 
@@ -89,6 +89,8 @@ All test data is synthetic. Tests never use your `.env.local`, never touch the C
 | `pnpm test:data-guard`     | Fails if test/fixture files contain real-looking personal data or live secrets    |
 | `pnpm test:critical-guard` | Fails if critical browser tests are focused (`.only`) or skipped without approval |
 | `pnpm test:foundation`     | All of the above in order: guards, coverage, integration, E2E, accessibility      |
+| `pnpm test:security`       | Secret scan (Gitleaks, Docker), production dependency audit, workflow policy      |
+| `pnpm ci:local`            | The exact CI sequence (see `docs/CI.md`)                                          |
 
 First-time browser setup: `pnpm exec playwright install chromium`. To run Firefox and WebKit too (main/nightly), install them with `pnpm exec playwright install firefox webkit` and run `E2E_BROWSERS=chromium,firefox,webkit pnpm test:e2e`.
 
@@ -217,3 +219,5 @@ Next.js collects anonymous framework telemetry by default. To opt out on your ma
 - [`AGENTS.md`](../AGENTS.md) — agent workspace rules
 - [`docs/IMPLEMENTATION_PLAN.md`](../docs/IMPLEMENTATION_PLAN.md) — milestones and work items
 - [`docs/OPERATIONS.md`](../docs/OPERATIONS.md) — logging fields, correlation IDs, and the public error contract
+- [`docs/CI.md`](../docs/CI.md) — CI workflow, local parity (`pnpm ci:local`), artifacts, and exception procedures
+- [`docs/adr/ADR-0001-MODULAR-MONOLITH-FOUNDATION.md`](../docs/adr/ADR-0001-MODULAR-MONOLITH-FOUNDATION.md) — accepted foundation architecture
