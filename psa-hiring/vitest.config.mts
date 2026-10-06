@@ -8,6 +8,16 @@ import { defineConfig } from "vitest/config";
 // Playwright specs (tests/e2e, tests/accessibility) are never picked up here.
 
 const alias = { "@": path.resolve(import.meta.dirname, "src") };
+// Server-only modules run in Node for unit/integration tests, so resolve the
+// `server-only` guard to its no-op. The jsdom component project keeps the
+// real guard, so client components still cannot import server code.
+const serverAlias = {
+  ...alias,
+  "server-only": path.resolve(
+    import.meta.dirname,
+    "node_modules/server-only/empty.js",
+  ),
+};
 
 export default defineConfig({
   resolve: { alias },
@@ -36,6 +46,7 @@ export default defineConfig({
     projects: [
       {
         extends: true,
+        resolve: { alias: serverAlias },
         test: {
           name: "unit",
           environment: "node",
@@ -58,17 +69,7 @@ export default defineConfig({
       },
       {
         extends: true,
-        resolve: {
-          alias: {
-            ...alias,
-            // The real database client is server-only; the integration
-            // project runs it in Node, so resolve the guard to its no-op.
-            "server-only": path.resolve(
-              import.meta.dirname,
-              "node_modules/server-only/empty.js",
-            ),
-          },
-        },
+        resolve: { alias: serverAlias },
         test: {
           name: "integration",
           environment: "node",

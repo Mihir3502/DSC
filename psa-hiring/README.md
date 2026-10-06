@@ -4,7 +4,7 @@ Web application for managing hiring and compliance readiness for a Kentucky priv
 
 Release 1 covers candidate intake through **Ready for Assignment**. Scheduling, visit tracking, timesheets, payroll, billing, and leave are out of scope. See [`CLAUDE.md`](../CLAUDE.md) for the full scope.
 
-> **Current state: M0.4 test foundation.** Placeholder pages, local PostgreSQL and Mailpit, a Drizzle migration workflow, and a layered automated test suite. The schema contains one technical table (`app.system_metadata`) and no business data; no page reads the database and the application does not send email. Authentication, logging, and CI arrive in later M0 work items.
+> **Current state: M0.5 logging, errors, and correlation.** Placeholder pages, local PostgreSQL and Mailpit, a Drizzle migration workflow, a layered automated test suite, and structured logging with correlation IDs and safe error handling. The schema contains one technical table (`app.system_metadata`) and no business data; no page reads the database and the application does not send email. Authentication and CI arrive in later work items.
 
 ## Prerequisites
 
@@ -106,6 +106,10 @@ First-time browser setup: `pnpm exec playwright install chromium`. To run Firefo
 - **Browser tests** build the app and serve it on `http://127.0.0.1:3100`. Any request to another host is blocked and fails the test, as do page or console errors. Reports go to `playwright-report/`; traces, screenshots, and videos are kept only for failures in `test-results/`.
 - Shared synthetic fixture builders live in `tests/fixtures/`. Use reserved domains (`example.test`), `TEST` labels, and synthetic SSN ranges (area 000/666/9xx) only.
 - Coverage covers `src/` and has no threshold yet; thresholds come with real domain code.
+
+## Logging and errors
+
+Server logs are JSON lines on stdout with an allowlisted set of fields. Every request gets an `x-correlation-id` response header, and error pages show that ID as the request reference. Route handlers should be wrapped with `withRouteHandler` so failures return `application/problem+json` without internal details. See [`docs/OPERATIONS.md`](../docs/OPERATIONS.md) for the field allowlist, forbidden data, and error codes.
 
 ## Local services
 
@@ -212,3 +216,4 @@ Next.js collects anonymous framework telemetry by default. To opt out on your ma
 - [`CLAUDE.md`](../CLAUDE.md) — product scope and rules
 - [`AGENTS.md`](../AGENTS.md) — agent workspace rules
 - [`docs/IMPLEMENTATION_PLAN.md`](../docs/IMPLEMENTATION_PLAN.md) — milestones and work items
+- [`docs/OPERATIONS.md`](../docs/OPERATIONS.md) — logging fields, correlation IDs, and the public error contract
