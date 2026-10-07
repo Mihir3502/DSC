@@ -622,7 +622,13 @@ describe("document access gate", () => {
     expect(h.events.map((e) => e.code)).toEqual([
       "authz.restricted_access_allowed",
     ]);
-    expect(JSON.stringify(h.events)).not.toContain(sid(500));
+    // M1.6 (ADR-0012): the durable restricted-access event names the
+    // document only as its opaque audit target; no other field carries it.
+    const [event] = h.events;
+    expect(event.recordRef).toBe(sid(500));
+    expect(JSON.stringify({ ...event, recordRef: undefined })).not.toContain(
+      sid(500),
+    );
   });
 
   it("requires recent authentication for restricted documents", async () => {

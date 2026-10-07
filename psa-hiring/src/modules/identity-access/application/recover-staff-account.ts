@@ -1,4 +1,5 @@
 import "server-only";
+import { withAuditedTransaction } from "@/modules/audit";
 import {
   decideRecoveryTransition,
   isRecoveryReasonCode,
@@ -54,7 +55,10 @@ export async function requestStaffRecovery(
   deps: StaffAuthDependencies = defaultStaffDependencies(),
 ): Promise<RequestStaffRecoveryResult> {
   if (!deps.limiter.consume("staffRecoveryPerClient", clientKeyFrom(headers))) {
-    deps.events.record({ code: "auth.rate_limited", category: "rate_limited" });
+    await deps.events.record({
+      code: "auth.rate_limited",
+      category: "rate_limited",
+    });
     return { kind: "RATE_LIMITED" };
   }
   const email = tryNormalizeEmail(input.email);
@@ -69,8 +73,8 @@ export async function requestStaffRecovery(
   const account = await findAccountByEmail(deps.db, email.login);
   if (account?.accountType === "STAFF" && account.status === "ACTIVE") {
     const now = new Date();
-    const caseId = await deps.db.transaction((tx) =>
-      insertRecoveryCase(tx, {
+    await withAuditedTransaction(deps, async (tx, audit) => {
+      const caseId = await insertRecoveryCase(tx, {
         accountId: account.id,
         reasonCode: reason,
         requestedAt: now,
@@ -78,23 +82,27 @@ export async function requestStaffRecovery(
           now.getTime() +
             deps.env.AUTH_STAFF_RECOVERY_EXPIRES_IN_SECONDS * 1000,
         ),
-      }),
-    );
-    if (caseId) {
-      deps.events.record({
-        code: "staff.recovery_requested",
-        accountRef: account.id,
-        recordRef: caseId,
       });
-    }
+      if (caseId) {
+        await audit.append({
+          code: "staff.recovery_requested",
+          accountRef: account.id,
+          recordRef: caseId,
+        });
+      }
+    });
   } else {
-    deps.events.record({
-      code: "staff.recovery_requested",
+    // No case is created; the response is identical either way.
+    await deps.events.record({
+      code: "staff.recovery_denied",
       category: "not_eligible",
     });
   }
   return { kind: "SUBMITTED" };
 }
+
+const uuidShape =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 const actionFor: Record<RecoveryCommand["type"], StaffAdministrationAction> = {
   START_VERIFICATION: "RECOVERY_START_VERIFICATION",
@@ -155,13 +163,19 @@ export async function advanceStaffRecovery(
     input.actor.kind !== "ACCOUNT" ||
     !deps.staffAdmin.allows(input.actor, action)
   ) {
-    deps.events.record({ code: "staff.recovery_denied", category: "denied" });
+    await deps.events.record({
+      code: "staff.recovery_denied",
+      category: "denied",
+    });
     return { kind: "NOT_AUTHORIZED" };
   }
   const actorId = input.actor.accountId;
   const actor = await findAccountById(deps.db, actorId);
   if (actor?.accountType !== "STAFF" || actor.status !== "ACTIVE") {
-    deps.events.record({ code: "staff.recovery_denied", category: "denied" });
+    await deps.events.record({
+      code: "staff.recovery_denied",
+      category: "denied",
+    });
     return { kind: "NOT_AUTHORIZED" };
   }
 
@@ -169,7 +183,8 @@ export async function advanceStaffRecovery(
   let pendingEmail: AuthEmailMessage | null = null;
   let result: AdvanceStaffRecoveryResult;
   try {
-    result = await deps.db.transaction(async (tx) => {
+    result = await withAuditedTransaction(deps, async (tx, audit) => {
+      if (!uuidShape.test(input.caseId)) return { kind: "NOT_FOUND" } as const;
       const row = await findRecoveryCase(tx, input.caseId, true);
       if (!row) return { kind: "NOT_FOUND" } as const;
       const decision = decideRecoveryTransition(
@@ -186,6 +201,12 @@ export async function advanceStaffRecovery(
           at: now,
           resolution: decision.resolution,
         });
+        await audit.append({
+          code: "staff.recovery_expired",
+          recordRef: row.id,
+          accountRef: row.accountId,
+          systemActor: "SCHEDULED_EXPIRY",
+        });
         return { kind: "EXPIRED" } as const;
       }
 
@@ -198,17 +219,29 @@ export async function advanceStaffRecovery(
         await removeTwoFactorEnrollment(tx, row.accountId);
         const email = await findAccountEmail(tx, row.accountId);
         if (!email) throw new Denied("ACCOUNT_NOT_ELIGIBLE");
-        const issued = await issueInvitationInTransaction(tx, deps, {
-          email,
-          emailDisplay: email,
-          purpose: "STAFF_REENROLLMENT",
-          issuerReasonCode: "RECOVERY_REENROLLMENT",
-          accountId: row.accountId,
-          recoveryCaseId: row.id,
-          now,
-        });
+        const issued = await issueInvitationInTransaction(
+          tx,
+          deps,
+          {
+            email,
+            emailDisplay: email,
+            purpose: "STAFF_REENROLLMENT",
+            issuerReasonCode: "RECOVERY_REENROLLMENT",
+            accountId: row.accountId,
+            recoveryCaseId: row.id,
+            now,
+          },
+          audit,
+          { actorRef: actorId },
+        );
         if (!issued) throw new Denied("ACCOUNT_NOT_ELIGIBLE");
         pendingEmail = issued.email;
+        await audit.append({
+          code: "staff.mfa_reset",
+          accountRef: row.accountId,
+          actorRef: actorId,
+          recordRef: row.id,
+        });
       }
 
       const applied = await updateRecoveryCase(tx, row, {
@@ -232,6 +265,13 @@ export async function advanceStaffRecovery(
           : {}),
       });
       if (!applied) throw new Error("recovery case changed concurrently");
+      // The case transition and its evidence commit together.
+      await audit.append({
+        code: eventFor[decision.to as keyof typeof eventFor],
+        actorRef: actorId,
+        accountRef: row.accountId,
+        recordRef: row.id,
+      });
       return { kind: "UPDATED", status: decision.to } as const;
     });
   } catch (error) {
@@ -248,23 +288,12 @@ export async function advanceStaffRecovery(
   }
 
   if (pendingEmail) deps.email.enqueue(pendingEmail);
-  const recordRef = /^[0-9a-f-]{36}$/i.test(input.caseId)
-    ? input.caseId
-    : undefined;
-  if (result.kind === "UPDATED") {
-    const code = eventFor[result.status as keyof typeof eventFor];
-    if (code) deps.events.record({ code, accountRef: actorId, recordRef });
-    if (result.status === "COMPLETED") {
-      deps.events.record({ code: "staff.mfa_reset", recordRef });
-    }
-  } else if (result.kind === "EXPIRED") {
-    deps.events.record({ code: "staff.recovery_expired", recordRef });
-  } else {
-    deps.events.record({
+  if (result.kind !== "UPDATED" && result.kind !== "EXPIRED") {
+    await deps.events.record({
       code: "staff.recovery_denied",
       category: "denied",
       accountRef: actorId,
-      recordRef,
+      ...(uuidShape.test(input.caseId) ? { recordRef: input.caseId } : {}),
     });
   }
   return result;

@@ -24,16 +24,22 @@ export async function requestCandidateRecovery(
 ): Promise<RequestRecoveryResult> {
   const email = tryNormalizeEmail(input.email);
   if (!email) return { kind: "INVALID_INPUT" };
-  deps.events.record({ code: "auth.recovery_requested" });
+  await deps.events.record({ code: "auth.recovery_requested" });
 
   // Per-client limit is visible; the per-email cap is silent so an attacker
   // cannot learn anything or block the target's sign-in.
   if (!deps.limiter.consume("sendPerClient", clientKeyFrom(headers))) {
-    deps.events.record({ code: "auth.rate_limited", category: "rate_limited" });
+    await deps.events.record({
+      code: "auth.rate_limited",
+      category: "rate_limited",
+    });
     return { kind: "RATE_LIMITED" };
   }
   if (!deps.limiter.consume("recoverySendPerEmail", email.login)) {
-    deps.events.record({ code: "auth.rate_limited", category: "rate_limited" });
+    await deps.events.record({
+      code: "auth.rate_limited",
+      category: "rate_limited",
+    });
     return { kind: "SENT" };
   }
 

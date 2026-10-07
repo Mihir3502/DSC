@@ -30,6 +30,11 @@ import {
 // 6. No totals, facets, or counts are returned, so pagination cannot
 //    reveal out-of-scope records.
 
+const silentRowRecheck: AuthorizationDependencies["events"] = {
+  record: async () => true,
+  recordInTransaction: async () => {},
+};
+
 export type ListQuerySpec = Readonly<{
   maxPageSize: number;
   defaultPageSize: number;
@@ -245,6 +250,10 @@ export async function authorizeScopedList<R extends ScopedRow>(
   const page = await source.list(constraint, parsed.query);
   const rows: R[] = [];
   let refused = 0;
+  // The list decision above already produced its own (single) evidence.
+  // Per-row rechecks only drop rows; their refusals are summarized in one
+  // telemetry line below instead of one durable event per row.
+  const rowDeps = { ...deps, events: silentRowRecheck };
   for (const row of page.rows) {
     const recheck = await authorize(
       {
@@ -257,7 +266,7 @@ export async function authorizeScopedList<R extends ScopedRow>(
           ? { correlationId: request.correlationId }
           : {}),
       },
-      deps,
+      rowDeps,
     );
     if (recheck.decision === "ALLOW") rows.push(row);
     else refused += 1;

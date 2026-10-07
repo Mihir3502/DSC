@@ -158,3 +158,9 @@ export {
   toCookieWrites,
   type CookieWrite,
 } from "./infrastructure/cookie-writes";
+// M1.6 (ADR-0012): the audit query authorizer adapter. Internal service
+// wiring only; no route, page, or Server Action exposes audit queries.
+export {
+  auditQueryAuthorizer,
+  auditQueryDependencies,
+} from "./application/audit-query-authorizer";

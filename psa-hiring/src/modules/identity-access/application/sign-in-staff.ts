@@ -1,6 +1,10 @@
 import "server-only";
+import { requireRecorded } from "@/modules/audit";
+import { resolveCurrentAccount } from "./current-account";
+import { issuedToken } from "./sign-in-candidate";
 import { clientKeyFrom } from "../infrastructure/action-rate-limiter";
 import {
+  deleteIssuedSession,
   findAccountByEmail,
   findAccountById,
 } from "../infrastructure/account-repository";
@@ -70,12 +74,15 @@ export async function signInStaff(
       email?.login ?? "invalid",
     )
   ) {
-    deps.events.record({ code: "auth.rate_limited", category: "rate_limited" });
+    await deps.events.record({
+      code: "auth.rate_limited",
+      category: "rate_limited",
+    });
     return { kind: "RATE_LIMITED" };
   }
 
-  const fail = (accountRef?: string): StaffSignInResult => {
-    deps.events.record({
+  const fail = async (accountRef?: string): Promise<StaffSignInResult> => {
+    await deps.events.record({
       code: "staff.sign_in_first_factor_failed",
       category: "invalid_credentials",
       accountRef,
@@ -134,7 +141,7 @@ export async function signInStaff(
     { accountId: account.id, primaryAuthenticatedAt },
     deps.env.AUTH_STAFF_MFA_CHALLENGE_SECONDS,
   );
-  deps.events.record({
+  await deps.events.record({
     code: "staff.sign_in_first_factor_succeeded",
     accountRef: account.id,
   });
@@ -160,7 +167,10 @@ export async function completeStaffMfa(
   deps: StaffAuthDependencies = defaultStaffDependencies(),
 ): Promise<StaffMfaResult> {
   if (!deps.limiter.consume("staffMfaPerClient", clientKeyFrom(headers))) {
-    deps.events.record({ code: "auth.rate_limited", category: "rate_limited" });
+    await deps.events.record({
+      code: "auth.rate_limited",
+      category: "rate_limited",
+    });
     return { kind: "RATE_LIMITED" };
   }
   const expired = (): StaffMfaResult => ({
@@ -182,8 +192,10 @@ export async function completeStaffMfa(
   }
 
   const method = input.method === "backup" ? "backup" : "totp";
-  const failure = (category: "invalid_code" | "replayed"): StaffMfaResult => {
-    deps.events.record({
+  const failure = async (
+    category: "invalid_code" | "replayed",
+  ): Promise<StaffMfaResult> => {
+    await deps.events.record({
       code: "staff.mfa_challenge_failed",
       category,
       accountRef: account.id,
@@ -232,7 +244,7 @@ export async function completeStaffMfa(
   if (!response.ok) {
     const error = await authErrorCode(response);
     if (error === "ACCOUNT_TEMPORARILY_LOCKED") {
-      deps.events.record({
+      await deps.events.record({
         code: "staff.mfa_locked",
         category: "locked",
         accountRef: account.id,
@@ -244,7 +256,7 @@ export async function completeStaffMfa(
       error === "INVALID_TWO_FACTOR_COOKIE"
     ) {
       await consumeStaffChallenge(store, cookie);
-      deps.events.record({
+      await deps.events.record({
         code: "staff.mfa_challenge_failed",
         category: "expired",
         accountRef: account.id,
@@ -255,15 +267,33 @@ export async function completeStaffMfa(
   }
 
   await consumeStaffChallenge(store, cookie);
+  // PROVIDER_COMMITTED (ADR-0012): Better Auth created the MFA session
+  // (and consumed a backup code). Without durable evidence the session is
+  // deleted again and the command fails generically.
+  const accountId = account.id;
+  const compensate = async () => {
+    const token = await issuedToken(response);
+    if (token) await deleteIssuedSession(deps.db, accountId, token);
+  };
   if (method === "backup") {
-    deps.events.record({
-      code: "staff.backup_code_used",
-      accountRef: account.id,
-    });
+    await requireRecorded(
+      deps.events,
+      { code: "staff.backup_code_used", accountRef: accountId },
+      compensate,
+    );
   }
-  deps.events.record({
+  await requireRecorded(
+    deps.events,
+    {
+      code: "auth.sign_in_succeeded",
+      accountRef: accountId,
+      methodCategory: method === "totp" ? "TOTP" : "BACKUP_CODE",
+    },
+    compensate,
+  );
+  await deps.events.record({
     code: "staff.mfa_challenge_succeeded",
-    accountRef: account.id,
+    accountRef: accountId,
   });
   return {
     kind: "SIGNED_IN",
@@ -287,11 +317,20 @@ export async function signOutStaff(
   headers: Headers,
   deps: StaffAuthDependencies = defaultStaffDependencies(),
 ): Promise<StaffSignOutResult> {
+  const principal = await resolveCurrentAccount(headers, deps).catch(
+    () => null,
+  );
   try {
     await deps.auth.api.signOut({ headers, asResponse: true });
   } catch {
     // No or invalid session: nothing to revoke.
   }
-  deps.events.record({ code: "staff.sign_out" });
+  // Sign-out is never withheld; the event is recorded when a session ended.
+  if (principal) {
+    await deps.events.record({
+      code: "staff.sign_out",
+      accountRef: principal.accountId,
+    });
+  }
   return { setCookies: expiredStaffCookies(deps) };
 }

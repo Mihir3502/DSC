@@ -1,4 +1,8 @@
 import "server-only";
+import {
+  withAuditedTransaction,
+  type EffectiveAuthority,
+} from "@/modules/audit";
 import { pgErrorCode } from "@/shared/database/errors";
 import type { Principal } from "./current-account";
 import {
@@ -21,6 +25,7 @@ import {
 } from "../domain/role-assignment";
 import { isValidDescriptor } from "../domain/scope-policy";
 import { AUTHORIZATION_POLICY_VERSION } from "../policy/authorization-catalog";
+import { findPermission } from "../policy/permission-catalog";
 import {
   bumpAccountVersion,
   deleteAllSessions,
@@ -63,7 +68,9 @@ import {
 // Approval, revocation, and supersession increment the subject's
 // authorization epoch and account version and delete the subject's
 // sessions in the same transaction (privilege change ⇒ fresh MFA session).
-// Events are recorded after commit through the existing port.
+// Their audit events (with the actor's effective authority and record
+// versions) are appended inside that same transaction (M1.6, ADR-0012):
+// the change and its evidence commit or roll back together.
 
 export type AssignmentActor =
   | Readonly<{ kind: "ACCOUNT"; principal: Principal }>
@@ -101,6 +108,20 @@ const refuse = (reason: AssignmentRefusal): never => {
   throw new Refusal(reason);
 };
 
+/** Per-attempt facts gathered while authorizing the actor. */
+type RunContext = {
+  effective: EffectiveAuthority | null;
+  /** A high-risk denial event was already recorded by the authorizer. */
+  deniedRecorded: boolean;
+};
+
+/** Actor facts for an event: the acting account, or the test harness. */
+function actorFacts(actor: AssignmentActor) {
+  return actor.kind === "ACCOUNT"
+    ? ({ actorRef: actor.principal.accountId } as const)
+    : ({ systemActor: "TEST_HARNESS" } as const);
+}
+
 function actorId(actor: AssignmentActor): string {
   return actor.kind === "ACCOUNT" ? actor.principal.accountId : actor.accountId;
 }
@@ -118,6 +139,7 @@ async function authorizeActor(
   scopeReferenceId: string,
   reasonCode: string | undefined,
   deps: RoleAssignmentDependencies,
+  ctx: RunContext,
 ): Promise<void> {
   if (actor.kind === "BOOTSTRAP") {
     if (
@@ -146,7 +168,17 @@ async function authorizeActor(
     ...(reasonCode ? { reasonCode } : {}),
   };
   const decision = await authorizeInTransaction(tx, request, deps);
-  if (decision.decision !== "ALLOW") refuse("NOT_AUTHORIZED");
+  if (decision.decision !== "ALLOW") {
+    ctx.deniedRecorded = findPermission(permission)?.highRisk === true;
+    refuse("NOT_AUTHORIZED");
+    return;
+  }
+  ctx.effective = {
+    roleCode: decision.effectiveRoleCode,
+    assignmentId: decision.effectiveAssignmentId,
+    scopeType: decision.effectiveScopeType,
+    scopeReferenceId: decision.effectiveScopeReferenceId,
+  };
 }
 
 /** The target scope must resolve ACTIVE now through an approved adapter. */
@@ -186,26 +218,46 @@ async function applySubjectChange(
   now: Date,
   events: SecurityEvent[],
 ) {
-  await bumpAuthorizationVersion(tx, subjectAccountId, now);
+  const version = await bumpAuthorizationVersion(tx, subjectAccountId, now);
   await bumpAccountVersion(tx, subjectAccountId, now);
   await deleteAllSessions(tx, subjectAccountId);
   events.push({
     code: "authz.subject_version_changed",
     accountRef: subjectAccountId,
+    ...(version > 1 ? { previousVersion: version - 1 } : {}),
+    newVersion: version,
     policyVersion: AUTHORIZATION_POLICY_VERSION,
   });
 }
 
 async function run(
   deps: RoleAssignmentDependencies,
-  refusedEvent: Omit<SecurityEvent, "code" | "reasonCode">,
-  body: (tx: Executor, events: SecurityEvent[]) => Promise<AssignmentResult>,
+  actor: AssignmentActor,
+  refusal: Readonly<{ recordRef?: string; roleCode?: string }>,
+  body: (
+    tx: Executor,
+    events: SecurityEvent[],
+    ctx: RunContext,
+  ) => Promise<AssignmentResult>,
 ): Promise<AssignmentResult> {
-  const events: SecurityEvent[] = [];
+  const ctx: RunContext = { effective: null, deniedRecorded: false };
   try {
-    const result = await deps.db.transaction((tx) => body(tx, events));
-    for (const event of events) deps.events.record(event);
-    return result;
+    return await withAuditedTransaction(deps, async (tx, audit) => {
+      ctx.effective = null;
+      ctx.deniedRecorded = false;
+      const events: SecurityEvent[] = [];
+      const result = await body(tx, events, ctx);
+      for (const event of events) {
+        await audit.append({
+          ...event,
+          ...actorFacts(actor),
+          ...(ctx.effective && event.code !== "authz.subject_version_changed"
+            ? { effective: ctx.effective }
+            : {}),
+        });
+      }
+      return result;
+    });
   } catch (error) {
     const reason: AssignmentRefusal =
       error instanceof Refusal
@@ -218,13 +270,23 @@ async function run(
             if (code?.startsWith("23")) return "INVALID_STATE";
             throw error;
           })();
-    deps.events.record({
-      ...refusedEvent,
-      code: "authz.assignment_refused",
-      category: "denied",
-      reasonCode: reason,
-      policyVersion: AUTHORIZATION_POLICY_VERSION,
-    });
+    // One event per refusal: an authorization denial of a high-risk
+    // permission was already recorded once by the authorization service.
+    if (!(reason === "NOT_AUTHORIZED" && ctx.deniedRecorded)) {
+      await deps.events.record({
+        code: "authz.assignment_refused",
+        category: "denied",
+        ...(actor.kind === "ACCOUNT"
+          ? { accountRef: actor.principal.accountId }
+          : {}),
+        ...(refusal.recordRef && isUuid(refusal.recordRef)
+          ? { recordRef: refusal.recordRef }
+          : {}),
+        ...(refusal.roleCode ? { roleCode: refusal.roleCode } : {}),
+        reasonCode: reason,
+        policyVersion: AUTHORIZATION_POLICY_VERSION,
+      });
+    }
     return { kind: "REFUSED", reason };
   }
 }
@@ -242,8 +304,9 @@ export function proposeRoleAssignment(
   const roleCode = isRoleCode(input.roleCode) ? input.roleCode : null;
   return run(
     deps,
-    { accountRef: actorId(actor), roleCode: roleCode ?? undefined },
-    async (tx, events) => {
+    actor,
+    { roleCode: roleCode ?? undefined },
+    async (tx, events, ctx) => {
       if (!roleCode) refuse("ROLE_UNAVAILABLE");
       if (!isScopeType(input.scopeType)) refuse("SCOPE_NOT_ALLOWED_FOR_ROLE");
       if (!isUuid(input.scopeReferenceId)) refuse("SCOPE_UNRESOLVED");
@@ -260,6 +323,7 @@ export function proposeRoleAssignment(
         input.scopeReferenceId,
         input.reasonCode,
         deps,
+        ctx,
       );
       const subject = await lockAccountForUpdate(tx, input.subjectAccountId);
       const role = await findRoleByCode(tx, roleCode!);
@@ -332,6 +396,7 @@ export function proposeRoleAssignment(
         roleCode: roleCode!,
         scopeType,
         reasonCode: input.reasonCode,
+        newVersion: 1,
         policyVersion: AUTHORIZATION_POLICY_VERSION,
       });
       return { kind: "PROPOSED", assignmentId, version: 1 };
@@ -357,11 +422,9 @@ export function approveRoleAssignment(
 ): Promise<AssignmentResult> {
   return run(
     deps,
-    {
-      accountRef: actorId(actor),
-      recordRef: isUuid(input.assignmentId) ? input.assignmentId : undefined,
-    },
-    async (tx, events) => {
+    actor,
+    { recordRef: input.assignmentId },
+    async (tx, events, ctx) => {
       const now = deps.clock();
       const approver = actorId(actor);
       const assignment = await findAssignment(tx, input.assignmentId, true);
@@ -375,6 +438,7 @@ export function approveRoleAssignment(
         a.scopeReferenceId,
         "ASSIGNMENT_APPROVAL",
         deps,
+        ctx,
       );
       const subject = await lockAccountForUpdate(tx, a.userAccountId);
       if (!subject || subject.accountType !== "STAFF")
@@ -427,6 +491,8 @@ export function approveRoleAssignment(
           roleCode: replaced!.roleCode,
           scopeType: replaced!.scopeType,
           reasonCode: "SUPERSEDED",
+          previousVersion: replaced!.version,
+          newVersion: replaced!.version + 1,
           policyVersion: AUTHORIZATION_POLICY_VERSION,
         });
       }
@@ -447,6 +513,8 @@ export function approveRoleAssignment(
         recordRef: a.id,
         roleCode: a.roleCode,
         scopeType: a.scopeType,
+        previousVersion: input.expectedVersion,
+        newVersion: input.expectedVersion + 1,
         policyVersion: AUTHORIZATION_POLICY_VERSION,
       });
       await applySubjectChange(tx, a.userAccountId, now, events);
@@ -471,11 +539,9 @@ export function rejectRoleAssignment(
 ): Promise<AssignmentResult> {
   return run(
     deps,
-    {
-      accountRef: actorId(actor),
-      recordRef: isUuid(input.assignmentId) ? input.assignmentId : undefined,
-    },
-    async (tx, events) => {
+    actor,
+    { recordRef: input.assignmentId },
+    async (tx, events, ctx) => {
       const now = deps.clock();
       const assignment = await findAssignment(tx, input.assignmentId, true);
       if (!assignment) refuse("NOT_FOUND");
@@ -488,6 +554,7 @@ export function rejectRoleAssignment(
         a.scopeReferenceId,
         input.reasonCode,
         deps,
+        ctx,
       );
       const problem = decideRejection(
         a,
@@ -513,6 +580,8 @@ export function rejectRoleAssignment(
         roleCode: a.roleCode,
         scopeType: a.scopeType,
         reasonCode: input.reasonCode,
+        previousVersion: input.expectedVersion,
+        newVersion: input.expectedVersion + 1,
         policyVersion: AUTHORIZATION_POLICY_VERSION,
       });
       return {
@@ -536,11 +605,9 @@ export function revokeRoleAssignment(
 ): Promise<AssignmentResult> {
   return run(
     deps,
-    {
-      accountRef: actorId(actor),
-      recordRef: isUuid(input.assignmentId) ? input.assignmentId : undefined,
-    },
-    async (tx, events) => {
+    actor,
+    { recordRef: input.assignmentId },
+    async (tx, events, ctx) => {
       const now = deps.clock();
       const assignment = await findAssignment(tx, input.assignmentId, true);
       if (!assignment) refuse("NOT_FOUND");
@@ -553,6 +620,7 @@ export function revokeRoleAssignment(
         a.scopeReferenceId,
         input.reasonCode,
         deps,
+        ctx,
       );
       await lockAccountForUpdate(tx, a.userAccountId);
       const problem = decideRevocation(
@@ -579,6 +647,8 @@ export function revokeRoleAssignment(
         roleCode: a.roleCode,
         scopeType: a.scopeType,
         reasonCode: input.reasonCode,
+        previousVersion: input.expectedVersion,
+        newVersion: input.expectedVersion + 1,
         policyVersion: AUTHORIZATION_POLICY_VERSION,
       });
       await applySubjectChange(tx, a.userAccountId, now, events);
@@ -613,7 +683,9 @@ export async function listRoleAssignments(
   deps: RoleAssignmentDependencies,
 ): Promise<readonly AssignmentSummary[]> {
   if (!isUuid(subjectAccountId)) return [];
-  return deps.db.transaction(async (tx) => {
+  // A read: no mutation or success event, but denials raised inside are
+  // deferred until the transaction settles (withAuditedTransaction).
+  return withAuditedTransaction(deps, async (tx) => {
     const rows = await listSubjectAssignments(tx, subjectAccountId);
     const visible: AssignmentSummary[] = [];
     for (const row of rows) {
@@ -626,6 +698,7 @@ export async function listRoleAssignments(
           row.scopeReferenceId,
           undefined,
           deps,
+          { effective: null, deniedRecorded: false },
         );
       } catch (error) {
         if (error instanceof Refusal) continue;

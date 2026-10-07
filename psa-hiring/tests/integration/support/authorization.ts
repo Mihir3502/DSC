@@ -43,6 +43,7 @@ import {
   SyntheticScopeResolver,
 } from "@/modules/identity-access/infrastructure/scope-resolvers";
 import type { SecurityEvent } from "@/modules/identity-access/infrastructure/security-events";
+import { createAuditRecorder, type EventRecorder } from "@/modules/audit";
 import { NonproductionHarnessGate } from "@/modules/identity-access/infrastructure/staff-administration-gate";
 import type { WorkflowPolicyRegistry } from "@/modules/identity-access/policy/workflow-policies";
 import { getDatabase } from "@/shared/database";
@@ -115,6 +116,23 @@ export type AuthorizationHarness = Readonly<{
   capture: InMemoryEmailCapture;
 }>;
 
+/** Wraps a recorder, capturing each event before it is persisted. */
+export function capturingRecorder(
+  inner: EventRecorder,
+  events: SecurityEvent[],
+): EventRecorder {
+  return {
+    record(event) {
+      events.push(event);
+      return inner.record(event);
+    },
+    recordInTransaction(tx, event) {
+      events.push(event);
+      return inner.recordInTransaction(tx, event);
+    },
+  };
+}
+
 export function createAuthorizationHarness(
   options: { workflow?: WorkflowPolicyRegistry } = {},
 ): AuthorizationHarness {
@@ -144,6 +162,8 @@ export function createAuthorizationHarness(
       branchId: scopes.ORG2_BRANCH,
     });
   const ownership = new SyntheticCandidateOwnership(process.env.APP_ENV);
+  const events: SecurityEvent[] = [];
+  const durable = createAuditRecorder({ db: getDatabase(), logger });
   const base = createIdentityRuntime({
     env: parseAuthEnv(process.env),
     db: getDatabase(),
@@ -157,18 +177,11 @@ export function createAuthorizationHarness(
       ...(options.workflow ? { workflow: options.workflow } : {}),
     },
     assignmentHarness: new NonproductionAssignmentHarness(process.env.APP_ENV),
+    // Every event (including Better Auth hook events) is captured for
+    // assertions and then persisted by the real durable recorder.
+    events: capturingRecorder(durable, events),
   });
-  const events: SecurityEvent[] = [];
-  const runtime: IdentityRuntime = Object.freeze({
-    ...base,
-    events: {
-      record(event: SecurityEvent) {
-        events.push(event);
-        base.events.record(event);
-      },
-    },
-  });
-  return { runtime, resolver, ownership, events, logs, capture };
+  return { runtime: base, resolver, ownership, events, logs, capture };
 }
 
 export const authzDeps = (h: AuthorizationHarness) =>

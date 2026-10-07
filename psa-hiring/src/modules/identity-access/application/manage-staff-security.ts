@@ -1,4 +1,5 @@
 import "server-only";
+import { requireRecorded, withAuditedTransaction } from "@/modules/audit";
 import type { PasswordProblem } from "../domain/candidate-registration-policy";
 import {
   bumpAccountVersion,
@@ -154,7 +155,7 @@ export async function revokeStaffSession(
   const rows = await listActiveSessions(deps.db, principal.accountId);
   const target = rows.find((row) => sameRef(sessionRef(deps, row.id), ref));
   if (!target) return { kind: "NOT_FOUND" };
-  const outcome = await deps.db.transaction(async (tx) => {
+  const outcome = await withAuditedTransaction(deps, async (tx, audit) => {
     const recheck = await authorizeAccountSelfServiceInTransaction(
       tx,
       principal,
@@ -163,18 +164,26 @@ export async function revokeStaffSession(
       { correlationId },
     );
     if (recheck.decision === "DENY") return recheck;
-    return deleteOwnedSession(tx, principal.accountId, target.id);
+    const revoked = await deleteOwnedSession(
+      tx,
+      principal.accountId,
+      target.id,
+    );
+    if (revoked > 0) {
+      await audit.append({
+        code: "staff.session_revoked",
+        accountRef: principal.accountId,
+        permissionCode: selfServiceAction("STAFF_SESSION_REVOKE"),
+        policyVersion: recheck.policyVersion,
+        count: revoked,
+        correlationId,
+      });
+    }
+    return revoked;
   });
   if (typeof outcome !== "number") return refusalOf(outcome);
   if (outcome === 0) return { kind: "NOT_FOUND" };
   const endedCurrent = target.id === principal.sessionId;
-  deps.events.record({
-    code: "staff.session_revoked",
-    accountRef: principal.accountId,
-    permissionCode: selfServiceAction("STAFF_SESSION_REVOKE"),
-    policyVersion: decision.policyVersion,
-    correlationId,
-  });
   return {
     kind: "REVOKED",
     endedCurrent,
@@ -197,7 +206,7 @@ export async function revokeOtherStaffSessions(
   );
   if (decision.decision === "DENY") return refusalOf(decision);
   if (!principal) return { kind: "UNAUTHENTICATED" };
-  const outcome = await deps.db.transaction(async (tx) => {
+  const outcome = await withAuditedTransaction(deps, async (tx, audit) => {
     const recheck = await authorizeAccountSelfServiceInTransaction(
       tx,
       principal,
@@ -206,16 +215,22 @@ export async function revokeOtherStaffSessions(
       { correlationId },
     );
     if (recheck.decision === "DENY") return recheck;
-    return deleteSessionsExcept(tx, principal.accountId, principal.sessionId);
+    const revoked = await deleteSessionsExcept(
+      tx,
+      principal.accountId,
+      principal.sessionId,
+    );
+    await audit.append({
+      code: "staff.sessions_revoked",
+      accountRef: principal.accountId,
+      permissionCode: selfServiceAction("STAFF_SESSIONS_REVOKE_OTHERS"),
+      policyVersion: recheck.policyVersion,
+      count: revoked,
+      correlationId,
+    });
+    return revoked;
   });
   if (typeof outcome !== "number") return refusalOf(outcome);
-  deps.events.record({
-    code: "staff.sessions_revoked",
-    accountRef: principal.accountId,
-    permissionCode: selfServiceAction("STAFF_SESSIONS_REVOKE_OTHERS"),
-    policyVersion: decision.policyVersion,
-    correlationId,
-  });
   return {
     kind: "REVOKED",
     endedCurrent: false,
@@ -248,7 +263,7 @@ export async function signOutStaffEverywhere(
     const refusal = refusalOf(decision);
     return refusal.kind === "UNAUTHENTICATED" ? signedOut : refusal;
   }
-  const outcome = await deps.db.transaction(async (tx) => {
+  const outcome = await withAuditedTransaction(deps, async (tx, audit) => {
     const recheck = await authorizeAccountSelfServiceInTransaction(
       tx,
       principal,
@@ -257,19 +272,21 @@ export async function signOutStaffEverywhere(
       { correlationId },
     );
     if (recheck.decision === "DENY") return recheck;
-    return deleteAllSessions(tx, principal.accountId);
+    const revoked = await deleteAllSessions(tx, principal.accountId);
+    await audit.append({
+      code: "staff.sessions_revoked",
+      accountRef: principal.accountId,
+      permissionCode: selfServiceAction("STAFF_SESSIONS_END_ALL"),
+      policyVersion: recheck.policyVersion,
+      count: revoked,
+      correlationId,
+    });
+    return revoked;
   });
   if (typeof outcome !== "number") {
     const refusal = refusalOf(outcome);
     return refusal.kind === "UNAUTHENTICATED" ? signedOut : refusal;
   }
-  deps.events.record({
-    code: "staff.sessions_revoked",
-    accountRef: principal.accountId,
-    permissionCode: selfServiceAction("STAFF_SESSIONS_END_ALL"),
-    policyVersion: decision.policyVersion,
-    correlationId,
-  });
   return { ...signedOut, count: outcome };
 }
 
@@ -308,7 +325,7 @@ export async function changeStaffPassword(
   if (decision.decision === "DENY") {
     const refusal = refusalOf(decision);
     if (refusal.kind === "REAUTHENTICATION_REQUIRED" && principal) {
-      deps.events.record({
+      await deps.events.record({
         code: "staff.reauth_challenged",
         category: "challenge",
         accountRef: principal.accountId,
@@ -321,7 +338,10 @@ export async function changeStaffPassword(
   if (
     !deps.limiter.consume("staffChangePasswordPerAccount", principal.accountId)
   ) {
-    deps.events.record({ code: "auth.rate_limited", category: "rate_limited" });
+    await deps.events.record({
+      code: "auth.rate_limited",
+      category: "rate_limited",
+    });
     return { kind: "RATE_LIMITED" };
   }
   const problems = await newPasswordProblems(
@@ -344,19 +364,29 @@ export async function changeStaffPassword(
     asResponse: true,
   });
   if (!response.ok) {
-    deps.events.record({
+    await deps.events.record({
       code: "staff.password_change_failed",
       category: "invalid_credentials",
       accountRef: principal.accountId,
     });
     return { kind: "CURRENT_PASSWORD_INVALID" };
   }
-  // The credential already changed: ending every session and invalidating
-  // assurance is unconditional (no recheck can veto it).
+  // The credential already changed (Better Auth committed it): ending
+  // every session and invalidating assurance is unconditional, so no
+  // recheck or audit failure can veto or roll it back.
   await deps.db.transaction(async (tx) => {
     await lockAccountForUpdate(tx, principal.accountId);
     await deleteAllSessions(tx, principal.accountId);
     await bumpAccountVersion(tx, principal.accountId, new Date());
+  });
+  // PROVIDER_COMMITTED (ADR-0012): not atomic with the password write. A
+  // failed append withholds success (generic error) and raises an alert.
+  await requireRecorded(deps.events, {
+    code: "staff.password_changed",
+    accountRef: principal.accountId,
+    permissionCode: selfServiceAction("STAFF_PASSWORD_CHANGE"),
+    policyVersion: decision.policyVersion,
+    correlationId,
   });
   const to = await findAccountEmail(deps.db, principal.accountId);
   if (to) {
@@ -366,13 +396,6 @@ export async function changeStaffPassword(
       notice: "PASSWORD_CHANGED",
     });
   }
-  deps.events.record({
-    code: "staff.password_changed",
-    accountRef: principal.accountId,
-    permissionCode: selfServiceAction("STAFF_PASSWORD_CHANGE"),
-    policyVersion: decision.policyVersion,
-    correlationId,
-  });
   return { kind: "CHANGED", setCookies: expiredStaffCookies(deps) };
 }
 
@@ -451,6 +474,16 @@ export async function regenerateStaffBackupCodes(
     ? body.backupCodes.filter((c): c is string => typeof c === "string")
     : [];
   if (codes.length === 0) return { kind: "INVALID" };
+  // PROVIDER_COMMITTED (ADR-0012): the earlier codes are already replaced.
+  // If the event cannot be recorded, the new codes are withheld (the staff
+  // member regenerates again) rather than shown without evidence.
+  await requireRecorded(deps.events, {
+    code: "staff.backup_codes_regenerated",
+    accountRef: principal.accountId,
+    permissionCode: selfServiceAction("STAFF_BACKUP_CODES_REGENERATE"),
+    policyVersion: decision.policyVersion,
+    correlationId,
+  });
   const to = await findAccountEmail(deps.db, principal.accountId);
   if (to) {
     deps.email.enqueue({
@@ -459,12 +492,5 @@ export async function regenerateStaffBackupCodes(
       notice: "BACKUP_CODES_REGENERATED",
     });
   }
-  deps.events.record({
-    code: "staff.backup_codes_regenerated",
-    accountRef: principal.accountId,
-    permissionCode: selfServiceAction("STAFF_BACKUP_CODES_REGENERATE"),
-    policyVersion: decision.policyVersion,
-    correlationId,
-  });
   return { kind: "REGENERATED", backupCodes: Object.freeze(codes) };
 }

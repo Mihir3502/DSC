@@ -278,7 +278,12 @@ function setup(
     separation: new MandatorySeparationOfDutiesPolicy(),
     dualControl: restrictiveDualControl,
     clock: () => NOW,
-    events: { record: (e: SecurityEvent) => events.push(e) },
+    events: {
+      record: async (e: SecurityEvent) => (events.push(e), true),
+      recordInTransaction: async (_tx: unknown, e: SecurityEvent) => {
+        events.push(e);
+      },
+    },
     logger,
     recentWindowSeconds: 300,
     ...options.ports,
@@ -952,11 +957,11 @@ describe("authorization service: failure and telemetry", () => {
     expect(events).toEqual([
       {
         code: "authz.high_risk_denied",
-        category: "denied",
-        accountRef: STAFF,
+        actorRef: STAFF,
         permissionCode: "readiness.final_approval",
         reasonCode: "RECENT_AUTH_REQUIRED",
         policyVersion: AUTHORIZATION_POLICY_VERSION,
+        correlationId: undefined,
       },
     ]);
     const output = JSON.stringify({ events, lines });

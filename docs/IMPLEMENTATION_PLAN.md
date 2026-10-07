@@ -963,8 +963,9 @@ Create ADRs only when the decision is needed:
 | ADR-0009 | E-signature provider selection | M4/M5 |
 | ADR-0010 | Production hosting, key management, and observability | M10 or earlier procurement |
 | ADR-0011 | Route, object, and field authorization | M1.5 |
+| ADR-0012 | Append-only audit integrity | M1.6 |
 
-Numbering note (approved during M1.4): M1.2 and M1.3 recorded decisions as ADR-0003 and ADR-0004, so the authorization ADR originally planned as ADR-0003 is ADR-0005 and later planned ADRs moved to ADR-0006–ADR-0010. Work-item packets that cite the old planned numbers refer to the topics above. M1.5's decision record takes the next free number (ADR-0011) so the reserved ADR-0006–ADR-0010 keep their topics.
+Numbering note (approved during M1.4): M1.2 and M1.3 recorded decisions as ADR-0003 and ADR-0004, so the authorization ADR originally planned as ADR-0003 is ADR-0005 and later planned ADRs moved to ADR-0006–ADR-0010. Work-item packets that cite the old planned numbers refer to the topics above. M1.5's decision record takes the next free number (ADR-0011) so the reserved ADR-0006–ADR-0010 keep their topics. The M1.6 packet's "ADR-0004" is recorded as ADR-0012 for the same reason (project-owner approval, 2026-10-07).
 
 Do not write an ADR that pretends an unresolved vendor or cloud decision is final.
 

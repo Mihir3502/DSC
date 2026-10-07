@@ -875,6 +875,68 @@ describe("password recovery and reset", () => {
   });
 });
 
+describe("durable audit and security events (M1.6, ADR-0012)", () => {
+  it("records candidate registration, verification, sign-in, password change, and sign-out once each", async () => {
+    const email = await verifiedCandidate("durable");
+    const accountId = (await userRow(email))!.id;
+    const session = await signIn(email);
+    expect(
+      (
+        await changeCandidatePassword(
+          {
+            currentPassword: "TEST wrong passphrase 0005",
+            password: NEW_PASSWORD,
+            passwordConfirmation: NEW_PASSWORD,
+          },
+          headers(session.cookie),
+          runtime,
+        )
+      ).kind,
+    ).toBe("CURRENT_PASSWORD_INVALID");
+    const changed = await changeCandidatePassword(
+      {
+        currentPassword: TEST_PASSWORD,
+        password: NEW_PASSWORD,
+        passwordConfirmation: NEW_PASSWORD,
+      },
+      headers(session.cookie),
+      runtime,
+    );
+    expect(changed.kind).toBe("CHANGED");
+    const rotated = cookieOf(
+      changed.kind === "CHANGED" ? changed.setCookies : [],
+    );
+    await signOutCandidate(headers(rotated), runtime);
+
+    const audit = await admin.query<{ event_name: string; actor_type: string }>(
+      `SELECT event_name, actor_type FROM audit.audit_event
+       WHERE target_id = $1 ORDER BY occurred_at, chain_sequence`,
+      [accountId],
+    );
+    expect(audit.rows.map((r) => r.event_name)).toEqual([
+      "auth.registration_account_created",
+      "auth.verification_completed",
+      "auth.sign_in_succeeded",
+      "auth.password_changed",
+      "auth.sign_out",
+    ]);
+    expect(audit.rows.every((r) => r.actor_type === "USER")).toBe(true);
+    const security = await admin.query<{
+      event_name: string;
+      risk_code: string;
+    }>(
+      "SELECT event_name, risk_code FROM audit.security_event WHERE account_id = $1",
+      [accountId],
+    );
+    expect(security.rows).toEqual([
+      {
+        event_name: "auth.password_change_failed",
+        risk_code: "INVALID_CREDENTIALS",
+      },
+    ]);
+  });
+});
+
 describe("authenticated password change and session management", () => {
   it("changes the password with the current one, revokes other sessions, and rotates this one", async () => {
     const email = await verifiedCandidate("change");
@@ -1104,7 +1166,7 @@ describe("closed HTTP surface", () => {
 });
 
 describe("leakage", () => {
-  it("keeps passwords, codes, tokens, cookies, and emails out of logs and results", async () => {
+  it("keeps passwords, codes, tokens, cookies, and emails out of logs, results, and audit rows", async () => {
     await runtime.email.idle();
     const sessions = await admin.query<{ token: string }>(
       "SELECT token FROM auth.session",
@@ -1134,6 +1196,33 @@ describe("leakage", () => {
       cookieHeader: false,
     });
     expect(findCanaryCategories(output)).toEqual([]);
+
+    // M1.6: durable audit/security rows hold no secret or personal value.
+    const { rows } = await admin.query<{ t: string }>(
+      `SELECT coalesce((SELECT string_agg(e::text, E'\\n') FROM audit.audit_event e), '')
+           || coalesce((SELECT string_agg(s::text, E'\\n') FROM audit.security_event s), '') AS t`,
+    );
+    const auditText = rows[0]!.t;
+    expect(auditText.length).toBeGreaterThan(0);
+    expect({
+      password:
+        auditText.includes(TEST_PASSWORD) || auditText.includes(NEW_PASSWORD),
+      hash: hashes.rows.some((h) => auditText.includes(h.password)),
+      secret: secrets.some((s) => s.length >= 8 && auditText.includes(s)),
+      sessionToken: sessions.rows.some((s) => auditText.includes(s.token)),
+      email: emails.rows.some((e) => auditText.includes(e.email)),
+      ip: auditText.includes("198.51.100."),
+      userAgent: auditText.includes("Mozilla/5.0"),
+    }).toEqual({
+      password: false,
+      hash: false,
+      secret: false,
+      sessionToken: false,
+      email: false,
+      ip: false,
+      userAgent: false,
+    });
+    expect(findCanaryCategories(auditText)).toEqual([]);
     const allowed = new Set([
       "level",
       "time",
@@ -1152,6 +1241,7 @@ describe("leakage", () => {
       "reasonCode",
       "policyVersion",
     ]);
+    // M1.6 audit alerts carry only these allowlisted fields too.
     for (const line of logs.records()) {
       expect(
         Object.keys(line).every((k) => allowed.has(k)),

@@ -185,7 +185,7 @@ Every allowed security change carries:
 
 A refused high-risk self-service command emits exactly one `authz.self_service_denied`; guards emit none. An allowed restricted document access emits `authz.restricted_access_allowed`. A restricted denial is reported once, by M1.4's `authz.high_risk_denied`.
 
-No audit table was created (M1.6).
+No audit table was created (M1.6). *Superseded for events by ADR-0012: these events are now durable; `authz.restricted_access_allowed` records the document as its opaque audit target and is required before a grant is issued.*
 
 ## Rejected alternatives
 

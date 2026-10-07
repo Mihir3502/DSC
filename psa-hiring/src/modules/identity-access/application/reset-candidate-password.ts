@@ -1,4 +1,5 @@
 import "server-only";
+import { requireRecorded } from "@/modules/audit";
 import { canSignInInteractively } from "../domain/account-policy";
 import type { PasswordProblem } from "../domain/candidate-registration-policy";
 import { clientKeyFrom } from "../infrastructure/action-rate-limiter";
@@ -36,8 +37,8 @@ export async function resetCandidatePassword(
   headers: Headers,
   deps: CandidateAuthDependencies = defaultDependencies(),
 ): Promise<ResetPasswordResult> {
-  const linkInvalid = (): ResetPasswordResult => {
-    deps.events.record({
+  const linkInvalid = async (): Promise<ResetPasswordResult> => {
+    await deps.events.record({
       code: "auth.recovery_failed",
       category: "invalid_link",
     });
@@ -48,7 +49,10 @@ export async function resetCandidatePassword(
   };
 
   if (!deps.limiter.consume("resetPerClient", clientKeyFrom(headers))) {
-    deps.events.record({ code: "auth.rate_limited", category: "rate_limited" });
+    await deps.events.record({
+      code: "auth.rate_limited",
+      category: "rate_limited",
+    });
     return { kind: "RATE_LIMITED" };
   }
   const token = formString(input.token, 128);
@@ -87,5 +91,12 @@ export async function resetCandidatePassword(
   } catch {
     return linkInvalid();
   }
+  // PROVIDER_COMMITTED (ADR-0012): Better Auth already replaced the
+  // password and revoked sessions. A failed append withholds success
+  // (generic error) and raises an alert; it cannot undo the reset.
+  await requireRecorded(deps.events, {
+    code: "auth.recovery_completed",
+    accountRef: account.id,
+  });
   return { kind: "RESET" };
 }

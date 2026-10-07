@@ -259,7 +259,7 @@ Every denial writes one bounded log line (`authz.denied`: permission, reason, po
 ### Boundaries
 
 - **M1.5:** route, object, and field guards; serializers and redaction; files, search, and exports; adapters from denial reasons to HTTP or UI.
-- **M1.6:** append-only audit persistence, atomic with the transaction.
+- **M1.6:** append-only audit persistence, atomic with the transaction. *Delivered by ADR-0012: assignment events, the subject-version change, and the catalog apply append inside their transactions; a denied high-risk command records exactly one `authz.high_risk_denied`.*
 - **M2+:** scope entities and real resolvers, ownership, designations, and workflow policies.
 
 ## Rejected alternatives

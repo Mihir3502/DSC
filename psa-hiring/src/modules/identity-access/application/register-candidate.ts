@@ -1,4 +1,5 @@
 import "server-only";
+import { withAuditedTransaction } from "@/modules/audit";
 import {
   intentAllowsEmail,
   type PasswordProblem,
@@ -48,10 +49,13 @@ export async function registerCandidate(
   deps: CandidateAuthDependencies = defaultDependencies(),
 ): Promise<RegisterCandidateResult> {
   const log = commandLogger(deps);
-  deps.events.record({ code: "auth.registration_requested" });
+  await deps.events.record({ code: "auth.registration_requested" });
 
   if (!deps.limiter.consume("register", clientKeyFrom(headers))) {
-    deps.events.record({ code: "auth.rate_limited", category: "rate_limited" });
+    await deps.events.record({
+      code: "auth.rate_limited",
+      category: "rate_limited",
+    });
     return { kind: "RATE_LIMITED" };
   }
 
@@ -102,18 +106,23 @@ export async function registerCandidate(
   }
 
   const ctx = await deps.auth.$context;
-  const accountId = await createCandidateWithCredential(deps.db, {
-    email: email.login,
-    emailDisplay: email.display,
-    passwordHash: await ctx.password.hash(password),
-  });
-  if (accountId) {
-    deps.events.record({
-      code: "auth.registration_account_created",
-      accountRef: accountId,
+  const passwordHash = await ctx.password.hash(password);
+  // The account, its credential, and the audit event commit together.
+  const accountId = await withAuditedTransaction(deps, async (tx, audit) => {
+    const created = await createCandidateWithCredential(tx, {
+      email: email.login,
+      emailDisplay: email.display,
+      passwordHash,
     });
-    await sendVerificationCode(deps, email.login);
-  }
+    if (created) {
+      await audit.append({
+        code: "auth.registration_account_created",
+        accountRef: created,
+      });
+    }
+    return created;
+  });
+  if (accountId) await sendVerificationCode(deps, email.login);
   // accountId is null when a concurrent request created the same normalized
   // email first: the outcome is still the generic one.
   log.info("auth.registration_submitted", {
@@ -131,7 +140,10 @@ export async function sendVerificationCode(
   normalizedEmail: string,
 ): Promise<void> {
   if (!deps.limiter.consume("verificationSendPerEmail", normalizedEmail)) {
-    deps.events.record({ code: "auth.rate_limited", category: "rate_limited" });
+    await deps.events.record({
+      code: "auth.rate_limited",
+      category: "rate_limited",
+    });
     return;
   }
   await deps.auth.api.sendVerificationOTP({

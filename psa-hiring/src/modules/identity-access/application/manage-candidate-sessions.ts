@@ -1,4 +1,5 @@
 import "server-only";
+import { withAuditedTransaction } from "@/modules/audit";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import {
   deleteAllSessions,
@@ -188,7 +189,7 @@ export async function revokeCandidateSession(
   const target = rows.find((row) => sameRef(sessionRef(deps, row.id), ref));
   if (!target) return { kind: "NOT_FOUND" };
 
-  const outcome = await deps.db.transaction(async (tx) => {
+  const outcome = await withAuditedTransaction(deps, async (tx, audit) => {
     const recheck = await authorizeAccountSelfServiceInTransaction(
       tx,
       principal,
@@ -197,18 +198,26 @@ export async function revokeCandidateSession(
       { correlationId },
     );
     if (recheck.decision === "DENY") return recheck;
-    return deleteOwnedSession(tx, principal.accountId, target.id);
+    const revoked = await deleteOwnedSession(
+      tx,
+      principal.accountId,
+      target.id,
+    );
+    if (revoked > 0) {
+      await audit.append({
+        code: "auth.session_revoked",
+        accountRef: principal.accountId,
+        permissionCode: selfServiceAction("CANDIDATE_SESSION_REVOKE"),
+        policyVersion: recheck.policyVersion,
+        count: revoked,
+        correlationId,
+      });
+    }
+    return revoked;
   });
   if (typeof outcome !== "number") return refusalOf(outcome);
   if (outcome === 0) return { kind: "NOT_FOUND" };
   const endedCurrent = target.id === principal.sessionId;
-  deps.events.record({
-    code: "auth.session_revoked",
-    accountRef: principal.accountId,
-    permissionCode: selfServiceAction("CANDIDATE_SESSION_REVOKE"),
-    policyVersion: decision.policyVersion,
-    correlationId,
-  });
   return {
     kind: "REVOKED",
     endedCurrent,
@@ -232,7 +241,7 @@ export async function revokeOtherCandidateSessions(
   );
   if (decision.decision === "DENY") return refusalOf(decision);
   if (!principal) return { kind: "UNAUTHENTICATED" };
-  const outcome = await deps.db.transaction(async (tx) => {
+  const outcome = await withAuditedTransaction(deps, async (tx, audit) => {
     const recheck = await authorizeAccountSelfServiceInTransaction(
       tx,
       principal,
@@ -241,16 +250,22 @@ export async function revokeOtherCandidateSessions(
       { correlationId },
     );
     if (recheck.decision === "DENY") return recheck;
-    return deleteSessionsExcept(tx, principal.accountId, principal.sessionId);
+    const revoked = await deleteSessionsExcept(
+      tx,
+      principal.accountId,
+      principal.sessionId,
+    );
+    await audit.append({
+      code: "auth.sessions_revoked",
+      accountRef: principal.accountId,
+      permissionCode: selfServiceAction("CANDIDATE_SESSIONS_REVOKE_OTHERS"),
+      policyVersion: recheck.policyVersion,
+      count: revoked,
+      correlationId,
+    });
+    return revoked;
   });
   if (typeof outcome !== "number") return refusalOf(outcome);
-  deps.events.record({
-    code: "auth.sessions_revoked",
-    accountRef: principal.accountId,
-    permissionCode: selfServiceAction("CANDIDATE_SESSIONS_REVOKE_OTHERS"),
-    policyVersion: decision.policyVersion,
-    correlationId,
-  });
   return {
     kind: "REVOKED",
     endedCurrent: false,
@@ -287,7 +302,7 @@ export async function signOutCandidateEverywhere(
     const refusal = refusalOf(decision);
     return refusal.kind === "UNAUTHENTICATED" ? signedOut : refusal;
   }
-  const outcome = await deps.db.transaction(async (tx) => {
+  const outcome = await withAuditedTransaction(deps, async (tx, audit) => {
     const recheck = await authorizeAccountSelfServiceInTransaction(
       tx,
       principal,
@@ -296,18 +311,20 @@ export async function signOutCandidateEverywhere(
       { correlationId },
     );
     if (recheck.decision === "DENY") return recheck;
-    return deleteAllSessions(tx, principal.accountId);
+    const revoked = await deleteAllSessions(tx, principal.accountId);
+    await audit.append({
+      code: "auth.sessions_revoked",
+      accountRef: principal.accountId,
+      permissionCode: selfServiceAction("CANDIDATE_SESSIONS_END_ALL"),
+      policyVersion: recheck.policyVersion,
+      count: revoked,
+      correlationId,
+    });
+    return revoked;
   });
   if (typeof outcome !== "number") {
     const refusal = refusalOf(outcome);
     return refusal.kind === "UNAUTHENTICATED" ? signedOut : refusal;
   }
-  deps.events.record({
-    code: "auth.sessions_revoked",
-    accountRef: principal.accountId,
-    permissionCode: selfServiceAction("CANDIDATE_SESSIONS_END_ALL"),
-    policyVersion: decision.policyVersion,
-    correlationId,
-  });
   return { ...signedOut, count: outcome };
 }

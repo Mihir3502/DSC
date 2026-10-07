@@ -166,20 +166,68 @@
     {
       "id": "PRD-AUTH-007",
       "title": "Authentication events are auditable",
-      "status": "partial",
-      "note": "M1.2 and M1.3 emit allowlisted, future-audit-ready security event codes (opaque account/record references only) through the logger; immutable audit persistence is M1.6. Not satisfied until then. M1.4 adds authz.* assignment, catalog, policy, and high-risk denial events through the same port.",
+      "status": "covered",
+      "note": "M1.6 (ADR-0012): every M1 authentication, recovery, MFA, session, account, role/scope, catalog, restricted-access, and high-risk authorization-denial event is registered in the versioned audit catalog and persisted durably to the append-only, HMAC-chained audit_event or security_event stream (approved routine telemetry stays log-only). App-owned changes append atomically in the same transaction; Better Auth-committed changes are recorded right after the provider commit and success is withheld if recording fails (documented PROVIDER_COMMITTED limitation, ADR-0012 §5).",
       "tests": [
         {
-          "file": "src/modules/identity-access/infrastructure/candidate-auth-adapters.test.ts",
-          "title": "logs allowlisted codes with an opaque reference"
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "records candidate registration, verification, sign-in, password change, and sign-out once each"
         },
         {
-          "file": "src/modules/identity-access/infrastructure/staff-auth-adapters.test.ts",
-          "title": "logs only the allowlisted code, result, and opaque references"
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "records staff invitation, activation, MFA, sign-in, and role changes once each with safe context"
+        },
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "records a high-risk denial once and keeps it denied when the append fails"
+        },
+        {
+          "file": "src/modules/audit/application/event-catalog.test.ts",
+          "title": "registers every emitted event name exactly once"
+        },
+        {
+          "file": "src/modules/identity-access/infrastructure/candidate-auth-adapters.test.ts",
+          "title": "logs telemetry codes with an opaque reference"
         },
         {
           "file": "tests/integration/authorization/role-assignments.test.ts",
-          "title": "emits only safe, future-audit-ready events"
+          "title": "emits only safe, catalog-bounded audit events"
+        }
+      ]
+    },
+    {
+      "id": "PRD-AUD-001",
+      "title": "Compliance-significant actions generate append-only audit events",
+      "status": "partial",
+      "note": "M1.6 delivers the append-only, tamper-evident audit foundation and the shared withAuditedTransaction boundary for all current M1 identity and access actions. M2+ business actions (classification, screening, readiness, …) adopt it in their own work items.",
+      "tests": [
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "commits the mutation and its audit event together"
+        },
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "denies runtime UPDATE, DELETE, TRUNCATE, INSERT, DDL, integrity reads, and trigger bypass"
+        },
+        {
+          "file": "tests/integration/audit/integrity.test.ts",
+          "title": "detects ${label}"
+        }
+      ]
+    },
+    {
+      "id": "PRD-AUD-002",
+      "title": "Audit events identify actor, action, target, timestamp, source, correlation, and reason",
+      "status": "partial",
+      "note": "M1.6 envelopes carry server-owned actor/effective authority, action, target, trusted database time, source, correlation/request references, and reason codes. Authorized reason references for M2+ business decisions arrive with those decisions.",
+      "tests": [
+        {
+          "file": "src/modules/audit/application/audit-facts.test.ts",
+          "title": "builds one exact safe envelope for a registered event and context"
+        },
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "appends one exact, chained envelope for a registered event"
         }
       ]
     }
@@ -671,7 +719,7 @@
         },
         {
           "file": "src/modules/identity-access/infrastructure/staff-auth-adapters.test.ts",
-          "title": "logs only the allowlisted code, result, and opaque references"
+          "title": "keeps telemetry codes as allowlisted log lines"
         },
         {
           "file": "tests/integration/auth/staff-authentication.test.ts",
@@ -703,7 +751,7 @@
       "tests": [
         {
           "file": "tests/guards/traceability.test.ts",
-          "title": "keeps PRD-AUTH-007 incomplete until immutable audit (M1.6)"
+          "title": "marks PRD-AUTH-007 covered by durable audit (M1.6)"
         },
         {
           "file": "tests/guards/traceability.test.ts",
@@ -717,7 +765,7 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains no business-domain, audit, or job tables"
+          "title": "contains no business-domain or job tables, and only the M1.6 audit tables"
         },
         {
           "file": "tests/integration/auth/staff-authentication.test.ts",
@@ -833,7 +881,7 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains no business-domain, audit, or job tables"
+          "title": "contains no business-domain or job tables, and only the M1.6 audit tables"
         },
         {
           "file": "tests/integration/authorization/role-assignments.test.ts",
@@ -957,7 +1005,7 @@
       "tests": [
         {
           "file": "tests/integration/authorization/role-assignments.test.ts",
-          "title": "emits only safe, future-audit-ready events"
+          "title": "emits only safe, catalog-bounded audit events"
         },
         {
           "file": "src/modules/identity-access/application/authorize.test.ts",
@@ -1029,7 +1077,7 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains no business-domain, audit, or job tables"
+          "title": "contains no business-domain or job tables, and only the M1.6 audit tables"
         },
         {
           "file": "tests/guards/authorization-matrix.test.ts",
@@ -1417,7 +1465,288 @@
         },
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains no business-domain, audit, or job tables"
+          "title": "contains no business-domain or job tables, and only the M1.6 audit tables"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.6-01",
+      "title": "Versioned audit schema",
+      "tests": [
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "appends one exact, chained envelope for a registered event"
+        },
+        {
+          "file": "src/modules/audit/application/audit-facts.test.ts",
+          "title": "builds one exact safe envelope for a registered event and context"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.6-02",
+      "title": "Event catalog",
+      "tests": [
+        {
+          "file": "src/modules/audit/application/event-catalog.test.ts",
+          "title": "registers every emitted event name exactly once"
+        },
+        {
+          "file": "src/modules/audit/application/audit-facts.test.ts",
+          "title": "rejects unknown events, versions, and facts before any write"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.6-03",
+      "title": "Data minimization",
+      "tests": [
+        {
+          "file": "src/modules/audit/application/audit-facts.test.ts",
+          "title": "rejects prohibited, free-text, and oversized values"
+        },
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "keeps passwords, codes, tokens, cookies, and emails out of logs, results, and audit rows"
+        },
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "rejects unknown events, facts, and prohibited values with no row and a safe alert"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.6-04",
+      "title": "Append-only enforcement",
+      "tests": [
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "denies runtime UPDATE, DELETE, TRUNCATE, INSERT, DDL, integrity reads, and trigger bypass"
+        },
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "rejects UPDATE, DELETE, TRUNCATE, and head rewinds even for the owner"
+        },
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "never lets an account deletion cascade into audit history"
+        },
+        {
+          "file": "src/modules/audit/application/event-catalog.test.ts",
+          "title": "exposes no update, delete, repair, rehash, export, or generic append"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.6-05",
+      "title": "Tamper evidence",
+      "tests": [
+        {
+          "file": "tests/integration/audit/integrity.test.ts",
+          "title": "detects ${label}"
+        },
+        {
+          "file": "src/modules/audit/domain/envelope.test.ts",
+          "title": "changes the keyed MAC when any field, position, or link changes"
+        }
+      ],
+      "note": "Parameterized corruption cases: modified row and metadata, deleted middle and last rows, inserted row, reordered rows, duplicated/forked sequence, chain-head mismatch, unknown key version, row outside any chain head."
+    },
+    {
+      "id": "AC-M1.6-06",
+      "title": "Safe key lifecycle",
+      "tests": [
+        {
+          "file": "src/modules/audit/infrastructure/hmac-key-ring.test.ts",
+          "title": "rejects missing, placeholder, test, short, low-entropy, and reused keys in production"
+        },
+        {
+          "file": "tests/integration/audit/integrity.test.ts",
+          "title": "keeps history verifiable across a key rotation with retained old keys"
+        },
+        {
+          "file": "tests/integration/audit/integrity.test.ts",
+          "title": "rejects verification with a wrong key for a stored version"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.6-07",
+      "title": "Atomic allowed mutations",
+      "tests": [
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "rolls the mutation back when audit validation, integrity, or append fails"
+        },
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "reports neither change nor audit when the commit itself fails"
+        },
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "keeps a real account restriction from committing without its audit event"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.6-08",
+      "title": "Safe denial/failure persistence",
+      "tests": [
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "records a high-risk denial once and keeps it denied when the append fails"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.6-09",
+      "title": "Idempotency and concurrency",
+      "tests": [
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "records one success event for one accepted command and refuses the retry"
+        },
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "deduplicates a replayed idempotent event without a second row"
+        },
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "keeps distinct failed attempts as distinct bounded security events"
+        },
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "serializes same-partition appends into a contiguous chain without forks"
+        },
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "lets independent partitions append while one head is locked"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.6-10",
+      "title": "Current M1 integration",
+      "tests": [
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "records candidate registration, verification, sign-in, password change, and sign-out once each"
+        },
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "records staff invitation, activation, MFA, sign-in, and role changes once each with safe context"
+        },
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "appends the authorization catalog event atomically with the catalog apply"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.6-11",
+      "title": "Authorized query projection",
+      "tests": [
+        {
+          "file": "tests/integration/audit/query.test.ts",
+          "title": "returns an exact redacted keyset page filtered before materialization"
+        },
+        {
+          "file": "tests/integration/audit/query.test.ts",
+          "title": "denies candidates, administrators, wrong-scope staff, and anonymous callers"
+        },
+        {
+          "file": "tests/integration/audit/query.test.ts",
+          "title": "bounds auditors by assignment dates, categories, and record groups in SQL"
+        },
+        {
+          "file": "tests/integration/audit/query.test.ts",
+          "title": "audits each executed query once, outside its own page, without recursion"
+        },
+        {
+          "file": "src/modules/audit/presentation/audit-event-view-model.test.ts",
+          "title": "returns only the exact approved fields and projectable metadata"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.6-12",
+      "title": "Migration and database permissions",
+      "tests": [
+        {
+          "file": "tests/integration/audit/integrity.test.ts",
+          "title": "applies 0004 over M1.5 with synthetic data"
+        },
+        {
+          "file": "tests/integration/database/foundation.test.ts",
+          "title": "contains no business-domain or job tables, and only the M1.6 audit tables"
+        },
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "passes for the least-privileged runtime and refuses excess grants, disabled triggers, or unsafe keys"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.6-13",
+      "title": "Verification and recovery",
+      "tests": [
+        {
+          "file": "tests/integration/audit/integrity.test.ts",
+          "title": "fails safely through the script"
+        },
+        {
+          "file": "tests/integration/audit/integrity.test.ts",
+          "title": "restores events, chain heads, sequences, and key references that still verify"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.6-14",
+      "title": "Operational failure safety",
+      "tests": [
+        {
+          "file": "src/modules/audit/infrastructure/hmac-key-ring.test.ts",
+          "title": "uses the deterministic synthetic key only in local and test"
+        },
+        {
+          "file": "tests/integration/audit/query.test.ts",
+          "title": "returns nothing when the query's own audit event cannot be written"
+        },
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "rejects unknown events, facts, and prohibited values with no row and a safe alert"
+        },
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "passes for the least-privileged runtime and refuses excess grants, disabled triggers, or unsafe keys"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.6-15",
+      "title": "ADR and traceability",
+      "tests": [
+        {
+          "file": "tests/guards/traceability.test.ts",
+          "title": "covers every %s acceptance criterion exactly once"
+        },
+        {
+          "file": "tests/guards/traceability.test.ts",
+          "title": "marks PRD-AUTH-007 covered by durable audit (M1.6)"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.6-16",
+      "title": "Regression and scope containment",
+      "tests": [
+        {
+          "file": "tests/integration/database/foundation.test.ts",
+          "title": "contains no business-domain or job tables, and only the M1.6 audit tables"
+        },
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "adds no generic CRUD, GraphQL, or catch-all business endpoint"
         }
       ]
     }

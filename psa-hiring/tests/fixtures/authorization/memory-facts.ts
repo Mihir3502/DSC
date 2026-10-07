@@ -246,7 +246,12 @@ export function memoryAuthorization() {
     separation: new MandatorySeparationOfDutiesPolicy(),
     dualControl: restrictiveDualControl,
     clock: () => NOW,
-    events: { record: (e: SecurityEvent) => events.push(e) },
+    events: {
+      record: async (e: SecurityEvent) => (events.push(e), true),
+      recordInTransaction: async (_tx: unknown, e: SecurityEvent) => {
+        events.push(e);
+      },
+    },
     logger,
     recentWindowSeconds: 300,
   };

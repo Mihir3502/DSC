@@ -62,7 +62,7 @@ export async function applyLocalDatabaseGrants(
     throw new Error("admin connection is not on the expected database");
   }
 
-  for (const schema of ["app", "drizzle", "auth"]) {
+  for (const schema of ["app", "drizzle", "auth", "audit"]) {
     const { rows } = await admin.query<{ owner: string }>(
       "SELECT pg_get_userbyid(nspowner) AS owner FROM pg_namespace WHERE nspname = $1",
       [schema],
@@ -99,6 +99,11 @@ export async function applyLocalDatabaseGrants(
     `GRANT USAGE ON SCHEMA auth TO ${app}`,
     `GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA auth TO ${app}`,
     `ALTER DEFAULT PRIVILEGES FOR ROLE ${migrator} IN SCHEMA auth GRANT SELECT, INSERT, UPDATE ON TABLES TO ${app}`,
+    // M1.6 append-only audit (ADR-0012): a separate schema with NO default
+    // privileges, so no audit table ever inherits runtime write access.
+    `CREATE SCHEMA IF NOT EXISTS audit AUTHORIZATION ${migrator}`,
+    `REVOKE ALL ON SCHEMA audit FROM PUBLIC`,
+    `GRANT USAGE ON SCHEMA audit TO ${app}`,
   ];
   // Table-specific DELETE, applied once the auth migration has created the
   // tables (run db:bootstrap:local again after db:migrate). Sessions and
@@ -153,6 +158,18 @@ export async function applyLocalDatabaseGrants(
     );
   }
 
+  // The runtime role reaches audit storage only through the reviewed
+  // SECURITY DEFINER append functions, and may read only the projection
+  // columns of audit_event: never integrity hashes, key versions, chain
+  // positions, request IDs, the chain head, or security_event.
+  if (await tableExists(admin, "audit.audit_event")) {
+    statements.push(
+      `REVOKE ALL ON ALL TABLES IN SCHEMA audit FROM ${app}`,
+      `GRANT SELECT (${auditProjectionColumns.join(", ")}) ON audit.audit_event TO ${app}`,
+      `GRANT EXECUTE ON FUNCTION audit.claim_chain_head(text), audit.append_audit_event(jsonb), audit.append_security_event(jsonb) TO ${app}`,
+    );
+  }
+
   await admin.query("BEGIN");
   try {
     for (const statement of statements) await admin.query(statement);
@@ -167,6 +184,7 @@ export async function applyLocalDatabaseGrants(
     `${app}: SELECT/INSERT/UPDATE/DELETE on app tables, including future ones (default privileges)`,
     `schema auth: owned by ${migrator}; ${app} has SELECT/INSERT/UPDATE, DELETE only on auth.session, auth.verification, auth.two_factor, and auth.totp_replay_guard`,
     `authorization: ${app} has SELECT only on auth.role, auth.permission, auth.role_permission; INSERT and lifecycle-column UPDATE only on auth.user_role_assignment; no DELETE`,
+    `audit: owned by ${migrator}, no default privileges; ${app} has EXECUTE on the append functions and column-limited SELECT on audit.audit_event only`,
   ];
 }
 
@@ -181,6 +199,29 @@ export const assignmentLifecycleColumns = [
   "superseded_by_assignment_id",
   "version",
   "updated_at",
+] as const;
+
+/** audit_event columns the runtime role may read (query projection). */
+export const auditProjectionColumns = [
+  "id",
+  "event_name",
+  "event_version",
+  "category",
+  "outcome",
+  "organization_id",
+  "candidacy_id",
+  "actor_type",
+  "actor_user_id",
+  "effective_role_code",
+  "effective_scope_type",
+  "permission_code",
+  "action",
+  "target_type",
+  "target_id",
+  "reason_code",
+  "correlation_id",
+  "occurred_at",
+  "metadata_json",
 ] as const;
 
 async function tableExists(client: Client, table: string): Promise<boolean> {

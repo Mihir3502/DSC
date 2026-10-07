@@ -1,4 +1,5 @@
 import "server-only";
+import { requireRecorded } from "@/modules/audit";
 import type { PasswordProblem } from "../domain/candidate-registration-policy";
 import { findAccountEmail } from "../infrastructure/account-repository";
 import {
@@ -50,7 +51,10 @@ export async function changeCandidatePassword(
   if (decision.decision === "DENY") return refusalOf(decision);
   if (!principal) return { kind: "UNAUTHENTICATED" };
   if (!deps.limiter.consume("changePasswordPerAccount", principal.accountId)) {
-    deps.events.record({ code: "auth.rate_limited", category: "rate_limited" });
+    await deps.events.record({
+      code: "auth.rate_limited",
+      category: "rate_limited",
+    });
     return { kind: "RATE_LIMITED" };
   }
   const problems = await newPasswordProblems(
@@ -72,7 +76,7 @@ export async function changeCandidatePassword(
     asResponse: true,
   });
   if (!response.ok) {
-    deps.events.record({
+    await deps.events.record({
       code: "auth.password_change_failed",
       category: "invalid_credentials",
       accountRef: principal.accountId,
@@ -80,14 +84,17 @@ export async function changeCandidatePassword(
     return { kind: "CURRENT_PASSWORD_INVALID" };
   }
 
-  const to = await findAccountEmail(deps.db, principal.accountId);
-  if (to) deps.email.enqueue({ template: "PASSWORD_CHANGED", to });
-  deps.events.record({
+  // PROVIDER_COMMITTED (ADR-0012): Better Auth already changed the
+  // password and revoked other sessions. A failed append withholds success
+  // (generic error) and raises an alert; it cannot undo the change.
+  await requireRecorded(deps.events, {
     code: "auth.password_changed",
     accountRef: principal.accountId,
     permissionCode: selfServiceAction("CANDIDATE_PASSWORD_CHANGE"),
     policyVersion: decision.policyVersion,
     correlationId,
   });
+  const to = await findAccountEmail(deps.db, principal.accountId);
+  if (to) deps.email.enqueue({ template: "PASSWORD_CHANGED", to });
   return { kind: "CHANGED", setCookies: setCookiesOf(response) };
 }

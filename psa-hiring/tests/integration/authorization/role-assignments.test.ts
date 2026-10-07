@@ -627,7 +627,7 @@ describe("assignment administration by authorized staff", () => {
     expect(JSON.stringify(listed)).not.toContain("TEST-TICKET");
   });
 
-  it("emits only safe, future-audit-ready events", async () => {
+  it("emits only safe, catalog-bounded audit events", async () => {
     const subject = await staffAccount("events");
     await grant(h, pair, subject, "TRAINER_EVALUATOR", "TEAM", scopes.TEAM);
     await proposeRoleAssignment(
@@ -653,13 +653,19 @@ describe("assignment administration by authorized staff", () => {
           [
             "code",
             "accountRef",
+            "actorRef",
+            "systemActor",
             "recordRef",
             "category",
             "permissionCode",
             "roleCode",
             "scopeType",
+            "effective",
             "reasonCode",
             "policyVersion",
+            "previousVersion",
+            "newVersion",
+            "correlationId",
           ].includes(k),
         ),
       ).toBe(true);

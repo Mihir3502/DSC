@@ -98,6 +98,10 @@ function main() {
     "evaluateQueryScope",
     "BETTER_AUTH_SECRET",
     "DATABASE_URL",
+    // M1.6 (ADR-0012): audit integrity keys and append internals.
+    "AUDIT_INTEGRITY_KEYS",
+    "append_audit_event",
+    "withAuditedTransaction",
     "neverReturnKeys",
     "server-only",
   ];

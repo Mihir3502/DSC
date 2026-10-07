@@ -1,4 +1,9 @@
 import "server-only";
+import {
+  withAuditedTransaction,
+  type SystemActor,
+  type TransactionAudit,
+} from "@/modules/audit";
 import type { Database } from "@/shared/database";
 import {
   canIssueStaffInvitation,
@@ -37,6 +42,23 @@ import {
 
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
+/** Who issued or revoked: an acting account, or a bounded system actor. */
+export type InvitationActorFacts =
+  Readonly<{ actorRef: string }> | Readonly<{ systemActor: SystemActor }>;
+
+export function invitationActorFacts(
+  actor: StaffAdministrationActor,
+): InvitationActorFacts {
+  if (actor.kind === "ACCOUNT") return { actorRef: actor.accountId };
+  return {
+    systemActor:
+      actor.reason === "TEST_HARNESS" ? "TEST_HARNESS" : "SYSTEM_PROCESS",
+  };
+}
+
+const uuidShape =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
 export type IssueStaffInvitationResult =
   /**
    * Uniform outcome whether or not an invitation was created: existing
@@ -72,6 +94,8 @@ export async function issueInvitationInTransaction(
     recoveryCaseId?: string;
     now: Date;
   }>,
+  audit: TransactionAudit,
+  actor: InvitationActorFacts,
 ): Promise<IssuedInvitation | null> {
   await lockInvitationEmail(tx, input.email);
   const existing = await findAccountByEmail(tx, input.email);
@@ -114,8 +138,22 @@ export async function issueInvitationInTransaction(
     issuedAt: input.now,
     expiresAt: new Date(input.now.getTime() + ttlSeconds * 1000),
   });
-  if (supersededId)
+  if (supersededId) {
     await linkSupersededInvitation(tx, supersededId, invitationId);
+    await audit.append({
+      code: "staff.invitation_superseded",
+      recordRef: supersededId,
+      ...actor,
+    });
+  }
+  // Committed with the invitation itself (ADR-0012): no invitation exists
+  // without its evidence.
+  await audit.append({
+    code: "staff.invitation_issued",
+    recordRef: invitationId,
+    ...(input.accountId ? { accountRef: input.accountId } : {}),
+    ...actor,
+  });
   return Object.freeze({
     invitationId,
     supersededId,
@@ -138,7 +176,7 @@ export async function issueStaffInvitation(
   deps: StaffAuthDependencies = defaultStaffDependencies(),
 ): Promise<IssueStaffInvitationResult> {
   if (!deps.staffAdmin.allows(input.actor, "INVITATION_ISSUE")) {
-    deps.events.record({
+    await deps.events.record({
       code: "staff.invitation_refused",
       category: "denied",
     });
@@ -149,33 +187,29 @@ export async function issueStaffInvitation(
   const issuerReasonCode: InvitationIssuerReason =
     input.actor.kind === "BOOTSTRAP" ? input.actor.reason : "TEST_HARNESS";
 
-  const issued = await deps.db.transaction((tx) =>
-    issueInvitationInTransaction(tx, deps, {
-      email: email.login,
-      emailDisplay: email.display,
-      purpose: "STAFF_ACTIVATION",
-      issuerReasonCode,
-      now: new Date(),
-    }),
+  const issued = await withAuditedTransaction(deps, (tx, audit) =>
+    issueInvitationInTransaction(
+      tx,
+      deps,
+      {
+        email: email.login,
+        emailDisplay: email.display,
+        purpose: "STAFF_ACTIVATION",
+        issuerReasonCode,
+        now: new Date(),
+      },
+      audit,
+      invitationActorFacts(input.actor),
+    ),
   );
   if (!issued) {
-    deps.events.record({
+    await deps.events.record({
       code: "staff.invitation_refused",
       category: "not_eligible",
     });
     return { kind: "ACCEPTED" };
   }
   deps.email.enqueue(issued.email);
-  if (issued.supersededId) {
-    deps.events.record({
-      code: "staff.invitation_superseded",
-      recordRef: issued.supersededId,
-    });
-  }
-  deps.events.record({
-    code: "staff.invitation_issued",
-    recordRef: issued.invitationId,
-  });
   return { kind: "ACCEPTED" };
 }
 
@@ -192,14 +226,19 @@ export async function revokeStaffInvitation(
   deps: StaffAuthDependencies = defaultStaffDependencies(),
 ): Promise<RevokeStaffInvitationResult> {
   if (!deps.staffAdmin.allows(input.actor, "INVITATION_REVOKE")) {
-    deps.events.record({
+    await deps.events.record({
       code: "staff.invitation_refused",
       category: "denied",
     });
     return { kind: "NOT_AUTHORIZED" };
   }
   const now = new Date();
-  const result = await deps.db.transaction(async (tx) => {
+  const actor = invitationActorFacts(input.actor);
+  const result = await withAuditedTransaction(deps, async (tx, audit) => {
+    // Only a UUID-shaped reference can match; anything else is not found
+    // and never reaches an event.
+    if (!uuidShape.test(input.invitationId))
+      return { kind: "NOT_FOUND" } as const;
     const row = await findInvitationById(tx, input.invitationId, true);
     if (!row) return { kind: "NOT_FOUND" } as const;
     const decision = decideInvitationTransition(row, "REVOKE", now);
@@ -208,6 +247,11 @@ export async function revokeStaffInvitation(
     }
     if (decision.kind === "expired") {
       await transitionInvitation(tx, row, "EXPIRED", now);
+      await audit.append({
+        code: "staff.invitation_expired",
+        recordRef: row.id,
+        systemActor: "SCHEDULED_EXPIRY",
+      });
       return { kind: "EXPIRED" } as const;
     }
     if (!(await transitionInvitation(tx, row, "REVOKED", now))) {
@@ -220,17 +264,22 @@ export async function revokeStaffInvitation(
         await deleteAllSessions(tx, row.accountId);
       }
     }
+    await audit.append({
+      code: "staff.invitation_revoked",
+      recordRef: row.id,
+      ...(row.accountId ? { accountRef: row.accountId } : {}),
+      ...actor,
+    });
     return { kind: "REVOKED" } as const;
   });
-  deps.events.record({
-    code:
-      result.kind === "REVOKED"
-        ? "staff.invitation_revoked"
-        : result.kind === "EXPIRED"
-          ? "staff.invitation_expired"
-          : "staff.invitation_refused",
-    recordRef: input.invitationId.length <= 64 ? input.invitationId : undefined,
-    category: result.kind === "REVOKED" ? "ok" : "not_eligible",
-  });
+  if (result.kind === "NOT_FOUND" || result.kind === "NOT_REVOCABLE") {
+    await deps.events.record({
+      code: "staff.invitation_refused",
+      category: "not_eligible",
+      ...(result.kind === "NOT_REVOCABLE"
+        ? { recordRef: input.invitationId }
+        : {}),
+    });
+  }
   return result;
 }

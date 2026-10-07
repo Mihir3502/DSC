@@ -114,12 +114,12 @@ async function decide(
   });
 }
 
-function report(
+async function report(
   decision: SelfServiceDecision,
   principal: Principal | null,
   deps: SelfServiceDependencies,
   correlationId: string | undefined,
-): SelfServiceDecision {
+): Promise<SelfServiceDecision> {
   if (decision.decision === "ALLOW") return decision;
   deps.logger.info("authz.self_service_denied", {
     module: "authz",
@@ -136,7 +136,10 @@ function report(
     principal &&
     decision.reasonCode !== "RECENT_AUTH_REQUIRED"
   ) {
-    deps.events.record({
+    // Durable security evidence; inside an audited transaction it is
+    // deferred until that transaction settles (ADR-0012). The decision is
+    // DENY whether or not the append succeeds.
+    await deps.events.record({
       code: "authz.self_service_denied",
       category: "denied",
       accountRef: principal.accountId,

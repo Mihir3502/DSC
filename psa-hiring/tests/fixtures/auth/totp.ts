@@ -29,6 +29,18 @@ export async function totpCode(
   return createOTP(secret).hotp(counter);
 }
 
+/**
+ * Waits out the last moments of a time step, so a code computed for an
+ * offset now is still that offset when the server verifies it (a rollover
+ * in between would silently turn step -1 into step -2).
+ */
+export async function awayFromStepBoundary(marginMs = 3_000): Promise<void> {
+  const remaining = PERIOD_MS - (Date.now() % PERIOD_MS);
+  if (remaining < marginMs) {
+    await new Promise((resolve) => setTimeout(resolve, remaining + 100));
+  }
+}
+
 /** A code that is wrong for this secret at any nearby step. */
 export async function wrongTotpCode(secret: string, now = Date.now()) {
   const valid = new Set(

@@ -1,11 +1,14 @@
 import "server-only";
+import { requireRecorded } from "@/modules/audit";
 import { canSignInInteractively } from "../domain/account-policy";
 import { resolvePostAuthDestination } from "../domain/candidate-registration-policy";
 import { clientKeyFrom } from "../infrastructure/action-rate-limiter";
 import {
   activateVerifiedCandidate,
+  deleteIssuedSession,
   findAccountByEmail,
 } from "../infrastructure/account-repository";
+import { resolveCurrentAccount } from "./current-account";
 import {
   commandLogger,
   defaultDependencies,
@@ -51,12 +54,17 @@ export async function signInCandidate(
       email?.login ?? "invalid",
     )
   ) {
-    deps.events.record({ code: "auth.rate_limited", category: "rate_limited" });
+    await deps.events.record({
+      code: "auth.rate_limited",
+      category: "rate_limited",
+    });
     return { kind: "RATE_LIMITED" };
   }
 
   const fail = async (accountRef?: string): Promise<SignInCandidateResult> => {
-    deps.events.record({
+    // Durable security evidence; the response is the same generic failure
+    // whether or not it is recorded.
+    await deps.events.record({
       code: "auth.sign_in_failed",
       category: "invalid_credentials",
       accountRef,
@@ -98,10 +106,22 @@ export async function signInCandidate(
   });
   if (!response.ok) return fail(account.id);
 
-  deps.events.record({
-    code: "auth.sign_in_succeeded",
-    accountRef: account.id,
-  });
+  // PROVIDER_COMMITTED (ADR-0012): Better Auth already created the session.
+  // Without durable evidence the session is deleted again and the command
+  // fails generically; success is never returned unrecorded.
+  const accountId = account.id;
+  await requireRecorded(
+    deps.events,
+    {
+      code: "auth.sign_in_succeeded",
+      accountRef: accountId,
+      methodCategory: "PASSWORD",
+    },
+    async () => {
+      const token = await issuedToken(response);
+      if (token) await deleteIssuedSession(deps.db, accountId, token);
+    },
+  );
   return {
     kind: "SIGNED_IN",
     destination: resolvePostAuthDestination(input.next),
@@ -120,12 +140,32 @@ export async function signOutCandidate(
   deps: CandidateAuthDependencies = defaultDependencies(),
 ): Promise<SignOutResult> {
   let setCookies: string[] = [];
+  const principal = await resolveCurrentAccount(headers, deps).catch(
+    () => null,
+  );
   try {
     const response = await deps.auth.api.signOut({ headers, asResponse: true });
     setCookies = setCookiesOf(response);
   } catch {
     // No or invalid session: nothing to revoke.
   }
-  deps.events.record({ code: "auth.sign_out" });
+  // Sign-out always completes (ending a session is never withheld); the
+  // event is recorded only when a real session ended.
+  if (principal) {
+    await deps.events.record({
+      code: "auth.sign_out",
+      accountRef: principal.accountId,
+    });
+  }
   return { setCookies };
+}
+
+/** The session token from a provider sign-in response (never logged). */
+export async function issuedToken(response: Response): Promise<string | null> {
+  try {
+    const body = (await response.clone().json()) as { token?: unknown };
+    return typeof body.token === "string" ? body.token : null;
+  } catch {
+    return null;
+  }
 }

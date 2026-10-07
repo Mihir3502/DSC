@@ -145,6 +145,24 @@ export async function deleteOwnedSession(
   return deleted.length;
 }
 
+/**
+ * Deletes the session a provider just issued, by its token, only if it
+ * belongs to the account. Compensation when required sign-in evidence
+ * cannot be recorded (ADR-0012); the token is never logged or returned.
+ */
+export async function deleteIssuedSession(
+  tx: Executor,
+  accountId: string,
+  token: string,
+): Promise<number> {
+  if (token.length === 0 || token.length > 512) return 0;
+  const deleted = await tx
+    .delete(session)
+    .where(and(eq(session.token, token), eq(session.userId, accountId)))
+    .returning({ id: session.id });
+  return deleted.length;
+}
+
 /** Counts unexpired sessions for an account (diagnostics/tests). */
 export async function countActiveSessions(
   db: Executor,
@@ -187,18 +205,19 @@ export async function findAccountEmail(
 }
 
 /**
- * Creates an INVITED, unverified CANDIDATE account and its credential in one
- * transaction (packet M1.2 §6.1). Type, status, and verification are fixed
+ * Creates an INVITED, unverified CANDIDATE account and its credential on the
+ * caller's transaction (packet M1.2 §6.1), so its audit event commits with
+ * it (M1.6, withAuditedTransaction). Type, status, and verification are fixed
  * here, never taken from input. The password hash comes from Better Auth's
  * maintained hasher. Returns null, without error, when the normalized email
  * already exists (including a concurrent insert), so callers can respond
  * generically.
  */
 export async function createCandidateWithCredential(
-  db: Database,
+  tx: Executor,
   input: { email: string; emailDisplay: string; passwordHash: string },
 ): Promise<string | null> {
-  return db.transaction(async (tx) => {
+  {
     const now = new Date();
     const [created] = await tx
       .insert(user)
@@ -224,7 +243,7 @@ export async function createCandidateWithCredential(
       updatedAt: now,
     });
     return created.id;
-  });
+  }
 }
 
 /**

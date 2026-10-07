@@ -1,5 +1,7 @@
 import "server-only";
+import { requireRecorded } from "@/modules/audit";
 import { clientKeyFrom } from "../infrastructure/action-rate-limiter";
+import { findAccountByEmail } from "../infrastructure/account-repository";
 import { OTP_LENGTH } from "../infrastructure/auth";
 import {
   commandLogger,
@@ -46,7 +48,10 @@ export async function verifyCandidateEmail(
       email.login,
     )
   ) {
-    deps.events.record({ code: "auth.rate_limited", category: "rate_limited" });
+    await deps.events.record({
+      code: "auth.rate_limited",
+      category: "rate_limited",
+    });
     return { kind: "RATE_LIMITED" };
   }
 
@@ -55,7 +60,7 @@ export async function verifyCandidateEmail(
       body: { email: email.login, otp: code },
     });
   } catch {
-    deps.events.record({
+    await deps.events.record({
       code: "auth.verification_failed",
       category: "invalid_code",
     });
@@ -63,6 +68,15 @@ export async function verifyCandidateEmail(
       resultCode: "invalid_code",
     });
     return { kind: "CODE_INVALID" };
+  }
+  // PROVIDER_COMMITTED (ADR-0012): Better Auth marked the email verified
+  // and the hook activated the account; record it before reporting success.
+  const account = await findAccountByEmail(deps.db, email.login);
+  if (account) {
+    await requireRecorded(deps.events, {
+      code: "auth.verification_completed",
+      accountRef: account.id,
+    });
   }
   return { kind: "VERIFIED" };
 }
@@ -81,7 +95,10 @@ export async function resendVerificationCode(
   const email = tryNormalizeEmail(input.email);
   if (!email) return { kind: "INVALID_INPUT" };
   if (!deps.limiter.consume("sendPerClient", clientKeyFrom(headers))) {
-    deps.events.record({ code: "auth.rate_limited", category: "rate_limited" });
+    await deps.events.record({
+      code: "auth.rate_limited",
+      category: "rate_limited",
+    });
     return { kind: "RATE_LIMITED" };
   }
   await sendVerificationCode(deps, email.login);

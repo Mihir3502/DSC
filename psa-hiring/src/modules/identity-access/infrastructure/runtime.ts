@@ -29,7 +29,12 @@ import {
   UnavailableCandidateOwnership,
   UnavailableScopeResolver,
 } from "./scope-resolvers";
-import { LogSecurityEvents, type SecurityEventPort } from "./security-events";
+import {
+  createAuditRecorder,
+  getAuditKeyRing,
+  type AuditKeyRing,
+} from "@/modules/audit";
+import type { SecurityEventPort } from "./security-events";
 import {
   RefusingStaffAdministrationGate,
   type StaffAdministrationGate,
@@ -89,6 +94,10 @@ export function createIdentityRuntime(options: {
   authorization?: Partial<AuthorizationPorts>;
   /** Only tests pass NonproductionAssignmentHarness. */
   assignmentHarness?: AssignmentHarnessGate;
+  /** Durable audit recorder (ADR-0012); tests may wrap or fault-inject. */
+  events?: SecurityEventPort;
+  /** Integrity key ring; defaults to the validated process key ring. */
+  auditKeys?: AuditKeyRing;
 }): IdentityRuntime {
   const { env, db, logger } = options;
   const email = new AuthEmailDispatcher(
@@ -96,7 +105,13 @@ export function createIdentityRuntime(options: {
     env.BETTER_AUTH_URL,
     logger,
   );
-  const events = new LogSecurityEvents(logger);
+  const events =
+    options.events ??
+    createAuditRecorder({
+      db,
+      logger,
+      keys: options.auditKeys ?? getAuditKeyRing(),
+    });
   const auth = createAuth({ env, db, logger, email, events });
   const intents = new RegistrationIntentRepository(
     {

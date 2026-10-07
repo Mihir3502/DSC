@@ -15,7 +15,7 @@ import {
   withoutCookies,
 } from "./better-auth-mfa-adapter";
 import { isForwardedAuthPath } from "./auth-http";
-import { LogSecurityEvents } from "./security-events";
+import { AuditRecorder, parseAuditKeyRing } from "@/modules/audit";
 import {
   NonproductionHarnessGate,
   RefusingStaffAdministrationGate,
@@ -230,7 +230,9 @@ describe("staff invitation capability and email", () => {
     );
     expect(invitation.subject).toBe("Activate your staff account");
     const body = `${invitation.text}\n${invitation.html}`;
-    expect(body).not.toMatch(
+    // The random token itself may spell a filtered word ("ROle"); check the
+    // surrounding content only.
+    expect(body.replaceAll(token, "<token>")).not.toMatch(
       /role|branch|team|candidate|admin|otpauth|<img|<script/i,
     );
     expect(body).not.toContain("test.staff@example.test");
@@ -302,23 +304,33 @@ describe("staff cookies and codes", () => {
 });
 
 describe("staff security events", () => {
-  it("logs only the allowlisted code, result, and opaque references", () => {
+  it("keeps telemetry codes as allowlisted log lines and rejects unknown codes", async () => {
     const destination = createMemoryDestination();
-    const events = new LogSecurityEvents(createLogger({ destination }));
-    events.record({
-      code: "staff.mfa_challenge_failed",
-      category: "replayed",
-      accountRef: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-      recordRef: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    // Telemetry and rejected events never reach the database.
+    const events = new AuditRecorder({
+      db: {} as never,
+      logger: createLogger({ destination }),
+      keys: parseAuditKeyRing({ APP_ENV: "test" }),
+      source: "LOCAL_TEST",
     });
-    events.record({ code: "not.a.code" as never });
+    expect(
+      await events.record({
+        code: "staff.sign_in_first_factor_succeeded",
+        accountRef: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      }),
+    ).toBe(true);
+    expect(await events.record({ code: "not.a.code" as never })).toBe(false);
     const lines = destination.records();
-    expect(lines).toHaveLength(1);
+    expect(lines).toHaveLength(2);
     expect(lines[0]).toMatchObject({
-      eventCode: "staff.mfa_challenge_failed",
-      resultCode: "replayed",
+      eventCode: "staff.sign_in_first_factor_succeeded",
       actorRef: "aaaaaaaaaaaa4aaa8aaaaaaaaaaaaaaa",
-      recordRef: "bbbbbbbbbbbb4bbb8bbbbbbbbbbbbbbb",
     });
+    // The rejection is a safe alert: closed codes only, never the input.
+    expect(lines[1]).toMatchObject({
+      level: "error",
+      reasonCode: "UNKNOWN_EVENT",
+    });
+    expect(JSON.stringify(lines[1])).not.toContain("not.a.code");
   });
 });

@@ -1,4 +1,5 @@
 import "server-only";
+import { withAuditedTransaction } from "@/modules/audit";
 import {
   evaluateAssurance,
   isInlineReauthenticationPurpose,
@@ -107,17 +108,17 @@ export async function verifyStaffStepUp(
   deps: StaffAuthDependencies,
 ): Promise<"OK" | "INVALID" | "RATE_LIMITED"> {
   if (!deps.limiter.consume("staffReauthPerAccount", principal.accountId)) {
-    deps.events.record({
+    await deps.events.record({
       code: "auth.rate_limited",
       category: "rate_limited",
       accountRef: principal.accountId,
     });
     return "RATE_LIMITED";
   }
-  const fail = (
+  const fail = async (
     category: "invalid_credentials" | "invalid_code" | "replayed",
   ) => {
-    deps.events.record({
+    await deps.events.record({
       code: "staff.reauth_failed",
       category,
       accountRef: principal.accountId,
@@ -152,18 +153,26 @@ export async function verifyStaffStepUp(
     asResponse: true,
   });
   if (!totp.ok) return fail("invalid_code");
-  const recorded = await recordReauthentication(
-    deps.db,
-    principal.accountId,
-    principal.sessionId,
-    purpose,
-    new Date(),
-  );
-  if (!recorded) return fail("invalid_credentials");
-  deps.events.record({
-    code: "staff.reauth_succeeded",
-    accountRef: principal.accountId,
+  // The reauthentication evidence and its audit event commit together;
+  // Better Auth's TOTP verification above is provider-committed (ADR-0012).
+  const recorded = await withAuditedTransaction(deps, async (tx, audit) => {
+    const stamped = await recordReauthentication(
+      tx,
+      principal.accountId,
+      principal.sessionId,
+      purpose,
+      new Date(),
+    );
+    if (stamped) {
+      await audit.append({
+        code: "staff.reauth_succeeded",
+        accountRef: principal.accountId,
+        methodCategory: "TOTP",
+      });
+    }
+    return stamped;
   });
+  if (!recorded) return fail("invalid_credentials");
   return "OK";
 }
 

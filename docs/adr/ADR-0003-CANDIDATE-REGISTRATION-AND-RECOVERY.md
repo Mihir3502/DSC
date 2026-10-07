@@ -81,7 +81,7 @@ Decided by the project owner on 2026-10-06, replacing the stateless verification
   - Transports: `smtp-local` (Mailpit via nodemailer 10.0.15, loopback only), `capture-file` (test only), and `refuse` (the default).
   - Staging and production refuse `smtp-local` and `capture-file`.
 - **`CompromisedPasswordPort`:** exact match against a deterministic local denylist; no network. Production-like startup fails closed.
-- **`SecurityEventPort`:** allowlisted event codes and an opaque account reference, written through the M0.5 logger. Marked for replacement by M1.6. PRD-AUTH-007 isn't satisfied until then.
+- **`SecurityEventPort`:** allowlisted event codes and an opaque account reference, written through the M0.5 logger. Marked for replacement by M1.6. PRD-AUTH-007 isn't satisfied until then. *Superseded for events by ADR-0012 (M1.6): the port now persists durably; registration is atomic with its event, and verification and reset are provider-committed.*
 - **Action rate limiter:** per-process, fixed window, SHA-256-keyed. Recovery and resend use silent per-email caps, so nobody can lock out a target or enumerate accounts.
 
 ## Open decisions

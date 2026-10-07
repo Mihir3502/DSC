@@ -94,14 +94,15 @@ export function createAuth({
           token,
           expiresInMinutes: Math.round(env.AUTH_RESET_EXPIRES_IN_SECONDS / 60),
         });
-        events.record({
+        await events.record({
           code: "auth.recovery_email_sent",
           accountRef: account.id,
         });
       },
+      // The durable auth.recovery_completed event is recorded by the
+      // application command once Better Auth has finished (ADR-0012).
       onPasswordReset: async ({ user }) => {
         email.enqueue({ template: "PASSWORD_CHANGED", to: user.email });
-        events.record({ code: "auth.recovery_completed", accountRef: user.id });
       },
     },
     emailVerification: {
@@ -119,12 +120,10 @@ export function createAuth({
         }
       },
       // Approved transition: INVITED → ACTIVE once the email is verified.
+      // auth.verification_completed is recorded durably by the
+      // application command after Better Auth returns (ADR-0012).
       afterEmailVerification: async (user) => {
         await activateVerifiedCandidate(db, user.id);
-        events.record({
-          code: "auth.verification_completed",
-          accountRef: user.id,
-        });
       },
     },
     session: {
@@ -185,7 +184,7 @@ export function createAuth({
             code: otp,
             expiresInMinutes: Math.round(env.AUTH_OTP_EXPIRES_IN_SECONDS / 60),
           });
-          events.record({
+          await events.record({
             code: "auth.verification_sent",
             accountRef: account.id,
           });

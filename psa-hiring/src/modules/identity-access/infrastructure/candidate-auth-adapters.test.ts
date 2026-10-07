@@ -23,7 +23,7 @@ import {
   RegistrationIntentRepository,
   type VerificationStore,
 } from "./registration-intent-repository";
-import { LogSecurityEvents } from "./security-events";
+import { AuditRecorder, parseAuditKeyRing } from "@/modules/audit";
 import {
   isLoopbackSmtpHost,
   LocalSmtpEmailTransport,
@@ -310,17 +310,21 @@ describe("RegistrationIntentRepository", () => {
 });
 
 describe("security events", () => {
-  it("logs allowlisted codes with an opaque reference and nothing else", () => {
+  it("logs telemetry codes with an opaque reference and nothing else", async () => {
     const logs = createMemoryDestination();
-    const events = new LogSecurityEvents(createLogger({ destination: logs }));
-    events.record({
-      code: "auth.sign_in_failed",
-      category: "invalid_credentials",
+    const events = new AuditRecorder({
+      db: {} as never,
+      logger: createLogger({ destination: logs }),
+      keys: parseAuditKeyRing({ APP_ENV: "test" }),
+      source: "LOCAL_TEST",
+    });
+    await events.record({
+      code: "auth.recovery_email_sent",
       accountRef: "0b9a7a3e-6a55-4c8e-9a3b-2f1d0c4e5a6b",
     });
-    events.record({ code: "auth.not_a_code" as never });
+    await events.record({ code: "auth.not_a_code" as never });
     const text = logs.raw();
-    expect(text).toContain("auth.sign_in_failed");
+    expect(text).toContain("auth.recovery_email_sent");
     expect(text).toContain("0b9a7a3e6a554c8e9a3b2f1d0c4e5a6b");
     expect(text).not.toContain("auth.not_a_code");
   });

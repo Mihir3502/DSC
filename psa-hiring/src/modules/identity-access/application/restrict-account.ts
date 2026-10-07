@@ -1,4 +1,9 @@
 import "server-only";
+import {
+  createAuditRecorder,
+  withAuditedTransaction,
+  type EventRecorder,
+} from "@/modules/audit";
 import { getDatabase, type Database } from "@/shared/database";
 import { ConflictError, NotFoundError } from "@/shared/errors";
 import { getLogger, getRequestContext, type AppLogger } from "@/shared/logging";
@@ -19,6 +24,10 @@ import {
 // (SELECT … FOR UPDATE). Better Auth stores sessions only in the database
 // (no secondary storage, no cookie cache), so a committed restriction is
 // authoritative for every later session lookup.
+//
+// Audit (M1.6, ADR-0012): each applied restriction or revocation appends
+// its event inside the same transaction, with a SYSTEM actor until an
+// authorized administration surface exists.
 
 export type RestrictionResult = Readonly<{
   resultCode:
@@ -33,10 +42,23 @@ export type RestrictionResult = Readonly<{
   sessionsRevoked: number;
 }>;
 
-export type RestrictionDependencies = { db: Database; logger: AppLogger };
+export type RestrictionDependencies = {
+  db: Database;
+  logger: AppLogger;
+  /** Durable recorder; defaults to one bound to `db`. */
+  events?: EventRecorder;
+};
 
 function defaults(): RestrictionDependencies {
   return { db: getDatabase(), logger: getLogger() };
+}
+
+function audited(deps: RestrictionDependencies) {
+  return {
+    db: deps.db,
+    events:
+      deps.events ?? createAuditRecorder({ db: deps.db, logger: deps.logger }),
+  };
 }
 
 function logger(deps: RestrictionDependencies) {
@@ -52,11 +74,23 @@ export async function revokeSession(
   sessionId: string,
   deps: RestrictionDependencies = defaults(),
 ): Promise<RestrictionResult> {
-  const revoked = await deps.db.transaction(async (tx) => {
-    const account = await lockAccountForUpdate(tx, accountId);
-    if (!account) throw new NotFoundError();
-    return deleteOwnedSession(tx, accountId, sessionId);
-  });
+  const revoked = await withAuditedTransaction(
+    audited(deps),
+    async (tx, audit) => {
+      const account = await lockAccountForUpdate(tx, accountId);
+      if (!account) throw new NotFoundError();
+      const count = await deleteOwnedSession(tx, accountId, sessionId);
+      if (count > 0) {
+        await audit.append({
+          code: "account.sessions_revoked_by_system",
+          accountRef: accountId,
+          systemActor: "SYSTEM_PROCESS",
+          count,
+        });
+      }
+      return count;
+    },
+  );
   const result = Object.freeze({
     resultCode:
       revoked > 0
@@ -77,11 +111,21 @@ export async function revokeAllSessions(
   accountId: string,
   deps: RestrictionDependencies = defaults(),
 ): Promise<RestrictionResult> {
-  const revoked = await deps.db.transaction(async (tx) => {
-    const account = await lockAccountForUpdate(tx, accountId);
-    if (!account) throw new NotFoundError();
-    return deleteAllSessions(tx, accountId);
-  });
+  const revoked = await withAuditedTransaction(
+    audited(deps),
+    async (tx, audit) => {
+      const account = await lockAccountForUpdate(tx, accountId);
+      if (!account) throw new NotFoundError();
+      const count = await deleteAllSessions(tx, accountId);
+      await audit.append({
+        code: "account.sessions_revoked_by_system",
+        accountRef: accountId,
+        systemActor: "SYSTEM_PROCESS",
+        count,
+      });
+      return count;
+    },
+  );
   logger(deps).info("account.sessions_revoke_all", {
     recordRef: accountId,
     resultCode: "sessions_revoked",
@@ -99,28 +143,52 @@ async function restrict(
   expectedVersion: number | undefined,
   deps: RestrictionDependencies,
 ): Promise<RestrictionResult> {
-  const outcome = await deps.db.transaction(async (tx) => {
-    const account = await lockAccountForUpdate(tx, accountId);
-    if (!account) throw new NotFoundError();
-    if (expectedVersion !== undefined && account.version !== expectedVersion) {
-      throw new ConflictError();
-    }
-    const decision = decideRestriction(account.status, target);
-    if (decision.kind === "not-allowed") throw new ConflictError();
-    if (decision.kind === "apply") {
-      await applyRestriction(
-        tx,
-        accountId,
-        target,
-        reasonCodeFor[target],
-        new Date(),
-      );
-    }
-    // Always clear sessions, so a retry also repairs any session created by
-    // a racing request before the lock was taken.
-    const revoked = await deleteAllSessions(tx, accountId);
-    return { applied: decision.kind === "apply", revoked };
-  });
+  const outcome = await withAuditedTransaction(
+    audited(deps),
+    async (tx, audit) => {
+      const account = await lockAccountForUpdate(tx, accountId);
+      if (!account) throw new NotFoundError();
+      if (
+        expectedVersion !== undefined &&
+        account.version !== expectedVersion
+      ) {
+        throw new ConflictError();
+      }
+      const decision = decideRestriction(account.status, target);
+      if (decision.kind === "not-allowed") throw new ConflictError();
+      if (decision.kind === "apply") {
+        await applyRestriction(
+          tx,
+          accountId,
+          target,
+          reasonCodeFor[target],
+          new Date(),
+        );
+      }
+      // Always clear sessions, so a retry also repairs any session created by
+      // a racing request before the lock was taken.
+      const revoked = await deleteAllSessions(tx, accountId);
+      if (decision.kind === "apply") {
+        await audit.append({
+          code: "account.restricted",
+          accountRef: accountId,
+          systemActor: "SYSTEM_PROCESS",
+          reasonCode: reasonCodeFor[target],
+          previousVersion: account.version,
+          newVersion: account.version + 1,
+          count: revoked,
+        });
+      } else if (revoked > 0) {
+        await audit.append({
+          code: "account.sessions_revoked_by_system",
+          accountRef: accountId,
+          systemActor: "SYSTEM_PROCESS",
+          count: revoked,
+        });
+      }
+      return { applied: decision.kind === "apply", revoked };
+    },
+  );
   const result = Object.freeze({
     resultCode: outcome.applied
       ? ("ACCOUNT_RESTRICTED" as const)

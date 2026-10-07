@@ -173,6 +173,90 @@ void runScript("db:check", async () => {
       "authorization privileges: catalog read-only, assignments insert + lifecycle-column update, no DELETE",
     );
 
+    // Append-only audit (M1.6, ADR-0012): the runtime role may only execute
+    // the reviewed append functions and read projection columns. It never
+    // owns audit objects, writes or truncates audit tables, reads integrity
+    // columns, or touches the chain head; append-only triggers are enabled.
+    const audit = await one<Record<string, boolean | null>>(sql`
+      SELECT to_regclass('audit.audit_event') IS NOT NULL AS present,
+        (SELECT bool_or(has_table_privilege(c.oid, 'INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER'))
+           FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+           WHERE n.nspname = 'audit' AND c.relkind = 'r') AS table_write,
+        has_table_privilege('audit.chain_head', 'SELECT') AS head_select,
+        has_table_privilege('audit.security_event', 'SELECT') AS security_select,
+        has_column_privilege('audit.audit_event', 'event_name', 'SELECT') AS projection_select,
+        has_column_privilege('audit.audit_event', 'integrity_hash', 'SELECT')
+          OR has_column_privilege('audit.audit_event', 'previous_hash', 'SELECT')
+          OR has_column_privilege('audit.audit_event', 'integrity_key_version', 'SELECT')
+          OR has_column_privilege('audit.audit_event', 'request_id', 'SELECT') AS integrity_select,
+        has_function_privilege('audit.append_audit_event(jsonb)', 'EXECUTE')
+          AND has_function_privilege('audit.append_security_event(jsonb)', 'EXECUTE')
+          AND has_function_privilege('audit.claim_chain_head(text)', 'EXECUTE') AS append_execute,
+        EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = 'audit' AND pg_get_userbyid(c.relowner) = current_user) AS owns,
+        (SELECT count(*) FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid
+           JOIN pg_namespace n ON n.oid = c.relnamespace
+           WHERE n.nspname = 'audit' AND NOT t.tgisinternal AND t.tgenabled = 'O') = 6 AS triggers`);
+    assertCheck(
+      audit.present,
+      "audit tables are missing (run pnpm db:migrate)",
+    );
+    assertCheck(
+      audit.table_write === false &&
+        audit.head_select === false &&
+        audit.security_select === false &&
+        audit.integrity_select === false &&
+        audit.owns === false,
+      "application role has excess audit privileges (run pnpm db:bootstrap:local after db:migrate)",
+    );
+    assertCheck(
+      audit.projection_select && audit.append_execute,
+      "application role cannot append or read audit projections (run pnpm db:bootstrap:local after db:migrate)",
+    );
+    assertCheck(
+      audit.triggers,
+      "audit append-only triggers are missing or disabled",
+    );
+    for (const [label, statement] of [
+      [
+        "update audit_event",
+        sql`UPDATE audit.audit_event SET reason_code = NULL`,
+      ],
+      ["delete audit_event", sql`DELETE FROM audit.audit_event`],
+      ["truncate audit_event", sql`TRUNCATE audit.audit_event`],
+      [
+        "insert audit_event",
+        sql`INSERT INTO audit.audit_event (id) VALUES (gen_random_uuid())`,
+      ],
+      ["update chain_head", sql`UPDATE audit.chain_head SET last_sequence = 0`],
+      [
+        "disable audit trigger",
+        sql`ALTER TABLE audit.audit_event DISABLE TRIGGER audit_event_append_only`,
+      ],
+    ] as const) {
+      let succeeded = false;
+      try {
+        await db.transaction(async (tx) => {
+          await tx.execute(statement);
+          succeeded = true;
+          throw new Rollback();
+        });
+      } catch (error) {
+        if (!(error instanceof Rollback)) {
+          const code = pgErrorCode(error);
+          assertCheck(
+            code === "42501",
+            `${label}: unexpected error ${code ?? "unknown"}`,
+          );
+        }
+      }
+      if (succeeded)
+        throw new CheckFailure(`application role was able to ${label}`);
+    }
+    ok(
+      "audit privileges: append functions + projection SELECT only; no write, truncate, integrity read, ownership, or trigger bypass",
+    );
+
     // DML round trip inside a transaction that is always rolled back.
     try {
       await db.transaction(async (tx) => {

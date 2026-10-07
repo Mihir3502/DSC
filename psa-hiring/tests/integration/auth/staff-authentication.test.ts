@@ -65,6 +65,7 @@ import {
   totpCode,
   wrongTotpCode,
   wrongTotpCodes,
+  awayFromStepBoundary,
 } from "../../fixtures/auth/totp";
 import {
   createMemoryDestination,
@@ -271,6 +272,7 @@ async function firstFactor(email: string, password = STAFF_PASSWORD) {
 async function signInWithTotp(staff: ActivatedStaff, offset = 1) {
   const { result, jar } = await firstFactor(staff.email);
   expect(result.kind).toBe("MFA_REQUIRED");
+  await awayFromStepBoundary();
   const mfa = record(
     await completeStaffMfa(
       { method: "totp", code: await totpCode(staff.secret, offset) },

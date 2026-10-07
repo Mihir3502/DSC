@@ -1,4 +1,5 @@
 import "server-only";
+import { requireRecorded, withAuditedTransaction } from "@/modules/audit";
 import { encode } from "uqr";
 import type { PasswordProblem } from "../domain/candidate-registration-policy";
 import { maskEmail } from "../domain/candidate-registration-policy";
@@ -129,11 +130,16 @@ export async function beginStaffActivation(
 ): Promise<BeginActivationResult> {
   const log = commandLogger(deps);
   if (!deps.limiter.consume("staffActivatePerClient", clientKeyFrom(headers))) {
-    deps.events.record({ code: "auth.rate_limited", category: "rate_limited" });
+    await deps.events.record({
+      code: "auth.rate_limited",
+      category: "rate_limited",
+    });
     return { kind: "RATE_LIMITED" };
   }
-  const invalid = (category: "invalid_link" | "not_eligible" | "expired") => {
-    deps.events.record({ code: "staff.activation_failed", category });
+  const invalid = async (
+    category: "invalid_link" | "not_eligible" | "expired",
+  ) => {
+    await deps.events.record({ code: "staff.activation_failed", category });
     return { kind: "INVITATION_INVALID" } as const;
   };
   if (!isInvitationTokenShape(input.token)) return invalid("invalid_link");
@@ -157,12 +163,13 @@ export async function beginStaffActivation(
     return invalid("invalid_link");
   }
   if (found.status === "PENDING" && !isLiveInvitation(found, now)) {
-    await deps.db.transaction((tx) =>
-      transitionInvitation(tx, found, "EXPIRED", now),
-    );
-    deps.events.record({
-      code: "staff.invitation_expired",
-      recordRef: found.id,
+    await withAuditedTransaction(deps, async (tx, audit) => {
+      await transitionInvitation(tx, found, "EXPIRED", now);
+      await audit.append({
+        code: "staff.invitation_expired",
+        recordRef: found.id,
+        systemActor: "SCHEDULED_EXPIRY",
+      });
     });
     await equalizePasswordWork(deps, password);
     return invalid("expired");
@@ -173,7 +180,7 @@ export async function beginStaffActivation(
   }
 
   const passwordHash = await (await deps.auth.$context).password.hash(password);
-  const accountId = await deps.db.transaction(async (tx) => {
+  const accountId = await withAuditedTransaction(deps, async (tx, audit) => {
     const invitation = await findInvitationById(tx, found.id, true);
     if (!invitation || !isLiveInvitation(invitation, now)) return null;
     const existing = await findAccountByEmail(tx, invitation.email);
@@ -210,6 +217,13 @@ export async function beginStaffActivation(
     ) {
       throw new Error("invitation changed concurrently");
     }
+    // The account (or its replaced credential) and its evidence commit
+    // together; the provider enrollment steps follow.
+    await audit.append({
+      code: "staff.activation_started",
+      accountRef: id,
+      recordRef: invitation.id,
+    });
     return id;
   });
   if (!accountId) return invalid("not_eligible");
@@ -275,11 +289,6 @@ export async function beginStaffActivation(
     });
     return invalid("not_eligible");
   }
-  deps.events.record({
-    code: "staff.activation_started",
-    accountRef: accountId,
-    recordRef: found.id,
-  });
   return {
     kind: "ENROLLMENT_STARTED",
     enrollment,
@@ -353,7 +362,10 @@ export async function verifyStaffEnrollment(
   const context = await resolveActivationContext(headers, deps);
   if (!context) return { kind: "ACTIVATION_EXPIRED" };
   if (!deps.limiter.consume("staffEnrollPerAccount", context.accountId)) {
-    deps.events.record({ code: "auth.rate_limited", category: "rate_limited" });
+    await deps.events.record({
+      code: "auth.rate_limited",
+      category: "rate_limited",
+    });
     return { kind: "RATE_LIMITED" };
   }
   const password = formString(input.password, 4096);
@@ -364,7 +376,7 @@ export async function verifyStaffEnrollment(
     asResponse: true,
   });
   if (!confirm.ok) {
-    deps.events.record({
+    await deps.events.record({
       code: "staff.activation_failed",
       category: "invalid_credentials",
       accountRef: context.accountId,
@@ -382,7 +394,7 @@ export async function verifyStaffEnrollment(
       code,
     ))
   ) {
-    deps.events.record({
+    await deps.events.record({
       code: "staff.activation_failed",
       category: code ? "replayed" : "invalid_code",
       accountRef: context.accountId,
@@ -404,7 +416,7 @@ export async function verifyStaffEnrollment(
       }),
   );
   if (!verified.ok) {
-    deps.events.record({
+    await deps.events.record({
       code: "staff.activation_failed",
       category: "invalid_code",
       accountRef: context.accountId,
@@ -426,9 +438,13 @@ export async function verifyStaffEnrollment(
     ? body.backupCodes.filter((c): c is string => typeof c === "string")
     : [];
   if (codes.length === 0) return { kind: "ACTIVATION_EXPIRED" };
-  deps.events.record({
+  // PROVIDER_COMMITTED (ADR-0012): Better Auth enabled the factor and
+  // stored the codes; without durable evidence the codes are withheld and
+  // the account stays INVITED (activation completion is atomic below).
+  await requireRecorded(deps.events, {
     code: "staff.mfa_enrolled",
     accountRef: context.accountId,
+    methodCategory: "TOTP",
   });
   return {
     kind: "BACKUP_CODES",
@@ -462,7 +478,7 @@ export async function completeStaffActivation(
   if (!enrollment.verified) return { kind: "ACTIVATION_EXPIRED" };
 
   const now = new Date();
-  const activated = await deps.db.transaction(async (tx) => {
+  const activated = await withAuditedTransaction(deps, async (tx, audit) => {
     const invitation = await findInvitationById(tx, context.invitationId, true);
     if (!invitation) return false;
     if (
@@ -480,25 +496,25 @@ export async function completeStaffActivation(
     ) {
       throw new Error("invitation changed concurrently");
     }
+    await audit.append({
+      code: "staff.invitation_accepted",
+      accountRef: context.accountId,
+      recordRef: context.invitationId,
+    });
+    await audit.append({
+      code: "staff.activation_completed",
+      accountRef: context.accountId,
+    });
     return true;
   });
   if (!activated) {
-    deps.events.record({
+    await deps.events.record({
       code: "staff.activation_failed",
       category: "not_eligible",
       accountRef: context.accountId,
     });
     return { kind: "ACTIVATION_EXPIRED" };
   }
-  deps.events.record({
-    code: "staff.invitation_accepted",
-    accountRef: context.accountId,
-    recordRef: context.invitationId,
-  });
-  deps.events.record({
-    code: "staff.activation_completed",
-    accountRef: context.accountId,
-  });
 
   // Replace the enrollment session with a new MFA-complete staff session.
   const rotated = await withSessionIssuance(

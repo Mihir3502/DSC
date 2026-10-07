@@ -1,5 +1,6 @@
+import { drizzle } from "drizzle-orm/node-postgres";
 import { parseMigrationEnv } from "../../src/config/env-schema";
-import { LogSecurityEvents } from "../../src/modules/identity-access/infrastructure/security-events";
+import { AuditRecorder, getAuditKeyRing } from "../../src/modules/audit";
 import {
   AUTHORIZATION_POLICY_VERSION,
   authorizationCatalog,
@@ -75,16 +76,25 @@ void runScript(`db:catalog:${mode ?? "?"}`, async () => {
       throw new CheckFailure("authorization catalog not applied");
     }
     await applyPlan(query, plan, authorizationCatalog.version);
+    if (planChanges(plan) > 0) {
+      // Appended on the same connection and transaction as the catalog
+      // change (ADR-0012): both commit, or neither does.
+      const db = drizzle({ client });
+      await new AuditRecorder({
+        db: db as never,
+        logger: getLogger(),
+        keys: getAuditKeyRing(),
+        source: "SYSTEM",
+      }).recordInTransaction(db, {
+        code: "authz.catalog_applied",
+        systemActor: "SYSTEM_PROCESS",
+        policyVersion: AUTHORIZATION_POLICY_VERSION,
+      });
+    }
     await client.query("COMMIT");
     console.log(
       `Authorization catalog v${authorizationCatalog.version} applied: ${describePlan(plan)}.`,
     );
-    if (planChanges(plan) > 0) {
-      new LogSecurityEvents(getLogger()).record({
-        code: "authz.catalog_applied",
-        policyVersion: AUTHORIZATION_POLICY_VERSION,
-      });
-    }
   } catch (error) {
     await client.query("ROLLBACK").catch(() => undefined);
     throw error;

@@ -56,6 +56,7 @@ No `.env` file, Compose database, or volume is needed. Tests use only generated 
 | `test:security` | `test:security` |
 | `db:test:migrations` | `test:integration` (migration-from-empty in a disposable database, including the M1.1–M1.3 auth tests and the M1.4 authorization tests) |
 | route-manifest drift / architecture checks (M1.5) | `test:coverage` runs `tests/guards/authorization-boundaries.test.ts` (source tree vs. `src/app/_security/route-manifest.ts`, boundary scans with self-checks, production-config harness refusal); `test:routes` compares the production build |
+| M1.6 audit suites (`test:audit`) | `test:coverage` runs `src/modules/audit/**` (catalog strictness, canonicalization golden vector, key ring, projection, no-mutation API); `test:integration` runs `tests/integration/audit/` (privilege attacks, immutability, atomic forced failures, idempotency, deterministic chain races, corruption detection through `audit:verify`, key rotation, synthetic `pg_dump`/`pg_restore` verification, migration from the M1.5 schema, and authorized query projection). `pnpm test:audit` runs both subsets locally |
 | catalog idempotence/drift | `test:integration` (`tests/integration/authorization/catalog.test.ts` runs the real `db:catalog:apply`/`db:catalog:check`) plus the unit catalog digest and `tests/guards/authorization-matrix.test.ts` matrix traceability |
 
 ### Test environment variables

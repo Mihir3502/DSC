@@ -1,143 +1,25 @@
-import type { AppLogger } from "@/shared/logging";
+import type {
+  AuditFacts,
+  EventRecorder,
+  SecurityCategory,
+} from "@/modules/audit";
 
-// Security event port until M1.6 (packet M1.2 §15). Events are typed and
-// future-audit-ready, but this adapter writes only an allowlisted
-// operational event code and an opaque account reference through the M0.5
-// logger. It never receives an email, password, token, cookie, IP, user
-// agent, or request body. M1.6 replaces or composes this with atomic,
-// immutable audit persistence; PRD-AUTH-007 is not satisfied until then.
+// Identity-access event port (packet M1.2 §15, M1.6 §15, ADR-0012). Until
+// M1.6 this was a log-only adapter; it is now the durable audit recorder:
+// every emitted code is registered in the audit event catalog, and each
+// event is persisted to audit_event or security_event (or kept as an
+// approved telemetry log line) according to that catalog.
+//
+// - record(): bounded standalone append for denials, failures, reads, and
+//   Better Auth provider-committed changes. Never throws; returns false
+//   when a required append failed so the caller can withhold success.
+// - recordInTransaction(): append inside the caller's transaction; throws
+//   so the mutation rolls back. Prefer withAuditedTransaction.
+//
+// Events carry only opaque UUID references and closed codes: never an
+// email, password, token, cookie, header, IP, user agent, or request body.
 
-export const securityEventCodes = [
-  "auth.registration_requested",
-  "auth.registration_account_created",
-  "auth.verification_sent",
-  "auth.verification_completed",
-  "auth.verification_failed",
-  "auth.sign_in_succeeded",
-  "auth.sign_in_failed",
-  "auth.sign_out",
-  "auth.recovery_requested",
-  "auth.recovery_email_sent",
-  "auth.recovery_completed",
-  "auth.recovery_failed",
-  "auth.password_changed",
-  "auth.password_change_failed",
-  "auth.session_revoked",
-  "auth.sessions_revoked",
-  "auth.rate_limited",
-  // M1.3 staff invitation, activation, MFA, recent auth, and recovery.
-  "staff.invitation_issued",
-  "staff.invitation_superseded",
-  "staff.invitation_revoked",
-  "staff.invitation_expired",
-  "staff.invitation_accepted",
-  "staff.invitation_refused",
-  "staff.activation_started",
-  "staff.activation_completed",
-  "staff.activation_failed",
-  "staff.mfa_enrolled",
-  "staff.backup_codes_regenerated",
-  "staff.mfa_reset",
-  "staff.sign_in_first_factor_succeeded",
-  "staff.sign_in_first_factor_failed",
-  "staff.mfa_challenge_succeeded",
-  "staff.mfa_challenge_failed",
-  "staff.mfa_locked",
-  "staff.backup_code_used",
-  "staff.reauth_challenged",
-  "staff.reauth_succeeded",
-  "staff.reauth_failed",
-  "staff.recovery_requested",
-  "staff.recovery_verification_started",
-  "staff.recovery_identity_verified",
-  "staff.recovery_approved",
-  "staff.recovery_rejected",
-  "staff.recovery_cancelled",
-  "staff.recovery_expired",
-  "staff.recovery_completed",
-  "staff.recovery_denied",
-  "staff.session_revoked",
-  "staff.sessions_revoked",
-  "staff.password_changed",
-  "staff.password_change_failed",
-  "staff.sign_out",
-  // M1.4 authorization foundation (ADR-0005). Future-audit-ready only.
-  "authz.assignment_proposed",
-  "authz.assignment_approved",
-  "authz.assignment_rejected",
-  "authz.assignment_revoked",
-  "authz.assignment_superseded",
-  "authz.assignment_refused",
-  "authz.subject_version_changed",
-  "authz.catalog_applied",
-  "authz.high_risk_denied",
-  "authz.policy_unavailable",
-  // M1.5 route/field authorization (ADR-0011). Future-audit-ready only.
-  "authz.self_service_denied",
-  "authz.restricted_access_allowed",
-] as const;
-export type SecurityEventCode = (typeof securityEventCodes)[number];
-
-/** Closed failure categories; never raw library codes. */
-export type SecurityEventCategory =
-  | "invalid_input"
-  | "invalid_credentials"
-  | "not_eligible"
-  | "invalid_intent"
-  | "invalid_code"
-  | "invalid_link"
-  | "rate_limited"
-  | "duplicate"
-  | "locked"
-  | "replayed"
-  | "expired"
-  | "denied"
-  | "challenge"
-  | "ok";
-
-export type SecurityEvent = Readonly<{
-  code: SecurityEventCode;
-  /** Opaque account UUID when known; never an email address. */
-  accountRef?: string;
-  /** Opaque invitation, recovery-case, or assignment UUID. */
-  recordRef?: string;
-  category?: SecurityEventCategory;
-  /**
-   * M1.4 authorization context: catalog codes and versions only. Never
-   * scope or resource identifiers, reason references, or policy facts.
-   */
-  permissionCode?: string;
-  roleCode?: string;
-  scopeType?: string;
-  reasonCode?: string;
-  policyVersion?: string;
-  /** M1.5: the request's validated correlation ID, when known. */
-  correlationId?: string;
-}>;
-
-export interface SecurityEventPort {
-  record(event: SecurityEvent): void;
-}
-
-const codes = new Set<string>(securityEventCodes);
-
-export class LogSecurityEvents implements SecurityEventPort {
-  constructor(private readonly logger: AppLogger) {}
-
-  record(event: SecurityEvent): void {
-    if (!codes.has(event.code)) return;
-    this.logger.info(event.code, {
-      module: "auth",
-      eventCode: event.code,
-      resultCode: event.category ?? "ok",
-      actorRef: event.accountRef?.replaceAll("-", ""),
-      recordRef: event.recordRef?.replaceAll("-", ""),
-      action: event.permissionCode,
-      roleCode: event.roleCode,
-      scopeType: event.scopeType,
-      reasonCode: event.reasonCode,
-      policyVersion: event.policyVersion,
-      correlationId: event.correlationId,
-    });
-  }
-}
+export type SecurityEvent = AuditFacts;
+export type SecurityEventCode = AuditFacts["code"];
+export type SecurityEventCategory = SecurityCategory;
+export type SecurityEventPort = EventRecorder;

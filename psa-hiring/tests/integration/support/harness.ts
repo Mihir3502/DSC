@@ -135,7 +135,13 @@ export type ScriptResult = { code: number; output: string };
 
 const run = promisify(execFile);
 const scripts: Record<
-  "bootstrap" | "migrate" | "seed" | "check" | "catalog" | "catalogCheck",
+  | "bootstrap"
+  | "migrate"
+  | "seed"
+  | "check"
+  | "catalog"
+  | "catalogCheck"
+  | "auditVerify",
   { file: string; serverOnly: boolean; args?: readonly string[] }
 > = {
   bootstrap: { file: "scripts/db/bootstrap-local.ts", serverOnly: false },
@@ -153,6 +159,8 @@ const scripts: Record<
     serverOnly: true,
     args: ["check"],
   },
+  // M1.6 read-only audit integrity verifier (ADR-0012).
+  auditVerify: { file: "scripts/audit/verify-integrity.ts", serverOnly: true },
 };
 
 /**

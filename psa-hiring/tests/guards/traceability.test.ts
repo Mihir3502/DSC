@@ -46,6 +46,7 @@ describe("requirement traceability", () => {
     ["M1.3", 16],
     ["M1.4", 16],
     ["M1.5", 16],
+    ["M1.6", 16],
   ] as const)(
     "covers every %s acceptance criterion exactly once",
     (item, count) => {
@@ -69,8 +70,19 @@ describe("requirement traceability", () => {
     expect(recent?.status).not.toBe("covered");
   });
 
-  it("keeps PRD-AUTH-007 incomplete until immutable audit (M1.6)", () => {
+  it("marks PRD-AUTH-007 covered by durable audit (M1.6)", () => {
     const audit = data.requirements.find((e) => e.id === "PRD-AUTH-007");
-    expect(audit?.status).not.toBe("covered");
+    expect(audit?.status).toBe("covered");
+    // Business audit history, reports, and exports remain M2+ work.
+    for (const id of ["PRD-AUD-001", "PRD-AUD-002"]) {
+      expect(data.requirements.find((e) => e.id === id)?.status).toBe(
+        "partial",
+      );
+    }
+    for (const id of ["PRD-AUD-003", "PRD-AUD-004", "PRD-AUD-005"]) {
+      expect(
+        data.requirements.find((e) => e.id === id)?.status ?? "absent",
+      ).not.toBe("covered");
+    }
   });
 });

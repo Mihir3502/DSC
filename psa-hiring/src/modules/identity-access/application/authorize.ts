@@ -158,12 +158,12 @@ export async function evaluateAuthorization(
   try {
     const decision = await decide(request, definition, facts, deps);
     if (decision.decision === "DENY")
-      report(decision, definition, request, deps);
+      await report(decision, definition, request, deps);
     return decision;
   } catch {
     // Never surface a raw error, SQL, or resolver failure.
     const decision = deny(code, POLICY, "POLICY_UNAVAILABLE");
-    report(decision, definition, request, deps);
+    await report(decision, definition, request, deps);
     return decision;
   }
 }
@@ -702,7 +702,9 @@ function policyUnavailable(
   definition: PermissionDefinition,
   deps: Omit<AuthorizationDependencies, "db">,
 ) {
-  deps.events.record({
+  // Operational telemetry only (catalog: LOG_ONLY); the denial itself is
+  // persisted once by report() when the permission is high risk.
+  void deps.events.record({
     code: "authz.policy_unavailable",
     category: "denied",
     permissionCode: definition.code,
@@ -711,11 +713,15 @@ function policyUnavailable(
 }
 
 /**
- * Bounded denial telemetry for every denial; high-risk denials also emit a
- * future-audit-ready event. Only catalog codes and the opaque account
- * reference are recorded, never resource IDs, scope IDs, or policy facts.
+ * Bounded denial telemetry for every denial; a high-risk denial is also
+ * persisted exactly once as a durable audit event (ADR-0012) through a
+ * bounded standalone append. A failed append never changes the decision:
+ * the result is still DENY and only a safe alert is raised. Only catalog
+ * codes and the opaque account reference are recorded, never resource
+ * IDs, scope IDs, or policy facts. Route guards never emit (they only map
+ * outcomes), so one denial produces one event.
  */
-function report(
+async function report(
   decision: DenyDecision,
   definition: PermissionDefinition | null,
   request: AuthorizationRequest,
@@ -732,13 +738,13 @@ function report(
     policyVersion: decision.policyVersion,
   });
   if (definition?.highRisk && accountRef) {
-    deps.events.record({
+    await deps.events.record({
       code: "authz.high_risk_denied",
-      category: "denied",
-      accountRef,
+      actorRef: accountRef,
       permissionCode: definition.code,
       reasonCode: decision.reasonCode,
       policyVersion: decision.policyVersion,
+      correlationId: request.correlationId,
     });
   }
 }

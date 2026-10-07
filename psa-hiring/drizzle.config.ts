@@ -18,8 +18,9 @@ export default defineConfig({
     "./src/modules/*/infrastructure/*-schema.ts",
   ],
   out: "./drizzle",
-  // Application tables (app) and Better Auth tables (auth, ADR-0002).
-  schemaFilter: ["app", "auth"],
+  // Application tables (app), Better Auth tables (auth, ADR-0002), and the
+  // append-only audit tables (audit, ADR-0012).
+  schemaFilter: ["app", "auth", "audit"],
   migrations: {
     schema: "drizzle",
     table: "__drizzle_migrations",

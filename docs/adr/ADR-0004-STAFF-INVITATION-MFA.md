@@ -130,7 +130,7 @@ No staff profile, role, or scope is created.
 
 ### Security events
 
-Typed `staff.*` event codes go through the M1.2 `SecurityEventPort`. They carry only the code, a result category, opaque account and record UUIDs, and the correlation ID. This is future-audit-ready, not audit: PRD-AUTH-007 stays incomplete until M1.6.
+Typed `staff.*` event codes go through the M1.2 `SecurityEventPort`. They carry only the code, a result category, opaque account and record UUIDs, and the correlation ID. This is future-audit-ready, not audit: PRD-AUTH-007 stays incomplete until M1.6. *Superseded for events by ADR-0012 (M1.6): invitation, activation, recovery, and MFA-reset events now append in the same transaction; Better Auth MFA enrollment and sign-in are provider-committed.*
 
 ### Schema
 

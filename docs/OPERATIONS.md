@@ -10,9 +10,10 @@ This document describes the M0.5 foundation in `psa-hiring/src/shared/logging`, 
 | Correlation ID | Connect one request's logs to the reference a user sees | Request lifetime, `x-correlation-id` header, logs |
 | Internal error | Trusted classification for control flow | In memory only |
 | Public error | Minimal stable response or UI | Response body or error page |
-| Business audit record | Immutable evidence of sensitive business actions | **Not implemented yet (M1+)** |
+| Security event | Bounded authentication/abuse evidence | `audit.security_event` (append-only, HMAC-chained; M1.6, ADR-0012) |
+| Audit record | Immutable evidence of compliance-significant actions | `audit.audit_event` (append-only, HMAC-chained, authorization-scoped; M1.6, ADR-0012) |
 
-Never use operational logs as a substitute for business audit records. A future audit write failure must fail the command; it must not be reduced to a log line.
+Never use operational logs as a substitute for audit records. A required audit write failure fails the command (or, for Better Auth provider-committed changes, withholds success; ADR-0012 §5). It is never reduced to a log line, and no audit payload is ever written to logs as a fallback. See §7.
 
 ## 2. Logger
 
@@ -158,7 +159,7 @@ Auth route errors use the same closed problem codes (plus `RATE_LIMITED`, 429). 
 | `authz.subject_version_changed` | The subject's authorization version changed and their sessions ended |
 | `authz.catalog_applied` | `pnpm db:catalog:apply` changed the catalog (`policyVersion`) |
 
-Free-text reasons, reason references, emails, scope/resource IDs, and policy facts are never logged. These are operational events only; immutable audit persistence is M1.6.
+Free-text reasons, reason references, emails, scope/resource IDs, and policy facts are never logged. Since M1.6 these codes are durable audit or security events (or approved telemetry) according to the audit event catalog (§7, ADR-0012); the log lines above remain diagnostic only.
 
 ### Route, object, and field authorization events (M1.5)
 
@@ -179,3 +180,68 @@ Deployment order: `db:migrate` → `db:catalog:apply` (migration role) → start
 - Page requests log `request.received` only. Next.js 16 does not expose page status or duration to the proxy, and the project does not wrap the framework server.
 - On client-side navigation the root layout is not re-rendered, so the request reference shown by `error.tsx` is the one from the initial document request.
 - Next.js itself still prints its own error output for server render errors to stderr. That framework output is outside this logger and must be handled by the log pipeline chosen at deployment.
+
+## 7. Append-only audit and integrity (M1.6, ADR-0012)
+
+### Streams
+
+Every identity and authorization event code is registered in `src/modules/audit/application/event-catalog.ts` and goes to exactly one stream:
+
+- **`audit.audit_event`:** compliance history. Account, session, recovery, MFA, role/scope, catalog, restricted-access, high-risk denial, and audit-query events.
+- **`audit.security_event`:** bounded authentication and abuse evidence. Failed sign-in or MFA, rate limits, refusals, and integrity failures.
+- **Telemetry:** approved routine log lines only.
+
+Rows contain only opaque UUID references, closed codes, record versions, and bounded integers. They never contain emails, names, IPs, user agents, tokens, cookies, headers, bodies, URLs, raw errors, free text, or snapshots.
+
+### Alerts (high severity; closed codes only)
+
+| Event code | Meaning and response |
+|---|---|
+| `audit.write_failed` | A required audit or security append failed or was rejected (`reasonCode` such as `CHAIN_HEAD_MISMATCH`, `TIMEOUT`, `PRIVILEGE_DENIED`, `UNKNOWN_EVENT`). The command failed or was withheld, and a denial stayed a denial. Investigate database health, privileges, and key configuration. Do not retry by hand. |
+| `audit.integrity_verification_failed` | `pnpm audit:verify` found tampering or corruption (`reasonCode`). **Security incident:** preserve evidence and follow the incident procedure in `SECURITY_AND_PRIVACY.md`. Never repair, rehash, or delete rows. Ordinary administrators cannot clear it. |
+| `audit.config_rejected` | Production-like startup refused: an invalid or missing integrity key ring, or the runtime role owns audit objects, has write privileges, or append-only triggers are missing or disabled (`reasonCode`). |
+
+### Integrity verification
+
+```bash
+pnpm audit:verify     # migration identity, READ ONLY; exits 1 on any failure
+```
+
+The command reports partition and row counts. On failure it reports the first failing `<stream> partition <id> at sequence <n>` with a reason:
+
+- `SEQUENCE_GAP`
+- `DUPLICATE_SEQUENCE`
+- `PREVIOUS_HASH_MISMATCH`
+- `HMAC_MISMATCH`
+- `UNKNOWN_KEY_VERSION`
+- `UNSUPPORTED_CANONICALIZATION`
+- `HEAD_MISMATCH`
+- `ORPHAN_PARTITION`
+- `MALFORMED_ROW`
+
+It never prints hashes, keys, or metadata, and it never modifies existing rows. Run it on a schedule and after every restore.
+
+### Integrity keys
+
+- `AUDIT_INTEGRITY_KEYS=v1:<base64 ≥32 bytes>[,v2:…]` and `AUDIT_INTEGRITY_ACTIVE_KEY_VERSION=v1` come from the environment secret store. They are never stored in the database, repository, `.env.example`, or artifacts.
+- Local and test runs without configuration use the public synthetic version `t1`. Staging and production refuse to start with it.
+- **Rotation:**
+  1. Add a new version to the ring.
+  2. Deploy.
+  3. Switch `AUDIT_INTEGRITY_ACTIVE_KEY_VERSION`.
+  4. Keep every old version for as long as rows signed with it are retained. Removing a referenced version makes verification fail with `UNKNOWN_KEY_VERSION`.
+- Keep key custody separate from database administration (see ADR-0012, "Threat model and limitations").
+
+### Backup and restore
+
+1. Back up the whole database, including the `audit` schema and `audit.chain_head`, for example with `pg_dump -Fc`.
+2. Restore as a superuser with `pg_restore --disable-triggers`. The chain-head guard correctly rejects non-genesis inserts, so triggers are disabled for the data load only. The triggers themselves are restored enabled.
+3. Re-apply the environment's database grants (locally, `pnpm db:bootstrap:local`). A dump does not carry database-level ACLs.
+4. Run `pnpm db:check`. It must pass: no runtime ownership, excess privileges, or disabled triggers.
+5. Run `pnpm audit:verify` with every key version still referenced. It must pass.
+
+`tests/integration/audit/integrity.test.ts` proves this procedure on synthetic data.
+
+### Retention
+
+`AUDIT_STANDARD_UNSET` and `SECURITY_STANDARD_UNSET` are retention classes, not durations. No normal application path deletes audit or security rows. Account closure never removes them, because foreign keys use RESTRICT. Final retention, legal hold, and disposition are M9.6.

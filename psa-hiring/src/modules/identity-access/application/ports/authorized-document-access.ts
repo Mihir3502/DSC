@@ -1,3 +1,4 @@
+import { requireRecorded } from "@/modules/audit";
 import type {
   AuthorizationDecision,
   AuthorizationRequest,
@@ -163,14 +164,19 @@ export async function authorizeDocumentAccess(
     return { kind: "UNAVAILABLE" };
   }
   if (isRestricted && decision.decision === "ALLOW") {
-    deps.events.record({
+    // Required evidence before any restricted grant (ADR-0012): if the
+    // access event cannot be recorded, no grant is issued.
+    await requireRecorded(deps.events, {
       code: "authz.restricted_access_allowed",
-      category: "ok",
-      accountRef: request.principal.accountId,
+      actorRef: request.principal.accountId,
+      recordRef: envelope.id,
       permissionCode: decision.permissionCode,
-      roleCode: decision.effectiveRoleCode,
-      scopeType: decision.effectiveScopeType ?? undefined,
-      reasonCode: decision.reasonCode,
+      effective: {
+        roleCode: decision.effectiveRoleCode,
+        assignmentId: decision.effectiveAssignmentId,
+        scopeType: decision.effectiveScopeType,
+        scopeReferenceId: decision.effectiveScopeReferenceId,
+      },
       policyVersion: decision.policyVersion,
       correlationId: request.correlationId,
     });
