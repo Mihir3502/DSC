@@ -1359,7 +1359,7 @@ describe("controlled staff recovery", () => {
 });
 
 describe("staff leakage", () => {
-  it("keeps secrets, codes, tokens, emails, and cookies out of logs, results, and email", async () => {
+  it("keeps secrets, codes, tokens, emails, and cookies out of logs, results, email, and audit rows", async () => {
     await runtime.email.idle();
     const logText = JSON.stringify(logs.records());
     const mail = capture
@@ -1390,5 +1390,28 @@ describe("staff leakage", () => {
       expect(body).not.toMatch(/otpauth|STAFF|ACTIVE|INVITED|<img|<script/);
       expect(body).not.toContain(email.to);
     }
+    // M1.7 §20: durable audit/security rows carry no secret or personal value.
+    const { rows } = await admin.query<{ t: string }>(
+      `SELECT coalesce((SELECT string_agg(e::text, E'\\n') FROM audit.audit_event e), '')
+           || coalesce((SELECT string_agg(s::text, E'\\n') FROM audit.security_event s), '') AS t`,
+    );
+    const auditText = rows[0]!.t;
+    expect(auditText.length).toBeGreaterThan(0);
+    expect({
+      secret: secrets.some((s) => s.length >= 8 && auditText.includes(s)),
+      password: auditText.includes(STAFF_PASSWORD),
+      email: /@example\.test/.test(auditText),
+      totp: /otpauth:/.test(auditText),
+      ip: /198\.51\.100\./.test(auditText),
+      userAgent: /TEST-agent|Mozilla\/5\.0/.test(auditText),
+    }).toEqual({
+      secret: false,
+      password: false,
+      email: false,
+      totp: false,
+      ip: false,
+      userAgent: false,
+    });
+    expect(findCanaryCategories(auditText)).toEqual([]);
   });
 });

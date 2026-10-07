@@ -33,7 +33,7 @@
       "id": "PRD-AUTH-002",
       "title": "Candidates access only their own information",
       "status": "partial",
-      "note": "Own-account security and sessions (M1.2) are enforced by the CANDIDATE_* self-service policies and exact projections (M1.5, ADR-0011); candidate business-record ownership arrives with M2 and the full matrix with M1.7.",
+      "note": "Own-account security and sessions (M1.2) are enforced by the CANDIDATE_* self-service policies and exact projections (M1.5, ADR-0011); candidate business-record ownership arrives with M2 and the full matrix with M1.7. M1.7: Candidate A/B cross-record denial is proven over synthetic ownership envelopes for every candidate-self permission (tests/authorization/candidate-cross-record.matrix.test.ts); real candidacy ownership remains M2.",
       "tests": [
         {
           "file": "tests/integration/auth/candidate-registration.test.ts",
@@ -54,6 +54,10 @@
         {
           "file": "tests/integration/authorization/route-object-field.test.ts",
           "title": "keeps staff out of every candidate query and command"
+        },
+        {
+          "file": "tests/authorization/candidate-cross-record.matrix.test.ts",
+          "title": "Candidate A reaches only A's own envelope for %s"
         }
       ]
     },
@@ -61,7 +65,7 @@
       "id": "PRD-AUTH-003",
       "title": "Staff permissions are role based",
       "status": "partial",
-      "note": "M1.4 delivers the role/permission catalog, scoped effective-dated staff assignments, and the central deny-by-default authorization service (ADR-0005). M1.5 connects it to routes, objects, fields, scoped queries, files, and noninteractive contracts (ADR-0011); real scope adapters arrive in M2 and the exhaustive matrix in M1.7.",
+      "note": "M1.4 delivers the role/permission catalog, scoped effective-dated staff assignments, and the central deny-by-default authorization service (ADR-0005). M1.5 connects it to routes, objects, fields, scoped queries, files, and noninteractive contracts (ADR-0011); real scope adapters arrive in M2 and the exhaustive matrix in M1.7. M1.7: every role × permission pair (9 × 167) and every scope type is proven at policy level against the accepted catalog with drift control; real M2 scope resolvers remain synthetic, so this stays partial.",
       "tests": [
         {
           "file": "src/modules/identity-access/policy/authorization-catalog.test.ts",
@@ -78,6 +82,10 @@
         {
           "file": "src/modules/identity-access/application/authorization-contracts.test.ts",
           "title": "builds the union of current assignment scopes"
+        },
+        {
+          "file": "tests/authorization/role-permission.matrix.test.ts",
+          "title": "covers every catalog role and permission exactly once"
         }
       ]
     },
@@ -85,7 +93,7 @@
       "id": "PRD-AUTH-004",
       "title": "Recent authentication for sensitive actions",
       "status": "partial",
-      "note": "M1.3 delivers the server-owned recent-authentication primitive (named policies, purpose binding, /staff/reauthenticate) and applies it to staff password change and backup-code regeneration. Business high-risk actions adopt it in their own work items; candidate step-up is not configured. M1.4 composes the primitive into permission-level named recent-auth requirements (purpose-bound, strong methods, no reuse across privilege expansion); route adoption is M1.5.",
+      "note": "M1.3 delivers the server-owned recent-authentication primitive (named policies, purpose binding, /staff/reauthenticate) and applies it to staff password change and backup-code regeneration. Business high-risk actions adopt it in their own work items; candidate step-up is not configured. M1.4 composes the primitive into permission-level named recent-auth requirements (purpose-bound, strong methods, no reuse across privilege expansion); route adoption is M1.5. M1.7: every configured recent-authentication policy/purpose in the catalog is proven at exact controlled-clock boundaries (strength, purpose, session, account version, privilege-expansion floor); business commands that use them arrive in M2+.",
       "tests": [
         {
           "file": "tests/integration/auth/candidate-registration.test.ts",
@@ -110,6 +118,10 @@
         {
           "file": "tests/integration/authorization/authorization-service.test.ts",
           "title": "requires purpose-bound strong recent authentication for high-risk approvals"
+        },
+        {
+          "file": "tests/authorization/state-separation-recent-auth.matrix.test.ts",
+          "title": "recent authentication %s: exact freshness, strength, and binding"
         }
       ]
     },
@@ -577,7 +589,7 @@
         },
         {
           "file": "tests/integration/auth/staff-authentication.test.ts",
-          "title": "keeps secrets, codes, tokens, emails, and cookies out of logs, results, and email"
+          "title": "keeps secrets, codes, tokens, emails, and cookies out of logs, results, email, and audit rows"
         }
       ]
     },
@@ -723,7 +735,7 @@
         },
         {
           "file": "tests/integration/auth/staff-authentication.test.ts",
-          "title": "keeps secrets, codes, tokens, emails, and cookies out of logs, results, and email"
+          "title": "keeps secrets, codes, tokens, emails, and cookies out of logs, results, email, and audit rows"
         }
       ]
     },
@@ -755,7 +767,7 @@
         },
         {
           "file": "tests/guards/traceability.test.ts",
-          "title": "keeps roles and authorization incomplete until M2 scopes and the M1.7 matrix"
+          "title": "keeps roles, ownership, and recent-auth requirements partial until M2 resolvers and business commands exist"
         }
       ]
     },
@@ -1739,6 +1751,282 @@
     {
       "id": "AC-M1.6-16",
       "title": "Regression and scope containment",
+      "tests": [
+        {
+          "file": "tests/integration/database/foundation.test.ts",
+          "title": "contains no business-domain or job tables, and only the M1.6 audit tables"
+        },
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "adds no generic CRUD, GraphQL, or catch-all business endpoint"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.7-01",
+      "title": "Executable traceable matrix",
+      "tests": [
+        {
+          "file": "tests/authorization/m1-matrix-coverage.test.ts",
+          "title": "the accepted grant catalog equals the reviewed approved-grants snapshot"
+        },
+        {
+          "file": "tests/authorization/m1-matrix-coverage.test.ts",
+          "title": "requires scenario coverage for every route-manifest entry"
+        },
+        {
+          "file": "tests/authorization/m1-matrix-coverage.test.ts",
+          "title": "requires an executable test for every audit/security event in the catalog"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.7-02",
+      "title": "Authentication state coverage",
+      "tests": [
+        {
+          "file": "tests/integration/authentication/account-state.matrix.test.ts",
+          "title": "resolves a principal only for eligible account, MFA, and session states"
+        },
+        {
+          "file": "tests/authorization/self-service.matrix.test.ts",
+          "title": "covers every registered self-service policy"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "accepts each backup code once and records the weaker method"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.7-03",
+      "title": "Complete role-permission proof",
+      "tests": [
+        {
+          "file": "tests/authorization/role-permission.matrix.test.ts",
+          "title": "covers every catalog role and permission exactly once"
+        },
+        {
+          "file": "tests/authorization/role-permission.matrix.test.ts",
+          "title": "denies the unknown, wildcard, or prefix code %j"
+        },
+        {
+          "file": "tests/authorization/role-permission.matrix.test.ts",
+          "title": "never lets a candidate use a staff role or staff use the candidate role"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.7-04",
+      "title": "Scope boundaries",
+      "tests": [
+        {
+          "file": "tests/authorization/scope.matrix.test.ts",
+          "title": "covers every scope type and condition"
+        },
+        {
+          "file": "tests/authorization/scope.matrix.test.ts",
+          "title": "uses an inclusive start and exclusive end for assignments and audit windows"
+        },
+        {
+          "file": "tests/authorization/scope.matrix.test.ts",
+          "title": "lets a client selection narrow a list scope but never widen it"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.7-05",
+      "title": "Cross-record denial",
+      "tests": [
+        {
+          "file": "tests/authorization/candidate-cross-record.matrix.test.ts",
+          "title": "Candidate A reaches only A's own envelope for %s"
+        },
+        {
+          "file": "tests/authorization/candidate-cross-record.matrix.test.ts",
+          "title": "Candidate A cannot list, search, or count other candidates"
+        },
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "Candidate A cannot revoke or detect Candidate B's sessions"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.7-06",
+      "title": "Field and mass-assignment safety",
+      "tests": [
+        {
+          "file": "tests/authorization/field.matrix.test.ts",
+          "title": "field outcome for %s follows the decision pipeline exactly"
+        },
+        {
+          "file": "tests/authorization/field.matrix.test.ts",
+          "title": "refuses never-return keys for every audience and purpose"
+        },
+        {
+          "file": "tests/e2e/route-field-authorization.spec.ts",
+          "title": "injected server-owned fields reject the whole submission with no state change"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.7-07",
+      "title": "State and separation controls",
+      "tests": [
+        {
+          "file": "tests/authorization/state-separation-recent-auth.matrix.test.ts",
+          "title": "workflow state %s → %s"
+        },
+        {
+          "file": "tests/authorization/state-separation-recent-auth.matrix.test.ts",
+          "title": "separation rule %s: different actor allows; same actor, missing facts, and multi-role deny"
+        },
+        {
+          "file": "tests/authorization/state-separation-recent-auth.matrix.test.ts",
+          "title": "separation rule DUAL_CONTROL rejects the same user acting under two roles"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.7-08",
+      "title": "Recent-authentication controls",
+      "tests": [
+        {
+          "file": "tests/authorization/state-separation-recent-auth.matrix.test.ts",
+          "title": "recent authentication %s: exact freshness, strength, and binding"
+        },
+        {
+          "file": "tests/authorization/state-separation-recent-auth.matrix.test.ts",
+          "title": "recent authentication cannot be asserted by the client request"
+        },
+        {
+          "file": "tests/authorization/state-separation-recent-auth.matrix.test.ts",
+          "title": "recent authentication followed by a role or account change reauthorizes completely"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.7-09",
+      "title": "Administrator/auditor limits",
+      "tests": [
+        {
+          "file": "tests/authorization/admin-auditor.matrix.test.ts",
+          "title": "administrator with organization scope, every designation, and fresh step-up is denied %s"
+        },
+        {
+          "file": "tests/authorization/admin-auditor.matrix.test.ts",
+          "title": "auditor with an active assignment, every designation, and fresh step-up is denied %s"
+        },
+        {
+          "file": "tests/authorization/admin-auditor.matrix.test.ts",
+          "title": "never honors a stored %s assignment on a %s scope"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.7-10",
+      "title": "Immediate revocation and races",
+      "tests": [
+        {
+          "file": "tests/integration/authorization/revocation.matrix.test.ts",
+          "title": "revocation: an account disabled while a protected command waits"
+        },
+        {
+          "file": "tests/integration/authorization/revocation.matrix.test.ts",
+          "title": "revocation: one backup code replayed concurrently yields exactly one session"
+        },
+        {
+          "file": "tests/integration/authorization/concurrency.test.ts",
+          "title": "never commits on authority revoked before the protected boundary"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.7-11",
+      "title": "Correct durable audit evidence",
+      "tests": [
+        {
+          "file": "tests/integration/audit/event-coverage.test.ts",
+          "title": "records exactly one classified event for every catalog event exercised by the M1 suites"
+        },
+        {
+          "file": "tests/integration/audit/event-coverage.test.ts",
+          "title": "staff sign-in, MFA, lockout, backup codes, reauthentication, sessions, password, and sign-out each record exactly one classified event"
+        },
+        {
+          "file": "tests/integration/audit/persistence.test.ts",
+          "title": "rolls the mutation back when audit validation, integrity, or append fails"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.7-12",
+      "title": "Delivery-boundary consistency",
+      "tests": [
+        {
+          "file": "tests/e2e/authorization/m1-gate.spec.ts",
+          "title": "refuses a cross-origin submission for every server action page"
+        },
+        {
+          "file": "tests/e2e/authorization/m1-gate.spec.ts",
+          "title": "refuses unsupported methods on the auth surface and protected pages"
+        },
+        {
+          "file": "tests/e2e/authorization/m1-gate.spec.ts",
+          "title": "staff routes refuse candidate, service, and password-only principals"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.7-13",
+      "title": "Leakage and production safety",
+      "tests": [
+        {
+          "file": "tests/security/production-configuration.test.ts",
+          "title": "%s refuses every synthetic resolver and test harness"
+        },
+        {
+          "file": "tests/integration/auth/staff-authentication.test.ts",
+          "title": "keeps secrets, codes, tokens, emails, and cookies out of logs, results, email, and audit rows"
+        },
+        {
+          "file": "tests/integration/auth/candidate-registration.test.ts",
+          "title": "keeps passwords, codes, tokens, cookies, and emails out of logs, results, and audit rows"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.7-14",
+      "title": "Accessible stable M1 journeys",
+      "tests": [
+        {
+          "file": "tests/accessibility/staff-auth.a11y.spec.ts",
+          "title": "MFA, security, and reauthentication screens are accessible"
+        },
+        {
+          "file": "tests/accessibility/security-states.a11y.spec.ts",
+          "title": "a hidden staff route shown to a candidate is accessible and reflows"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.7-15",
+      "title": "Repeatable CI gate",
+      "tests": [
+        {
+          "file": "tests/authorization/m1-matrix-coverage.test.ts",
+          "title": "has no skipped, todo, focused, or fixme critical test anywhere in scope"
+        },
+        {
+          "file": "tests/guards/guards.test.ts",
+          "title": "never approves a skip or todo in critical M1 authorization, audit, or integration suites (M1.7)"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.7-16",
+      "title": "M1 exit decision and scope containment",
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",

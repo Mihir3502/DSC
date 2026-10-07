@@ -157,7 +157,15 @@ const telemetry = (name: string): EventDefinition =>
     target: null,
     targetFrom: null,
     requires: [],
-    allows: ["accountRef", "recordRef", "category"],
+    // Closed codes only (never free text): the authorizer's operational
+    // policy-unavailable signal names the permission code (M1.7 D2).
+    allows: [
+      "accountRef",
+      "recordRef",
+      "category",
+      "permissionCode",
+      "reasonCode",
+    ],
   });
 
 const selfService: readonly FactKey[] = ["permissionCode", "policyVersion"];

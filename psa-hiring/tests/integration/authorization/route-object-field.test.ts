@@ -614,6 +614,49 @@ describe("scoped list contract applies scope in SQL before materialization", () 
     expect(JSON.stringify(result)).not.toContain("TESTCANARY");
   });
 
+  it("drops and counts an out-of-scope row a defective repository returns (M1.7 §22)", async () => {
+    // A repository that ignores the constraint must not widen the list:
+    // every row is rechecked against the subject's authority.
+    const leaky: typeof source = {
+      async list(constraint, query) {
+        const page = await source.list(constraint, query);
+        return {
+          ...page,
+          rows: [
+            ...page.rows,
+            {
+              id: scopes.RECORD_ORG2,
+              sensitivity: "CONFIDENTIAL_PERSONNEL" as const,
+              displayName: "TEST other org",
+            },
+          ],
+        };
+      },
+    };
+    const deps = authzDeps(h);
+    const warned: string[] = [];
+    const logger = Object.create(deps.logger) as typeof deps.logger;
+    logger.warn = (event, context) => {
+      warned.push(event);
+      deps.logger.warn(event, context);
+    };
+    const result = await authorizeScopedList(
+      {
+        principal: session.principal,
+        permission: "candidate.read.assigned",
+        sensitivity: "CONFIDENTIAL_PERSONNEL",
+        input: {},
+      },
+      leaky,
+      spec,
+      { ...deps, logger },
+    );
+    expect(result).toMatchObject({ kind: "LISTED", refused: 1 });
+    if (result.kind !== "LISTED") return;
+    expect(result.rows.map((r) => r.id)).toEqual([scopes.RECORD]);
+    expect(warned).toEqual(["authz.list_rows_refused"]);
+  });
+
   it("rejects client-widened scope, unknown filters, and selector expansion", async () => {
     const base = {
       principal: session.principal,

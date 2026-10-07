@@ -87,6 +87,33 @@ describe("proxy (trusted web boundary)", () => {
     },
   );
 
+  // M1.7 §16: every protected prefix, not only staff pages, is private.
+  it.each([
+    "/register",
+    "/sign-in",
+    "/verify-email",
+    "/recover",
+    "/reset-password",
+    "/candidate",
+    "/candidate/security",
+    "/staff",
+    "/api/auth/get-session",
+  ])("marks protected path %s private no-store (M1.7)", (path) => {
+    const { response } = run(path);
+    expect(response.headers.get("cache-control")).toBe(
+      "private, no-store, max-age=0",
+    );
+    expect(response.headers.get("pragma")).toBe("no-cache");
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+  });
+
+  it("leaves only the public home page cacheable without personal data", () => {
+    const { response } = run("/");
+    expect(response.headers.get("cache-control")).not.toBe(
+      "private, no-store, max-age=0",
+    );
+  });
+
   it.each([
     ["/", "/"],
     ["/staff", "/staff"],

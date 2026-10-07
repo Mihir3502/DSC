@@ -54,6 +54,10 @@ export default defineConfig({
             "src/**/*.test.ts",
             "scripts/**/*.test.ts",
             "tests/guards/**/*.test.ts",
+            // M1.7 in-memory authorization/authentication/security matrix.
+            "tests/authorization/**/*.test.ts",
+            "tests/authentication/**/*.test.ts",
+            "tests/security/**/*.test.ts",
           ],
           setupFiles: ["tests/setup/no-network.ts"],
         },

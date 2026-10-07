@@ -232,6 +232,8 @@ M1 identity events have no organization, so they are never visible to auditors y
 - A backup must include the `audit` schema, including `chain_head`. A restore runs `pg_restore --disable-triggers` as a superuser for the load only, because the chain-head guard correctly rejects non-genesis inserts. It then re-applies environment grants, runs `pnpm db:check`, and runs `pnpm audit:verify`. A synthetic dump and restore is tested.
 - Key custody, rotation, and retention of old versions are environment secret-management responsibilities (ADR-0010 for production).
 
+**M1.7 correction (defect D2):** telemetry definitions now also allow the closed `permissionCode` and `reasonCode` facts. The authorizer's `authz.policy_unavailable` signal carries a permission code; before the fix the catalog rejected it as an unexpected fact, so the operational signal was lost and a misleading `audit.write_failed` alert fired instead.
+
 ## Threat model and limitations
 
 - **Tamper evidence, not tamper prevention.** A party who holds both database ownership (or superuser) **and** the integrity key can disable triggers and rewrite an entire chain consistently. Defenses outside M1.6 remain necessary: independent backups, external checkpoints or anchoring, operational database monitoring, and separation of key custody from database administration.

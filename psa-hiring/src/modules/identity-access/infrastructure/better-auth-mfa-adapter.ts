@@ -364,6 +364,20 @@ export async function removeTwoFactorEnrollment(
     .update(user)
     .set({ twoFactorEnabled: false })
     .where(eq(user.id, accountId));
+  await removePendingStaffChallenges(tx, accountId);
+  await tx.delete(totpReplayGuard).where(eq(totpReplayGuard.userId, accountId));
+}
+
+/**
+ * Removes every pending first-factor challenge and trusted-device record of
+ * an account, so a password verified before a credential change can never
+ * complete into a session afterwards (M1.7 D4). Runs inside the caller's
+ * transaction.
+ */
+export async function removePendingStaffChallenges(
+  tx: Executor,
+  accountId: string,
+): Promise<void> {
   // Better Auth challenge/trusted-device records store the account ID as
   // their value; staff challenge records use "<accountId>|<time>".
   await tx
@@ -374,7 +388,6 @@ export async function removeTwoFactorEnrollment(
         sql`${verification.value} LIKE ${`${accountId}|%`}`,
       ),
     );
-  await tx.delete(totpReplayGuard).where(eq(totpReplayGuard.userId, accountId));
 }
 
 /** Better Auth error codes from a JSON error response (never logged). */

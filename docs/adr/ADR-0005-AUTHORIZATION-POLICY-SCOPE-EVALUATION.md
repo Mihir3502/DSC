@@ -260,6 +260,7 @@ Every denial writes one bounded log line (`authz.denied`: permission, reason, po
 
 - **M1.5:** route, object, and field guards; serializers and redaction; files, search, and exports; adapters from denial reasons to HTTP or UI.
 - **M1.6:** append-only audit persistence, atomic with the transaction. *Delivered by ADR-0012: assignment events, the subject-version change, and the catalog apply append inside their transactions; a denied high-risk command records exactly one `authz.high_risk_denied`.*
+- **M1.7 (defect D1, regression-tested):** the decision engine now also refuses any stored assignment whose scope type is outside the role's approved set (`allowedScopeTypesByRole`: auditor only `AUDIT_ASSIGNMENT`, administrator only `ORGANIZATION`). Before, only proposal validation enforced it, so a row written around that validation was honored. Such a row is now treated as tampering (`POLICY_UNAVAILABLE`), exactly like an unknown role; no grant or scope semantics changed.
 - **M2+:** scope entities and real resolvers, ownership, designations, and workflow policies.
 
 ## Rejected alternatives

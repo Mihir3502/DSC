@@ -30,7 +30,10 @@ import {
   parseGrantCondition,
   type GrantCondition,
 } from "../domain/grant-condition";
-import { compareLeastPrivilege } from "../domain/role-assignment";
+import {
+  allowedScopeTypesByRole,
+  compareLeastPrivilege,
+} from "../domain/role-assignment";
 import {
   isValidDescriptor,
   isValidPlacement,
@@ -512,6 +515,11 @@ async function effectiveCandidates(
       row.roleCode === "CANDIDATE" ||
       !row.assignmentId ||
       !isScopeType(row.scopeType) ||
+      // A role acts only through its approved scope types (ADR-0005: the
+      // auditor only through AUDIT_ASSIGNMENT, the administrator only
+      // ORGANIZATION). A stored row outside that set bypassed proposal
+      // validation and is treated as tampering, never as authority (M1.7).
+      !allowedScopeTypesByRole[row.roleCode].includes(row.scopeType) ||
       !row.scopeReferenceId ||
       !row.effectiveFrom
     ) {

@@ -64,15 +64,31 @@ describe("critical test guard", () => {
   it("allows a skip only with an approved-skip reference, never a focus", () => {
     expect(
       scanForMarkers(
-        "a.spec.ts",
+        "tests/e2e/a.spec.ts",
         join("test", '.skip("x"); // approved-skip: PSA-123'),
       ),
     ).toEqual([]);
     expect(
       scanForMarkers(
-        "a.spec.ts",
+        "tests/e2e/a.spec.ts",
         join("test", '.only("x"); // approved-skip: PSA-123'),
       ),
     ).toHaveLength(1);
+  });
+
+  it("never approves a skip or todo in critical M1 authorization, audit, or integration suites (M1.7)", () => {
+    for (const file of [
+      "tests/integration/audit/x.test.ts",
+      "tests/authorization/x.matrix.test.ts",
+      "src/modules/audit/x.test.ts",
+    ]) {
+      expect(
+        scanForMarkers(
+          file,
+          join("it", '.skip("x"); // approved-skip: PSA-123'),
+        ),
+      ).toHaveLength(1);
+      expect(scanForMarkers(file, join("it", '.todo("x");'))).toHaveLength(1);
+    }
   });
 });

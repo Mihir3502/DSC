@@ -18,3 +18,15 @@ condition = "AND"
 targetRules = ["generic-api-key"]
 commits = ["74632e3ca84b5be7467c2e7f0e9b68ba85b11fc7"]
 paths = ['''^psa-hiring/src/modules/identity-access/infrastructure/infrastructure\.test\.ts$''']
+
+[[allowlists]]
+# fingerprint: 52d78cdb8c7fbfdb13d61f4834906e1d5a668a8d:docs/tasks/M1.6_APPEND_ONLY_AUDIT_FOUNDATION.md:generic-api-key:266
+# owner: Project owner
+# approver: Project owner (approved in session 2026-10-07)
+# reason: Prose list of prohibited data categories in the M1.6 task packet ("... API/provider secrets, encryption/HMAC keys ..."), never a credential.
+# review-by: 2027-01-07
+description = "M1.6 task packet prose (historical commit only)"
+condition = "AND"
+targetRules = ["generic-api-key"]
+commits = ["52d78cdb8c7fbfdb13d61f4834906e1d5a668a8d"]
+paths = ['''^docs/tasks/M1\.6_APPEND_ONLY_AUDIT_FOUNDATION\.md$''']

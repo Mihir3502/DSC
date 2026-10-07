@@ -1,10 +1,11 @@
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { startOwnedPostgres } from "../../integration/support/container";
 import {
+  adminClient,
   assertNoSecrets,
   buildHarnessEnv,
   createOwnedDatabase,
@@ -18,6 +19,47 @@ import {
 // with APP_ENV=test, and captures auth email as files in a private temp
 // directory (outside Playwright report/trace folders). Everything is
 // removed afterwards. Arguments are passed through to `playwright test`.
+//
+// M1.7 §20: before cleanup, the Playwright/server output, every captured
+// email file, and every durable audit/security row are scanned for
+// prohibited synthetic values. A hit fails the run and reports only the
+// category and location, never the value.
+
+/** Category → predicate; never returns or prints the matched value. */
+function leakCategories(
+  text: string,
+  secrets: Readonly<Record<string, string>>,
+  rules: Readonly<Record<string, RegExp>>,
+): string[] {
+  const found: string[] = [];
+  for (const [category, value] of Object.entries(secrets)) {
+    if (value && text.includes(value)) found.push(category);
+  }
+  for (const [category, pattern] of Object.entries(rules)) {
+    if (pattern.test(text)) found.push(category);
+  }
+  return found;
+}
+
+const outputRules = {
+  canary: /TESTCANARY/,
+  sessionCookie: /psa\.(session_token|two_factor)=[A-Za-z0-9]/,
+  totpSeed: /otpauth:\/\//,
+  testPassphrase: /TEST e2e (staff )?(long |another )?passphrase/,
+};
+const mailRules = {
+  canary: /TESTCANARY/,
+  sessionCookie: /psa\.(session_token|two_factor)=/,
+  totpSeed: /otpauth:\/\//,
+  testPassphrase: /TEST e2e (staff )?(long |another )?passphrase/,
+};
+const auditRules = {
+  ...mailRules,
+  email: /@example\.test/,
+  ipAddress: /\b198\.51\.100\.\d+/,
+  userAgent: /Mozilla\/5\.0/,
+  invitationOrResetLink: /#(invite|token)=/,
+};
 
 const projectRoot = path.resolve(import.meta.dirname, "../../..");
 
@@ -52,15 +94,63 @@ async function main() {
       AUTH_EMAIL_CAPTURE_DIR: captureDir,
       E2E_EMAIL_CAPTURE_DIR: captureDir,
     };
+    const output: string[] = [];
     exitCode = await new Promise<number>((resolve) => {
       const child = spawn(
         path.join(projectRoot, "node_modules/.bin/playwright"),
         ["test", ...process.argv.slice(2)],
-        { cwd: projectRoot, env, stdio: "inherit" },
+        { cwd: projectRoot, env, stdio: ["inherit", "pipe", "pipe"] },
       );
+      child.stdout.on("data", (chunk: Buffer) => {
+        output.push(chunk.toString("utf8"));
+        process.stdout.write(chunk);
+      });
+      child.stderr.on("data", (chunk: Buffer) => {
+        output.push(chunk.toString("utf8"));
+        process.stderr.write(chunk);
+      });
       child.on("exit", (code) => resolve(code ?? 1));
       child.on("error", () => resolve(1));
     });
+
+    const secrets = {
+      authSecret: env.BETTER_AUTH_SECRET!,
+      adminPassword: owned.context.adminPassword,
+      appPassword: owned.context.appPassword,
+      migratorPassword: owned.context.migratorPassword,
+    };
+    const leaks: string[] = [];
+    for (const c of leakCategories(output.join(""), secrets, outputRules)) {
+      leaks.push(`playwright/server output: ${c}`);
+    }
+    for (const name of readdirSync(captureDir)) {
+      const text = readFileSync(path.join(captureDir, name), "utf8");
+      for (const c of leakCategories(text, secrets, mailRules)) {
+        leaks.push(`captured email: ${c}`);
+      }
+    }
+    const admin = await adminClient(owned.context, database.name);
+    try {
+      const { rows } = await admin.query<{ t: string }>(
+        `SELECT coalesce((SELECT string_agg(e::text, E'\\n') FROM audit.audit_event e), '')
+             || coalesce((SELECT string_agg(s::text, E'\\n') FROM audit.security_event s), '') AS t`,
+      );
+      for (const c of leakCategories(rows[0]?.t ?? "", secrets, auditRules)) {
+        leaks.push(`audit/security rows: ${c}`);
+      }
+    } finally {
+      await admin.end();
+    }
+    if (leaks.length > 0) {
+      console.error(
+        `e2e leakage scan failed: ${[...new Set(leaks)].join("; ")}`,
+      );
+      exitCode = 1;
+    } else {
+      console.log(
+        "e2e leakage scan passed (output, captured email, audit/security rows).",
+      );
+    }
   } finally {
     if (databaseName) {
       await dropOwnedDatabase(owned.context, databaseName).catch(() => {});

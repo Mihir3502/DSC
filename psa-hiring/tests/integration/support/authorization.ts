@@ -50,7 +50,11 @@ import { getDatabase } from "@/shared/database";
 import { createLogger } from "@/shared/logging";
 import { nextTestEmail } from "../../fixtures/auth/accounts";
 import { CookieJar } from "../../fixtures/auth/cookie-jar";
-import { secretFromManualKey, totpCode } from "../../fixtures/auth/totp";
+import {
+  awayFromStepBoundary,
+  secretFromManualKey,
+  totpCode,
+} from "../../fixtures/auth/totp";
 import { createMemoryDestination } from "../../fixtures/canaries";
 import {
   adminClient,
@@ -103,9 +107,15 @@ export type StaffMember = {
   email: string;
   accountId: string;
   secret: string;
-  /** Next unused TOTP step offset (codes are single-use). */
-  nextOffset: number;
+  /**
+   * Absolute 30-second TOTP steps already used (codes are single-use and
+   * the server replay guard rejects a reused step). M1.7 D3: choose by
+   * absolute step, never by an offset relative to "now".
+   */
+  usedSteps: number[];
 };
+
+const TOTP_PERIOD_MS = 30_000;
 
 export type AuthorizationHarness = Readonly<{
   runtime: IdentityRuntime;
@@ -212,8 +222,10 @@ export async function activateStaff(
   if (begun.kind !== "ENROLLMENT_STARTED") throw new Error(begun.kind);
   jar.apply(begun.setCookies);
   const secret = secretFromManualKey(begun.enrollment.manualKey);
+  await awayFromStepBoundary();
+  const activationAt = Date.now();
   const verified = await verifyStaffEnrollment(
-    { code: await totpCode(secret, 0), password: STAFF_PASSWORD },
+    { code: await totpCode(secret, 0, activationAt), password: STAFF_PASSWORD },
     headers(jar),
     h.runtime,
   );
@@ -228,17 +240,39 @@ export async function activateStaff(
   jar.apply(completed.setCookies);
   const accountId = (await resolveCurrentStaff(headers(jar), h.runtime))!
     .accountId;
-  return { email, accountId, secret, nextOffset: 1 };
+  return {
+    email,
+    accountId,
+    secret,
+    usedSteps: [Math.floor(activationAt / TOTP_PERIOD_MS)],
+  };
 }
 
-/** Uses the next unused TOTP step (−1, 1 after activation's 0). */
+/**
+ * A code for an unused absolute step inside the server's ±1 window. Waits
+ * out the last moments of a step first so the chosen step cannot roll
+ * over between computing and verifying the code; if every step in the
+ * window is used, waits for the next step.
+ */
 async function nextCode(staff: StaffMember): Promise<string> {
-  const offset = staff.nextOffset;
-  if (offset === 1) staff.nextOffset = -1;
-  else if (offset === -1) staff.nextOffset = 2;
-  else throw new Error("TOTP codes for this window are exhausted");
-  return totpCode(staff.secret, offset);
+  for (;;) {
+    await awayFromStepBoundary();
+    const now = Date.now();
+    const step = Math.floor(now / TOTP_PERIOD_MS);
+    for (const offset of [0, 1, -1]) {
+      if (!staff.usedSteps.includes(step + offset)) {
+        staff.usedSteps.push(step + offset);
+        return totpCode(staff.secret, offset, now);
+      }
+    }
+    await new Promise((r) =>
+      setTimeout(r, TOTP_PERIOD_MS - (Date.now() % TOTP_PERIOD_MS) + 100),
+    );
+  }
 }
+
+/** The next single-use TOTP code for a staff member (shared by suites). */
+export const nextTotpCode = nextCode;
 
 export type StaffSession = Readonly<{ jar: CookieJar; principal: Principal }>;
 

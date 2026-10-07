@@ -102,6 +102,11 @@ function main() {
     "AUDIT_INTEGRITY_KEYS",
     "append_audit_event",
     "withAuditedTransaction",
+    // M1.7 §20: synthetic canaries and test secret/seed material.
+    "TESTCANARY",
+    "TEST-auth-secret",
+    "TEST-e2e-",
+    "otpauth://",
     "neverReturnKeys",
     "server-only",
   ];

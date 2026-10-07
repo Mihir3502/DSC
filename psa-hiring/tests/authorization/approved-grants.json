@@ -1,0 +1,2317 @@
+{
+  "$comment": "Reviewed snapshot of the accepted M1.4 grant catalog (packet M1.7 §7). Changing a grant requires an approved catalog change AND an updated snapshot; tests/authorization/m1-matrix-coverage.test.ts fails on any difference.",
+  "catalogVersion": 1,
+  "catalogDigest": "371ccf74985ea29b5b7e482657c93f526e13c59b20b899460f2f22ffd5776c5d",
+  "grants": [
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "adverse_action.read_restricted",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "application.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "audit.export.assigned",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "audit.read.assigned",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "audit.restricted.export.assigned",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "audit.restricted.read.assigned",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "candidate.read.assigned",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "capability_profile.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "classification.analysis.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "classification.decision.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "classification.proposal.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "communication.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "compensation.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "competency.evaluation.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "compliance_hold.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "configuration.application_template.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "configuration.classification_questionnaire.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "configuration.competency_task_catalog.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "configuration.message_template.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "configuration.offer_template.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "configuration.onboarding_requirement_matrix.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "configuration.position_template.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "configuration.requirement.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "configuration.retention_rule.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "configuration.scorecard_template.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "configuration.screening_requirement_matrix.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "configuration.training_catalog.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "final_review.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "identity_document.read_restricted",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "interview.schedule.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "interview.scorecard.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "medical_document.read_restricted",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "offer.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "onboarding.form.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "readiness.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "record.export.assigned",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "recruiting_note.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "role_assignment.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "screening.authorization.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "screening.result.read_restricted",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "selection.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "tax_banking_document.read_restricted",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "training.assignment.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CANDIDATE",
+      "permission": "application.own.edit",
+      "condition": {
+        "v": 1,
+        "kind": "CANDIDATE_OWNERSHIP"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CANDIDATE",
+      "permission": "application.own.submit",
+      "condition": {
+        "v": 1,
+        "kind": "CANDIDATE_OWNERSHIP"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CANDIDATE",
+      "permission": "candidacy.own.request_reactivation",
+      "condition": {
+        "v": 1,
+        "kind": "CANDIDATE_OWNERSHIP"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CANDIDATE",
+      "permission": "candidacy.own.withdraw",
+      "condition": {
+        "v": 1,
+        "kind": "CANDIDATE_OWNERSHIP"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CANDIDATE",
+      "permission": "candidacy.own_status.read",
+      "condition": {
+        "v": 1,
+        "kind": "CANDIDATE_OWNERSHIP"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CANDIDATE",
+      "permission": "candidate.own_profile.edit",
+      "condition": {
+        "v": 1,
+        "kind": "CANDIDATE_OWNERSHIP"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CANDIDATE",
+      "permission": "candidate.own_profile.read",
+      "condition": {
+        "v": 1,
+        "kind": "CANDIDATE_OWNERSHIP"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CANDIDATE",
+      "permission": "interview.own_schedule.read",
+      "condition": {
+        "v": 1,
+        "kind": "CANDIDATE_OWNERSHIP"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CANDIDATE",
+      "permission": "interview.own_schedule.self_schedule",
+      "condition": {
+        "v": 1,
+        "kind": "CANDIDATE_OWNERSHIP"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CANDIDATE",
+      "permission": "offer.own.read",
+      "condition": {
+        "v": 1,
+        "kind": "CANDIDATE_OWNERSHIP"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CANDIDATE",
+      "permission": "offer.own.respond",
+      "condition": {
+        "v": 1,
+        "kind": "CANDIDATE_OWNERSHIP"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CANDIDATE",
+      "permission": "onboarding.own_form.complete",
+      "condition": {
+        "v": 1,
+        "kind": "CANDIDATE_OWNERSHIP"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CANDIDATE",
+      "permission": "onboarding.own_restricted_document.submit",
+      "condition": {
+        "v": 1,
+        "kind": "CANDIDATE_OWNERSHIP"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CANDIDATE",
+      "permission": "record.export.own_documents",
+      "condition": {
+        "v": 1,
+        "kind": "CANDIDATE_OWNERSHIP"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CANDIDATE",
+      "permission": "screening.own_action.complete",
+      "condition": {
+        "v": 1,
+        "kind": "CANDIDATE_OWNERSHIP"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CANDIDATE",
+      "permission": "training.own.complete",
+      "condition": {
+        "v": 1,
+        "kind": "CANDIDATE_OWNERSHIP"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CLASSIFICATION_REVIEWER",
+      "permission": "application.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CLASSIFICATION_REVIEWER",
+      "permission": "candidate.read.assigned",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CLASSIFICATION_REVIEWER",
+      "permission": "classification.analysis.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CLASSIFICATION_REVIEWER",
+      "permission": "classification.analysis.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CLASSIFICATION_REVIEWER",
+      "permission": "classification.decision.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CLASSIFICATION_REVIEWER",
+      "permission": "classification.proposal.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CLASSIFICATION_REVIEWER",
+      "permission": "classification.review.decide",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CLASSIFICATION_REVIEWER",
+      "permission": "classification.review.start",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CLASSIFICATION_REVIEWER",
+      "permission": "compliance_hold.place",
+      "condition": {
+        "v": 1,
+        "kind": "HOLD_CATEGORY",
+        "categories": ["CLASSIFICATION"]
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CLASSIFICATION_REVIEWER",
+      "permission": "compliance_hold.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CLASSIFICATION_REVIEWER",
+      "permission": "compliance_hold.remove",
+      "condition": {
+        "v": 1,
+        "kind": "HOLD_CATEGORY",
+        "categories": ["CLASSIFICATION"]
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CLASSIFICATION_REVIEWER",
+      "permission": "configuration.classification_questionnaire.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CLASSIFICATION_REVIEWER",
+      "permission": "configuration.classification_questionnaire.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CLASSIFICATION_REVIEWER",
+      "permission": "interview.schedule.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CLASSIFICATION_REVIEWER",
+      "permission": "offer.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CLASSIFICATION_REVIEWER",
+      "permission": "readiness.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CLASSIFICATION_REVIEWER",
+      "permission": "record.export.standard",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CLASSIFICATION_REVIEWER",
+      "permission": "selection.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "adverse_action.final_record",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "adverse_action.manage",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "adverse_action.read_restricted",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "adverse_action.start",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "application.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "audit.business.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "audit.restricted.read",
+      "condition": {
+        "v": 1,
+        "kind": "DESIGNATION",
+        "designation": "RESTRICTED_AUDIT_REVIEWER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "candidate.read.assigned",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "capability_profile.approve",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "capability_profile.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "classification.decision.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "classification.proposal.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "communication.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "communication.send",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "competency.evaluation.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "compliance_hold.place",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "compliance_hold.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "compliance_hold.remove",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "configuration.competency_task_catalog.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "configuration.competency_task_catalog.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "configuration.competency_task_catalog.publish",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "configuration.onboarding_requirement_matrix.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "configuration.onboarding_requirement_matrix.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "configuration.requirement.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "configuration.retention_rule.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "configuration.retention_rule.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "configuration.screening_requirement_matrix.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "configuration.screening_requirement_matrix.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "configuration.screening_requirement_matrix.publish",
+      "condition": {
+        "v": 1,
+        "kind": "DESIGNATION",
+        "designation": "CONFIGURATION_APPROVER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "configuration.training_catalog.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "configuration.training_catalog.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "configuration.training_catalog.publish",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "final_review.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "final_review.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "final_review.return",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "final_review.start",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "identity_document.read_masked",
+      "condition": {
+        "v": 1,
+        "kind": "DESIGNATION",
+        "designation": "RESTRICTED_IDENTITY_REVIEWER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "identity_document.read_restricted",
+      "condition": {
+        "v": 1,
+        "kind": "DESIGNATION",
+        "designation": "RESTRICTED_IDENTITY_REVIEWER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "interview.schedule.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "medical_clearance.decide",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "medical_document.download",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "medical_document.read_restricted",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "offer.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "onboarding.form.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "onboarding.item.approve",
+      "condition": {
+        "v": 1,
+        "kind": "DESIGNATION",
+        "designation": "ONBOARDING_APPROVER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "readiness.final_approval",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "readiness.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "record.export.restricted",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "screening.authorization.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "screening.authorization.review",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "screening.disposition.decide",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "screening.initiate",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "screening.report.download",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "screening.result.read_restricted",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "screening.result.record",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "selection.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "training.assignment.manage",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "training.assignment.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "COMPLIANCE_REVIEWER",
+      "permission": "training.result.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "application.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "application.review",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "application.start_on_behalf",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "candidate.profile.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "candidate.read.assigned",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "capability_profile.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "classification.decision.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "classification.path.propose",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "classification.proposal.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "classification.review.start",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "communication.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "communication.send",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "compensation.propose",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "compensation.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "competency.evaluation.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "compliance_hold.place",
+      "condition": {
+        "v": 1,
+        "kind": "HOLD_CATEGORY",
+        "categories": ["DOCUMENT"]
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "compliance_hold.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "compliance_hold.remove",
+      "condition": {
+        "v": 1,
+        "kind": "HOLD_CATEGORY",
+        "categories": ["DOCUMENT"]
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "configuration.application_template.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "configuration.application_template.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "configuration.message_template.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "configuration.message_template.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "configuration.offer_template.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "configuration.offer_template.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "configuration.onboarding_requirement_matrix.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "configuration.onboarding_requirement_matrix.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "configuration.position_template.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "configuration.position_template.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "configuration.requirement.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "configuration.scorecard_template.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "configuration.scorecard_template.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "final_review.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "identity_document.download",
+      "condition": {
+        "v": 1,
+        "kind": "DESIGNATION",
+        "designation": "RESTRICTED_IDENTITY_REVIEWER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "identity_document.manage",
+      "condition": {
+        "v": 1,
+        "kind": "DESIGNATION",
+        "designation": "RESTRICTED_IDENTITY_REVIEWER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "identity_document.read_masked",
+      "condition": {
+        "v": 1,
+        "kind": "DESIGNATION",
+        "designation": "RESTRICTED_IDENTITY_REVIEWER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "identity_document.read_restricted",
+      "condition": {
+        "v": 1,
+        "kind": "DESIGNATION",
+        "designation": "RESTRICTED_IDENTITY_REVIEWER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "interview.schedule.manage",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "interview.schedule.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "interview.scorecard.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "interview.scorecard.submit",
+      "condition": {
+        "v": 1,
+        "kind": "PARTICIPANT",
+        "relationship": "INTERVIEWER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "offer.approve",
+      "condition": {
+        "v": 1,
+        "kind": "DESIGNATION",
+        "designation": "OFFER_APPROVER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "offer.draft.create",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "offer.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "offer.issue",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "offer.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "offer.review",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "offer.withdraw",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "onboarding.form.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "onboarding.form.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "onboarding.item.approve",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "onboarding.item.review",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "prescreen.begin",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "prescreen.complete",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "readiness.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "record.export.standard",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "recruiting_note.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "screening.authorization.manage",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "screening.authorization.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "screening.authorization.review",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "screening.initiate",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "screening.status.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "selection.decide",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "selection.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "tax_banking_document.download",
+      "condition": {
+        "v": 1,
+        "kind": "DESIGNATION",
+        "designation": "RESTRICTED_IDENTITY_REVIEWER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "tax_banking_document.manage",
+      "condition": {
+        "v": 1,
+        "kind": "DESIGNATION",
+        "designation": "RESTRICTED_IDENTITY_REVIEWER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "tax_banking_document.read_restricted",
+      "condition": {
+        "v": 1,
+        "kind": "DESIGNATION",
+        "designation": "RESTRICTED_IDENTITY_REVIEWER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "training.assignment.manage",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "training.assignment.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "application.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "audit.business.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "audit.restricted.read",
+      "condition": {
+        "v": 1,
+        "kind": "DESIGNATION",
+        "designation": "RESTRICTED_AUDIT_REVIEWER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "candidacy.reactivate",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "candidacy.withdraw",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "candidate.read.assigned",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "capability_profile.approve",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "capability_profile.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "classification.analysis.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "classification.decision.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "classification.path.propose",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "classification.proposal.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "classification.review.decide",
+      "condition": {
+        "v": 1,
+        "kind": "DESIGNATION",
+        "designation": "CLASSIFICATION_APPROVER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "classification.review.start",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "communication.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "compensation.approve",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "compensation.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "competency.evaluation.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "competency.evaluation.record",
+      "condition": {
+        "v": 1,
+        "kind": "PARTICIPANT",
+        "relationship": "EVALUATOR"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "compliance_hold.place",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "compliance_hold.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "compliance_hold.remove",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.application_template.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.application_template.publish",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.classification_questionnaire.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.classification_questionnaire.publish",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.competency_task_catalog.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.competency_task_catalog.publish",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.message_template.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.message_template.publish",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.offer_template.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.offer_template.publish",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.onboarding_requirement_matrix.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.onboarding_requirement_matrix.publish",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.position_template.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.position_template.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.position_template.publish",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.requirement.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.retention_rule.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.retention_rule.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.retention_rule.publish",
+      "condition": {
+        "v": 1,
+        "kind": "DESIGNATION",
+        "designation": "RETENTION_AUTHORITY"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.scorecard_template.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.scorecard_template.publish",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.screening_requirement_matrix.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.screening_requirement_matrix.publish",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.training_catalog.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "configuration.training_catalog.publish",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "final_review.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "final_review.return",
+      "condition": {
+        "v": 1,
+        "kind": "DESIGNATION",
+        "designation": "FINAL_REVIEWER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "final_review.start",
+      "condition": {
+        "v": 1,
+        "kind": "DESIGNATION",
+        "designation": "FINAL_REVIEWER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "interview.schedule.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "interview.scorecard.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "interview.scorecard.submit",
+      "condition": {
+        "v": 1,
+        "kind": "PARTICIPANT",
+        "relationship": "INTERVIEWER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "offer.approve",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "offer.draft.create",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "offer.issue",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "offer.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "offer.withdraw",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "onboarding.form.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "onboarding.status.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "prescreen.complete",
+      "condition": {
+        "v": 1,
+        "kind": "DESIGNATION",
+        "designation": "PRESCREEN_APPROVER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "readiness.final_approval",
+      "condition": {
+        "v": 1,
+        "kind": "DESIGNATION",
+        "designation": "READINESS_APPROVER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "readiness.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "record.archive",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "record.export.standard",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "recruiting_note.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "role_assignment.approve",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "role_assignment.propose",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "role_assignment.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "role_assignment.revoke",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "screening.status.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "selection.decide",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "selection.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "training.assignment.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "training.result.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "application.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "application.review",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "application.start_on_behalf",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "candidate.read.assigned",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "capability_profile.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "classification.decision.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "classification.path.propose",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "classification.proposal.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "classification.status.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "communication.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "communication.send",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "compensation.propose",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "compensation.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "compliance_hold.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "configuration.application_template.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "configuration.message_template.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "configuration.message_template.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "configuration.requirement.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "configuration.scorecard_template.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "configuration.scorecard_template.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "interview.schedule.manage",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "interview.schedule.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "interview.scorecard.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "interview.scorecard.review",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "interview.scorecard.submit",
+      "condition": {
+        "v": 1,
+        "kind": "PARTICIPANT",
+        "relationship": "INTERVIEWER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "offer.draft.create",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "offer.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "offer.issue",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "offer.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "offer.withdraw",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "onboarding.status.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "prescreen.begin",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "prescreen.complete",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "readiness.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "record.export.standard",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "recruiting_note.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "recruiting_note.write",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "screening.status.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "selection.decide",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "selection.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "training.status.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "SYSTEM_ADMINISTRATOR",
+      "permission": "authentication.configuration.manage",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "SYSTEM_ADMINISTRATOR",
+      "permission": "provider.configuration.manage",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "SYSTEM_ADMINISTRATOR",
+      "permission": "role_assignment.propose",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "SYSTEM_ADMINISTRATOR",
+      "permission": "role_assignment.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "SYSTEM_ADMINISTRATOR",
+      "permission": "role_assignment.revoke",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "SYSTEM_ADMINISTRATOR",
+      "permission": "security_event.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "SYSTEM_ADMINISTRATOR",
+      "permission": "staff_account.invite",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "SYSTEM_ADMINISTRATOR",
+      "permission": "staff_account.restore",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "SYSTEM_ADMINISTRATOR",
+      "permission": "staff_account.restrict",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "SYSTEM_ADMINISTRATOR",
+      "permission": "staff_recovery.manage",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "SYSTEM_ADMINISTRATOR",
+      "permission": "system_health.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "SYSTEM_ADMINISTRATOR",
+      "permission": "technical_configuration.manage",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "SYSTEM_ADMINISTRATOR",
+      "permission": "technical_log.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "candidate.summary.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "capability_profile.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "competency.evaluation.amend",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "competency.evaluation.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "competency.evaluation.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "competency.evaluation.record",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "compliance_hold.place",
+      "condition": {
+        "v": 1,
+        "kind": "HOLD_CATEGORY",
+        "categories": ["TRAINING_COMPETENCY"]
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "compliance_hold.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "compliance_hold.remove",
+      "condition": {
+        "v": 1,
+        "kind": "HOLD_CATEGORY",
+        "categories": ["TRAINING_COMPETENCY"]
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "configuration.competency_task_catalog.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "configuration.competency_task_catalog.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "configuration.training_catalog.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "configuration.training_catalog.history.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "interview.schedule.manage",
+      "condition": {
+        "v": 1,
+        "kind": "PARTICIPANT",
+        "relationship": "INTERVIEWER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "interview.schedule.read",
+      "condition": {
+        "v": 1,
+        "kind": "PARTICIPANT",
+        "relationship": "EVALUATOR"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "interview.scorecard.submit",
+      "condition": {
+        "v": 1,
+        "kind": "PARTICIPANT",
+        "relationship": "INTERVIEWER"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "readiness.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "record.export.standard",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "training.assignment.manage",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "training.assignment.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "training.result.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "TRAINER_EVALUATOR",
+      "permission": "training.result.record",
+      "condition": null,
+      "status": "ACTIVE"
+    }
+  ]
+}

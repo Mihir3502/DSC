@@ -10,7 +10,10 @@ import {
   listActiveSessions,
   lockAccountForUpdate,
 } from "../infrastructure/account-repository";
-import { readSessionAssurance } from "../infrastructure/better-auth-mfa-adapter";
+import {
+  readSessionAssurance,
+  removePendingStaffChallenges,
+} from "../infrastructure/better-auth-mfa-adapter";
 import { project } from "../presentation/authorized-projector";
 import {
   staffSecurityContract,
@@ -377,6 +380,9 @@ export async function changeStaffPassword(
   await deps.db.transaction(async (tx) => {
     await lockAccountForUpdate(tx, principal.accountId);
     await deleteAllSessions(tx, principal.accountId);
+    // A first factor verified with the old password must never complete
+    // into a session after the change (M1.7 D4).
+    await removePendingStaffChallenges(tx, principal.accountId);
     await bumpAccountVersion(tx, principal.accountId, new Date());
   });
   // PROVIDER_COMMITTED (ADR-0012): not atomic with the password write. A

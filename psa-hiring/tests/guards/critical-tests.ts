@@ -2,15 +2,21 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-// Fails when committed critical browser tests (tests/e2e, tests/accessibility)
-// contain focused tests or unapproved skip/fixme markers. A skip is approved
-// only when the same line carries `approved-skip:` with an issue reference.
+// Fails when committed critical tests contain focused tests or skip/todo/
+// fixme markers. M1.7 (§6, §23, §24): every authentication, authorization,
+// audit, integrity, security, and guard suite is critical, not only the
+// browser specs. In browser specs (tests/e2e, tests/accessibility) a skip is
+// approved only when the same line carries `approved-skip:` with an issue
+// reference; in every other critical scope no skip is ever approved.
 // Vitest projects additionally run with `allowOnly: false`.
 
 export type MarkerFinding = { file: string; line: number; marker: string };
 
 const marker =
-  /\b(?:test|it|describe|test\.describe)\.(only|skip|fixme)\s*\(|\b(?:test|it|describe)\.(only|skip|fixme)\b/g;
+  /\b(?:test|it|describe|test\.describe)\.(only|skip|fixme|todo)\s*\(|\b(?:test|it|describe)\.(only|skip|fixme|todo)\b/g;
+
+/** Scopes where an `approved-skip:` annotation may apply (browser specs). */
+const browserScope = /^tests\/(e2e|accessibility)\//;
 
 /** Scans a critical test file for focus/skip markers. Pure; no I/O. */
 export function scanForMarkers(file: string, text: string): MarkerFinding[] {
@@ -19,7 +25,13 @@ export function scanForMarkers(file: string, text: string): MarkerFinding[] {
     const code = content.replace(/\/\/.*$/, "");
     for (const match of code.matchAll(marker)) {
       const kind = match[1] ?? match[2];
-      if (kind !== "only" && /approved-skip:\s*\S+/.test(content)) continue;
+      if (
+        kind !== "only" &&
+        browserScope.test(file) &&
+        /approved-skip:\s*\S+/.test(content)
+      ) {
+        continue;
+      }
       findings.push({ file, line: index + 1, marker: `.${kind}` });
     }
   });
@@ -29,6 +41,15 @@ export function scanForMarkers(file: string, text: string): MarkerFinding[] {
 export const criticalScope = [
   "tests/e2e/**/*.ts",
   "tests/accessibility/**/*.ts",
+  // M1.7 critical M1 suites.
+  "tests/integration/**/*.ts",
+  "tests/authorization/**/*.ts",
+  "tests/authentication/**/*.ts",
+  "tests/security/**/*.ts",
+  "tests/guards/**/*.test.ts",
+  "src/modules/identity-access/**/*.test.ts",
+  "src/modules/identity-access/**/*.test.tsx",
+  "src/modules/audit/**/*.test.ts",
 ];
 
 function main() {

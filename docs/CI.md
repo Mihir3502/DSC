@@ -57,6 +57,9 @@ No `.env` file, Compose database, or volume is needed. Tests use only generated 
 | `db:test:migrations` | `test:integration` (migration-from-empty in a disposable database, including the M1.1–M1.3 auth tests and the M1.4 authorization tests) |
 | route-manifest drift / architecture checks (M1.5) | `test:coverage` runs `tests/guards/authorization-boundaries.test.ts` (source tree vs. `src/app/_security/route-manifest.ts`, boundary scans with self-checks, production-config harness refusal); `test:routes` compares the production build |
 | M1.6 audit suites (`test:audit`) | `test:coverage` runs `src/modules/audit/**` (catalog strictness, canonicalization golden vector, key ring, projection, no-mutation API); `test:integration` runs `tests/integration/audit/` (privilege attacks, immutability, atomic forced failures, idempotency, deterministic chain races, corruption detection through `audit:verify`, key rotation, synthetic `pg_dump`/`pg_restore` verification, migration from the M1.5 schema, and authorized query projection). `pnpm test:audit` runs both subsets locally |
+| M1.7 gate (`test:m1:gate`) | `pnpm test:m1:gate` (`scripts/ci/m1-gate.ts`) runs, fail-fast from a clean state: frozen install, security/data/critical guards, format, lint, typecheck, Better Auth schema check, migration drift, unit+component with coverage, integration, build, route manifest, critical E2E, accessibility, and the artifact guards. Vitest/Playwright JSON reporters make it fail on any skipped, todo, flaky, missing, or failed critical test; evidence (counts, durations, versions, identifiers, never output) goes to the ignored `.local/m1-gate/<run>.json` and feeds `docs/reports/M1_EXIT_GATE.md` |
+| `test:traceability` (M1.7) | `tests/guards/traceability.test.ts` plus `tests/authorization/m1-matrix-coverage.test.ts` (catalog/route/event/field/self-service drift against `tests/authorization/approved-grants.json`, missing or renamed test references, no-skip scan) |
+| `test:m1:matrix` (M1.7) | The policy-level matrix (`tests/authorization/*.matrix.test.ts`, `tests/security/`) plus the PostgreSQL account-state, revocation, and event-coverage suites |
 | catalog idempotence/drift | `test:integration` (`tests/integration/authorization/catalog.test.ts` runs the real `db:catalog:apply`/`db:catalog:check`) plus the unit catalog digest and `tests/guards/authorization-matrix.test.ts` matrix traceability |
 
 ### Test environment variables
@@ -93,6 +96,7 @@ Current entries (repository root [`.gitleaks.toml`](../.gitleaks.toml)):
 | Fingerprint | Reason | Approver | Review by |
 |---|---|---|---|
 | `74632e3c…:psa-hiring/src/modules/identity-access/infrastructure/infrastructure.test.ts:generic-api-key:9` | Synthetic hex test value for the auth-config validator in the M1.1 commit; the literal was replaced by a runtime-built value afterwards | Project owner (2026-10-06) | 2027-01-06 |
+| `52d78cdb…:docs/tasks/M1.6_APPEND_ONLY_AUDIT_FOUNDATION.md:generic-api-key:266` | Prose list of prohibited data categories in the M1.6 task packet that matches the generic-api-key heuristic; not a credential | Project owner (2026-10-07) | 2027-01-07 |
 
 ### Dependency advisories
 

@@ -47,6 +47,7 @@ describe("requirement traceability", () => {
     ["M1.4", 16],
     ["M1.5", 16],
     ["M1.6", 16],
+    ["M1.7", 16],
   ] as const)(
     "covers every %s acceptance criterion exactly once",
     (item, count) => {
@@ -63,11 +64,13 @@ describe("requirement traceability", () => {
     },
   );
 
-  it("keeps roles and authorization incomplete until M2 scopes and the M1.7 matrix", () => {
+  it("keeps roles, ownership, and recent-auth requirements partial until M2 resolvers and business commands exist", () => {
     const roles = data.requirements.find((e) => e.id === "PRD-AUTH-003");
     expect(roles?.status).toBe("partial");
     const recent = data.requirements.find((e) => e.id === "PRD-AUTH-004");
     expect(recent?.status).not.toBe("covered");
+    const own = data.requirements.find((e) => e.id === "PRD-AUTH-002");
+    expect(own?.status).toBe("partial");
   });
 
   it("marks PRD-AUTH-007 covered by durable audit (M1.6)", () => {
