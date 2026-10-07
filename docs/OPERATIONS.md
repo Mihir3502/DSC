@@ -160,6 +160,18 @@ Auth route errors use the same closed problem codes (plus `RATE_LIMITED`, 429). 
 
 Free-text reasons, reason references, emails, scope/resource IDs, and policy facts are never logged. These are operational events only; immutable audit persistence is M1.6.
 
+### Route, object, and field authorization events (M1.5)
+
+| Event code | Meaning |
+|---|---|
+| `authz.self_service_denied` (log line) | Bounded telemetry for every denied account self-service call: `action` = `self_service.<policy>`, `reasonCode`, `policyVersion` (`self-p1`), `correlationId`. Route guards never log, so one request produces one line |
+| `authz.self_service_denied` (event) | Future-audit-ready denial of a high-risk self-service command (`actorRef`, `action`, `reasonCode`, `policyVersion`, `correlationId`); missing recent authentication is a normal challenge, not this event |
+| `authz.restricted_access_allowed` | An allowed restricted document access through the M1.5 document gate (`actorRef`, `action`, `roleCode`, `scopeType`). Restricted denials are reported once, as `authz.high_risk_denied` |
+| `authz.projection_refused` | A response failed its exact contract (schema, never-return key, audience) and was refused (`action`, `reasonCode` = refusal). Should never occur; investigate |
+| `authz.list_rows_refused` | A scoped list returned rows its per-row recheck refused (`action`, counts only) |
+
+Allowed security changes (`auth.session_revoked`, `auth.sessions_revoked`, `auth.password_changed`, `staff.*`) also carry `action` = `self_service.<policy>`, `policyVersion`, and `correlationId`.
+
 Deployment order: `db:migrate` → `db:catalog:apply` (migration role) → start the application. `pnpm db:catalog:check` (runtime role, read-only) verifies the catalog after deployment.
 
 ## 6. Known limitations

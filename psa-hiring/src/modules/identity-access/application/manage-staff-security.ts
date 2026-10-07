@@ -1,27 +1,39 @@
 import "server-only";
-import type { AuthenticationMethod } from "../domain/authentication-assurance";
-import {
-  describeDevice,
-  maskEmail,
-  type PasswordProblem,
-} from "../domain/candidate-registration-policy";
+import type { PasswordProblem } from "../domain/candidate-registration-policy";
 import {
   bumpAccountVersion,
   deleteAllSessions,
+  deleteOwnedSession,
   deleteSessionsExcept,
   findAccountEmail,
   listActiveSessions,
   lockAccountForUpdate,
 } from "../infrastructure/account-repository";
 import { readSessionAssurance } from "../infrastructure/better-auth-mfa-adapter";
+import { project } from "../presentation/authorized-projector";
+import {
+  staffSecurityContract,
+  type StaffSecurityView,
+} from "../presentation/security-view-models";
+import {
+  authorizeAccountSelfService,
+  authorizeAccountSelfServiceInTransaction,
+  correlationOf,
+  refusalOf,
+  selfServiceAction,
+  type SelfServiceRefusal,
+} from "./authorize-self-service";
 import { formString, newPasswordProblems } from "./candidate-auth-support";
-import { sameRef, sessionRef } from "./manage-candidate-sessions";
+import { resolveCurrentAccount } from "./current-account";
+import {
+  sameRef,
+  sessionRef,
+  sessionRefPattern,
+} from "./manage-candidate-sessions";
 import {
   evaluateStaffAssurance,
-  resolveCurrentStaff,
   verifyStaffStepUp,
 } from "./reauthenticate-staff";
-import { revokeSession } from "./restrict-account";
 import {
   defaultStaffDependencies,
   expiredStaffCookies,
@@ -29,42 +41,39 @@ import {
   type StaffAuthDependencies,
 } from "./staff-auth-support";
 
-// The minimal /staff/security area (packet M1.3 §12, AC-M1.3-11). Account,
-// MFA, and session controls only: no roles, permissions, scopes, branch or
-// team, candidate records, queues, dashboards, or administration. No TOTP
-// secret or existing backup code is ever readable here (Better Auth's
-// server-only viewBackupCodes is deliberately not connected to anything).
+// The minimal /staff/security area (packet M1.3 §12, AC-M1.3-11; M1.5 §9,
+// §12.4). Account, MFA, and session controls only: no roles, permissions,
+// scopes, branch or team, candidate records, queues, dashboards, or
+// administration. No TOTP secret or existing backup code is ever readable
+// here (Better Auth's server-only viewBackupCodes is deliberately not
+// connected to anything).
+//
+// Every query and command resolves the principal, calls the STAFF_*
+// self-service policy (which re-reads the account and the session's MFA
+// assurance), touches only the principal's own rows, rechecks inside the
+// command transaction where a race matters, and returns an exact projected
+// view or a closed result code.
 
-export type StaffSessionSummary = Readonly<{
-  ref: string;
-  current: boolean;
-  deviceLabel: string;
-  createdAt: Date;
-  lastActiveAt: Date;
-  expiresAt: Date;
-}>;
+export type StaffSessionSummary = StaffSecurityView["sessions"][number];
+export type StaffSecurityOverview = StaffSecurityView;
 
-export type StaffSecurityOverview = Readonly<{
-  maskedEmail: string;
-  mfaMethod: "TOTP";
-  signedInWith: AuthenticationMethod | null;
-  /** Plain-language recent-authentication state for this session. */
-  recentAuthentication: Readonly<{
-    recent: boolean;
-    strong: boolean;
-    /** When the freshest qualifying authentication happened. */
-    at: Date | null;
-    windowSeconds: number;
-  }>;
-  sessions: readonly StaffSessionSummary[];
-}>;
+export type StaffSecurityQueryResult =
+  Readonly<{ kind: "OK"; view: StaffSecurityView }> | SelfServiceRefusal;
 
-export async function getStaffSecurityOverview(
+export async function queryStaffSecurity(
   headers: Headers,
   deps: StaffAuthDependencies = defaultStaffDependencies(),
-): Promise<StaffSecurityOverview | null> {
-  const principal = await resolveCurrentStaff(headers, deps);
-  if (!principal) return null;
+): Promise<StaffSecurityQueryResult> {
+  const correlationId = correlationOf(headers);
+  const principal = await resolveCurrentAccount(headers, deps);
+  const decision = await authorizeAccountSelfService(
+    principal,
+    "STAFF_SECURITY_READ",
+    deps,
+    { correlationId },
+  );
+  if (decision.decision === "DENY") return refusalOf(decision);
+  if (!principal) return { kind: "UNAUTHENTICATED" };
   const [email, rows, evidence, recent, strong] = await Promise.all([
     findAccountEmail(deps.db, principal.accountId),
     listActiveSessions(deps.db, principal.accountId),
@@ -72,28 +81,46 @@ export async function getStaffSecurityOverview(
     evaluateStaffAssurance(principal, "RECENT_STAFF_AUTH", {}, deps),
     evaluateStaffAssurance(principal, "RECENT_STRONG_AUTH", {}, deps),
   ]);
-  return Object.freeze({
-    maskedEmail: email ? maskEmail(email) : "•••",
-    mfaMethod: "TOTP",
-    signedInWith: evidence?.method ?? null,
-    recentAuthentication: Object.freeze({
+  const projected = project(
+    staffSecurityContract,
+    {
+      email,
+      signedInWith: evidence?.method ?? null,
       recent: recent.kind === "ALLOW",
       strong: strong.kind === "ALLOW",
-      at: recent.kind === "ALLOW" ? recent.at : null,
+      recentAt: recent.kind === "ALLOW" ? recent.at : null,
       windowSeconds: deps.env.AUTH_STAFF_RECENT_AUTH_SECONDS,
-    }),
-    // Transient first-factor/enrollment sessions are not "signed in".
-    sessions: rows.map((row) =>
-      Object.freeze({
+      // Transient first-factor/enrollment sessions are not "signed in".
+      sessions: rows.map((row) => ({
         ref: sessionRef(deps, row.id),
         current: row.id === principal.sessionId,
-        deviceLabel: describeDevice(row.userAgent),
+        userAgent: row.userAgent,
         createdAt: row.createdAt,
-        lastActiveAt: row.updatedAt,
+        updatedAt: row.updatedAt,
         expiresAt: row.expiresAt,
-      }),
-    ),
-  });
+      })),
+    },
+    { audience: "STAFF", purpose: "SECURITY", allowed: new Set() },
+  );
+  if (projected.kind !== "PROJECTED") {
+    deps.logger.error("authz.projection_refused", {
+      module: "authz",
+      action: selfServiceAction("STAFF_SECURITY_READ"),
+      reasonCode: projected.reason,
+      correlationId,
+    });
+    return { kind: "NOT_PERMITTED" };
+  }
+  return { kind: "OK", view: projected.value };
+}
+
+/** Convenience form of queryStaffSecurity: the view or null. */
+export async function getStaffSecurityOverview(
+  headers: Headers,
+  deps: StaffAuthDependencies = defaultStaffDependencies(),
+): Promise<StaffSecurityOverview | null> {
+  const result = await queryStaffSecurity(headers, deps);
+  return result.kind === "OK" ? result.view : null;
 }
 
 export type StaffSessionCommandResult =
@@ -104,27 +131,49 @@ export type StaffSessionCommandResult =
       setCookies: readonly string[];
     }>
   | Readonly<{ kind: "NOT_FOUND" }>
-  | Readonly<{ kind: "UNAUTHENTICATED" }>;
+  | SelfServiceRefusal;
 
 export async function revokeStaffSession(
   headers: Headers,
   ref: unknown,
   deps: StaffAuthDependencies = defaultStaffDependencies(),
 ): Promise<StaffSessionCommandResult> {
-  const principal = await resolveCurrentStaff(headers, deps);
+  const correlationId = correlationOf(headers);
+  const principal = await resolveCurrentAccount(headers, deps);
+  const decision = await authorizeAccountSelfService(
+    principal,
+    "STAFF_SESSION_REVOKE",
+    deps,
+    { correlationId },
+  );
+  if (decision.decision === "DENY") return refusalOf(decision);
   if (!principal) return { kind: "UNAUTHENTICATED" };
-  if (typeof ref !== "string" || !/^[A-Za-z0-9_-]{32}$/.test(ref)) {
+  if (typeof ref !== "string" || !sessionRefPattern.test(ref)) {
     return { kind: "NOT_FOUND" };
   }
   const rows = await listActiveSessions(deps.db, principal.accountId);
   const target = rows.find((row) => sameRef(sessionRef(deps, row.id), ref));
   if (!target) return { kind: "NOT_FOUND" };
-  const result = await revokeSession(principal.accountId, target.id, deps);
-  if (result.sessionsRevoked === 0) return { kind: "NOT_FOUND" };
+  const outcome = await deps.db.transaction(async (tx) => {
+    const recheck = await authorizeAccountSelfServiceInTransaction(
+      tx,
+      principal,
+      "STAFF_SESSION_REVOKE",
+      deps,
+      { correlationId },
+    );
+    if (recheck.decision === "DENY") return recheck;
+    return deleteOwnedSession(tx, principal.accountId, target.id);
+  });
+  if (typeof outcome !== "number") return refusalOf(outcome);
+  if (outcome === 0) return { kind: "NOT_FOUND" };
   const endedCurrent = target.id === principal.sessionId;
   deps.events.record({
     code: "staff.session_revoked",
     accountRef: principal.accountId,
+    permissionCode: selfServiceAction("STAFF_SESSION_REVOKE"),
+    policyVersion: decision.policyVersion,
+    correlationId,
   });
   return {
     kind: "REVOKED",
@@ -138,18 +187,41 @@ export async function revokeOtherStaffSessions(
   headers: Headers,
   deps: StaffAuthDependencies = defaultStaffDependencies(),
 ): Promise<StaffSessionCommandResult> {
-  const principal = await resolveCurrentStaff(headers, deps);
+  const correlationId = correlationOf(headers);
+  const principal = await resolveCurrentAccount(headers, deps);
+  const decision = await authorizeAccountSelfService(
+    principal,
+    "STAFF_SESSIONS_REVOKE_OTHERS",
+    deps,
+    { correlationId },
+  );
+  if (decision.decision === "DENY") return refusalOf(decision);
   if (!principal) return { kind: "UNAUTHENTICATED" };
-  const count = await deps.db.transaction(async (tx) => {
-    const account = await lockAccountForUpdate(tx, principal.accountId);
-    if (!account) return 0;
+  const outcome = await deps.db.transaction(async (tx) => {
+    const recheck = await authorizeAccountSelfServiceInTransaction(
+      tx,
+      principal,
+      "STAFF_SESSIONS_REVOKE_OTHERS",
+      deps,
+      { correlationId },
+    );
+    if (recheck.decision === "DENY") return recheck;
     return deleteSessionsExcept(tx, principal.accountId, principal.sessionId);
   });
+  if (typeof outcome !== "number") return refusalOf(outcome);
   deps.events.record({
     code: "staff.sessions_revoked",
     accountRef: principal.accountId,
+    permissionCode: selfServiceAction("STAFF_SESSIONS_REVOKE_OTHERS"),
+    policyVersion: decision.policyVersion,
+    correlationId,
   });
-  return { kind: "REVOKED", endedCurrent: false, count, setCookies: [] };
+  return {
+    kind: "REVOKED",
+    endedCurrent: false,
+    count: outcome,
+    setCookies: [],
+  };
 }
 
 /** Ends every session of the account and its assurance ("sign out everywhere"). */
@@ -157,29 +229,48 @@ export async function signOutStaffEverywhere(
   headers: Headers,
   deps: StaffAuthDependencies = defaultStaffDependencies(),
 ): Promise<StaffSessionCommandResult> {
-  const principal = await resolveCurrentStaff(headers, deps);
-  if (principal) {
-    const count = await deps.db.transaction(async (tx) => {
-      await lockAccountForUpdate(tx, principal.accountId);
-      return deleteAllSessions(tx, principal.accountId);
-    });
-    deps.events.record({
-      code: "staff.sessions_revoked",
-      accountRef: principal.accountId,
-    });
-    return {
-      kind: "REVOKED",
-      endedCurrent: true,
-      count,
-      setCookies: expiredStaffCookies(deps),
-    };
-  }
-  return {
+  const correlationId = correlationOf(headers);
+  const signedOut = {
     kind: "REVOKED",
     endedCurrent: true,
     count: 0,
     setCookies: expiredStaffCookies(deps),
-  };
+  } as const;
+  const principal = await resolveCurrentAccount(headers, deps);
+  if (!principal) return signedOut;
+  const decision = await authorizeAccountSelfService(
+    principal,
+    "STAFF_SESSIONS_END_ALL",
+    deps,
+    { correlationId },
+  );
+  if (decision.decision === "DENY") {
+    const refusal = refusalOf(decision);
+    return refusal.kind === "UNAUTHENTICATED" ? signedOut : refusal;
+  }
+  const outcome = await deps.db.transaction(async (tx) => {
+    const recheck = await authorizeAccountSelfServiceInTransaction(
+      tx,
+      principal,
+      "STAFF_SESSIONS_END_ALL",
+      deps,
+      { correlationId },
+    );
+    if (recheck.decision === "DENY") return recheck;
+    return deleteAllSessions(tx, principal.accountId);
+  });
+  if (typeof outcome !== "number") {
+    const refusal = refusalOf(outcome);
+    return refusal.kind === "UNAUTHENTICATED" ? signedOut : refusal;
+  }
+  deps.events.record({
+    code: "staff.sessions_revoked",
+    accountRef: principal.accountId,
+    permissionCode: selfServiceAction("STAFF_SESSIONS_END_ALL"),
+    policyVersion: decision.policyVersion,
+    correlationId,
+  });
+  return { ...signedOut, count: outcome };
 }
 
 export type ChangeStaffPasswordResult =
@@ -188,14 +279,14 @@ export type ChangeStaffPasswordResult =
   | Readonly<{ kind: "INVALID_INPUT"; password: readonly PasswordProblem[] }>
   | Readonly<{ kind: "CURRENT_PASSWORD_INVALID" }>
   /** Recent authentication is required first (RECENT_STAFF_AUTH). */
-  | Readonly<{ kind: "REAUTHENTICATION_REQUIRED" }>
-  | Readonly<{ kind: "UNAUTHENTICATED" }>
+  | SelfServiceRefusal
   | Readonly<{ kind: "RATE_LIMITED" }>;
 
 /**
- * Password change for staff: requires recent MFA authentication
- * (RECENT_STAFF_AUTH) and the current password, then ends every session
- * and invalidates all issued assurance (account version increment).
+ * Password change for staff: the STAFF_PASSWORD_CHANGE policy requires
+ * recent MFA authentication (RECENT_STAFF_AUTH) and the current password,
+ * then every session ends and all issued assurance is invalidated
+ * (account version increment).
  */
 export async function changeStaffPassword(
   input: Readonly<{
@@ -206,22 +297,27 @@ export async function changeStaffPassword(
   headers: Headers,
   deps: StaffAuthDependencies = defaultStaffDependencies(),
 ): Promise<ChangeStaffPasswordResult> {
-  const principal = await resolveCurrentStaff(headers, deps);
-  if (!principal) return { kind: "UNAUTHENTICATED" };
-  const assurance = await evaluateStaffAssurance(
+  const correlationId = correlationOf(headers);
+  const principal = await resolveCurrentAccount(headers, deps);
+  const decision = await authorizeAccountSelfService(
     principal,
-    "RECENT_STAFF_AUTH",
-    {},
+    "STAFF_PASSWORD_CHANGE",
     deps,
+    { correlationId },
   );
-  if (assurance.kind !== "ALLOW") {
-    deps.events.record({
-      code: "staff.reauth_challenged",
-      category: "challenge",
-      accountRef: principal.accountId,
-    });
-    return { kind: "REAUTHENTICATION_REQUIRED" };
+  if (decision.decision === "DENY") {
+    const refusal = refusalOf(decision);
+    if (refusal.kind === "REAUTHENTICATION_REQUIRED" && principal) {
+      deps.events.record({
+        code: "staff.reauth_challenged",
+        category: "challenge",
+        accountRef: principal.accountId,
+        correlationId,
+      });
+    }
+    return refusal;
   }
+  if (!principal) return { kind: "UNAUTHENTICATED" };
   if (
     !deps.limiter.consume("staffChangePasswordPerAccount", principal.accountId)
   ) {
@@ -255,6 +351,8 @@ export async function changeStaffPassword(
     });
     return { kind: "CURRENT_PASSWORD_INVALID" };
   }
+  // The credential already changed: ending every session and invalidating
+  // assurance is unconditional (no recheck can veto it).
   await deps.db.transaction(async (tx) => {
     await lockAccountForUpdate(tx, principal.accountId);
     await deleteAllSessions(tx, principal.accountId);
@@ -271,6 +369,9 @@ export async function changeStaffPassword(
   deps.events.record({
     code: "staff.password_changed",
     accountRef: principal.accountId,
+    permissionCode: selfServiceAction("STAFF_PASSWORD_CHANGE"),
+    policyVersion: decision.policyVersion,
+    correlationId,
   });
   return { kind: "CHANGED", setCookies: expiredStaffCookies(deps) };
 }
@@ -280,19 +381,40 @@ export type RegenerateBackupCodesResult =
   /** One generic failure for a wrong password or code. */
   | Readonly<{ kind: "INVALID" }>
   | Readonly<{ kind: "UNAUTHENTICATED" }>
+  | Readonly<{ kind: "NOT_PERMITTED" }>
   | Readonly<{ kind: "RATE_LIMITED" }>;
 
 /**
  * Regenerates backup codes after an inline password + TOTP step-up bound to
- * this purpose (RECENT_STRONG_AUTH; a backup code never qualifies). Better
- * Auth replaces the stored codes, so every earlier code stops working.
+ * this purpose (STAFF_BACKUP_CODES_REGENERATE: RECENT_STRONG_AUTH; a backup
+ * code never qualifies). The step-up always runs, then the whole policy is
+ * re-evaluated from current state before Better Auth replaces the stored
+ * codes, so every earlier code stops working. The new codes are the only
+ * one-time secret display in this area and are never retrievable later.
  */
 export async function regenerateStaffBackupCodes(
   input: Readonly<{ password: unknown; code: unknown }>,
   headers: Headers,
   deps: StaffAuthDependencies = defaultStaffDependencies(),
 ): Promise<RegenerateBackupCodesResult> {
-  const principal = await resolveCurrentStaff(headers, deps);
+  const correlationId = correlationOf(headers);
+  const principal = await resolveCurrentAccount(headers, deps);
+  const entry = await authorizeAccountSelfService(
+    principal,
+    "STAFF_BACKUP_CODES_REGENERATE",
+    deps,
+    { correlationId },
+  );
+  const inlineStepUp =
+    entry.decision === "DENY" &&
+    entry.reasonCode === "RECENT_AUTH_REQUIRED" &&
+    entry.stepUp?.kind === "INLINE";
+  if (entry.decision === "DENY" && !inlineStepUp) {
+    const refusal = refusalOf(entry);
+    return refusal.kind === "REAUTHENTICATION_REQUIRED"
+      ? { kind: "INVALID" }
+      : refusal;
+  }
   if (!principal) return { kind: "UNAUTHENTICATED" };
   const stepUp = await verifyStaffStepUp(
     principal,
@@ -303,13 +425,19 @@ export async function regenerateStaffBackupCodes(
   );
   if (stepUp === "RATE_LIMITED") return { kind: "RATE_LIMITED" };
   if (stepUp === "INVALID") return { kind: "INVALID" };
-  const assurance = await evaluateStaffAssurance(
+  // Never resume from the earlier result: re-run the full decision.
+  const decision = await authorizeAccountSelfService(
     principal,
-    "RECENT_STRONG_AUTH",
-    { purpose: "REGENERATE_BACKUP_CODES" },
+    "STAFF_BACKUP_CODES_REGENERATE",
     deps,
+    { correlationId },
   );
-  if (assurance.kind !== "ALLOW") return { kind: "INVALID" };
+  if (decision.decision === "DENY") {
+    const refusal = refusalOf(decision);
+    return refusal.kind === "REAUTHENTICATION_REQUIRED"
+      ? { kind: "INVALID" }
+      : refusal;
+  }
 
   const response = await deps.auth.api.generateBackupCodes({
     body: { password: input.password as string },
@@ -334,6 +462,9 @@ export async function regenerateStaffBackupCodes(
   deps.events.record({
     code: "staff.backup_codes_regenerated",
     accountRef: principal.accountId,
+    permissionCode: selfServiceAction("STAFF_BACKUP_CODES_REGENERATE"),
+    policyVersion: decision.policyVersion,
+    correlationId,
   });
   return { kind: "REGENERATED", backupCodes: Object.freeze(codes) };
 }

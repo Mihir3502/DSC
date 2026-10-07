@@ -241,6 +241,8 @@ Every pull request runs:
 
 Static checks must detect direct logging of designated sensitive field names and use of development adapters in production configuration where practicable.
 
+Since M1.5, `tests/guards/authorization-boundaries.test.ts` also enforces the route/entry-point authorization manifest and the delivery boundaries (no persistence or auth-library access from delivery code, no server imports in client modules, no role checks in UI, registered redirects only, no test adapters in production code, no record spreads into responses), each pattern with a synthetic self-check; `pnpm test:routes` compares the production build with the manifest.
+
 ## 11. Domain Unit Tests
 
 Domain tests cover pure behavior without database, network, framework, or UI dependencies.

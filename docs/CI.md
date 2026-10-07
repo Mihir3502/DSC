@@ -13,7 +13,7 @@ Workflow: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). Repository:
 | `static-and-security` | `test:secrets`, `test:data-guard`, `test:critical-guard`, `test:workflow-policy`, `format:check`, `lint`, `typecheck`, `auth:schema:check`, `db:check-drift`, `test:deps` | 15 min |
 | `unit-component-coverage` | `test:coverage` (unit + component projects with V8 coverage), artifact guard, coverage upload | 15 min |
 | `database-integration` | `test:integration` (migrations from empty, seed, UTC, least privilege) | 20 min |
-| `build` | `build` | 15 min |
+| `build` | `build`, `test:routes` (built routes and Server Actions vs. the authorization manifest, plus a client-bundle scan for source maps and server-only authorization markers, M1.5) | 15 min |
 | `critical-e2e` | `playwright install --with-deps chromium`, `test:e2e:critical`, `test:a11y` (each starts its own disposable PostgreSQL through Testcontainers) | 25 min |
 | `ci-gate` | `if: always()`; fails unless all five jobs report `success` | 5 min |
 
@@ -42,6 +42,7 @@ db:check-drift       (schema vs. committed migrations)
 test:coverage        (unit + component)
 test:integration
 build
+test:routes          (built routes/actions vs. the authorization manifest)
 test:e2e:critical
 test:a11y
 ```
@@ -54,6 +55,7 @@ No `.env` file, Compose database, or volume is needed. Tests use only generated 
 | `test:unit` + `test:component` + `test:coverage` | `test:coverage` in CI (`test:unit` and `test:component` exist for local use) |
 | `test:security` | `test:security` |
 | `db:test:migrations` | `test:integration` (migration-from-empty in a disposable database, including the M1.1–M1.3 auth tests and the M1.4 authorization tests) |
+| route-manifest drift / architecture checks (M1.5) | `test:coverage` runs `tests/guards/authorization-boundaries.test.ts` (source tree vs. `src/app/_security/route-manifest.ts`, boundary scans with self-checks, production-config harness refusal); `test:routes` compares the production build |
 | catalog idempotence/drift | `test:integration` (`tests/integration/authorization/catalog.test.ts` runs the real `db:catalog:apply`/`db:catalog:check`) plus the unit catalog digest and `tests/guards/authorization-matrix.test.ts` matrix traceability |
 
 ### Test environment variables

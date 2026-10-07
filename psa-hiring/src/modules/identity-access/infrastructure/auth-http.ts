@@ -2,6 +2,10 @@ import "server-only";
 import { toNextJsHandler } from "better-auth/next-js";
 import { publicErrorRegistry, type PublicErrorCode } from "@/shared/errors";
 import { problemResponse } from "@/shared/http/route-handler";
+import {
+  applyProtectedHeaders,
+  PROTECTED_CACHE_CONTROL,
+} from "@/shared/security/protected-cache-policy";
 import { getAuth } from "./runtime";
 
 // HTTP delivery for Better Auth (packet M1.1 §9.1, AC-M1.1-11). Library
@@ -49,6 +53,7 @@ export async function toSafeAuthResponse(
       }),
     );
     for (const cookie of setCookies) safe.headers.append("set-cookie", cookie);
+    applyProtectedHeaders(safe.headers);
     return safe;
   }
 
@@ -63,7 +68,7 @@ export async function toSafeAuthResponse(
   }
   const headers = new Headers(response.headers);
   headers.delete("content-length");
-  headers.set("cache-control", "no-store");
+  headers.set("cache-control", PROTECTED_CACHE_CONTROL);
   return new Response(JSON.stringify(stripTokens(body)), {
     status: response.status,
     headers,
@@ -71,14 +76,22 @@ export async function toSafeAuthResponse(
 }
 
 /**
- * The only Better Auth HTTP paths the application forwards (packet M1.2
- * §6.1, §11). Registration, verification, sign-in, sign-out, recovery,
- * reset, password change, and session management run as same-origin server
- * actions through auth.api, so no generic, staff, or OTP endpoint is
- * reachable over HTTP. Everything else is a closed 404.
+ * The Better Auth HTTP paths the application forwards (packet M1.2 §6.1,
+ * §11; M1.5 §11, §12.2). Registration, verification, sign-in, sign-out,
+ * recovery, reset, password change, and session management run as
+ * same-origin server actions through auth.api, so no generic, staff, or OTP
+ * endpoint is reachable over HTTP.
+ *
+ * M1.5 closed the last forwarded path, GET /get-session: it serialized
+ * Better Auth's own user/session objects (an auth-library object, not an
+ * application projection), bypassed the application account-status, MFA,
+ * and stale-version checks, and could roll the session expiry on a GET.
+ * No application code used it. Every /api/auth/* request is now a closed,
+ * side-effect-free 404; session state reaches pages only through the
+ * application's own exact projections.
  */
 export const forwardedAuthPaths: Readonly<Record<string, readonly string[]>> =
-  Object.freeze({ GET: Object.freeze(["/get-session"]), POST: [] });
+  Object.freeze({ GET: Object.freeze([]), POST: Object.freeze([]) });
 
 export function isForwardedAuthPath(method: string, pathname: string): boolean {
   const prefix = "/api/auth";

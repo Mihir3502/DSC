@@ -1148,6 +1148,9 @@ describe("leakage", () => {
       "actorRef",
       "correlationId",
       "errorCode",
+      // M1.5 bounded denial telemetry (closed codes only, ADR-0011).
+      "reasonCode",
+      "policyVersion",
     ]);
     for (const line of logs.records()) {
       expect(

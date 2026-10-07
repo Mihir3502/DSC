@@ -51,6 +51,16 @@ const eslintConfig = defineConfig([
       "no-restricted-imports": [
         "error",
         {
+          // M1.5 (ADR-0011): redirects go only to registered destinations
+          // through identity-access/delivery/route-authorization.
+          paths: [
+            {
+              name: "next/navigation",
+              importNames: ["redirect", "permanentRedirect"],
+              message:
+                "Use safeRedirect() from identity-access delivery; it only allows registered destinations.",
+            },
+          ],
           patterns: [
             ...serverOnlyModules,
             {
@@ -97,6 +107,71 @@ const eslintConfig = defineConfig([
               ],
               message:
                 "Domain code must not import frameworks, persistence, HTTP, or outer layers.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // M1.5 field policy and projections stay framework-neutral and never
+    // reach persistence or the auth library (ADR-0011).
+    files: ["src/modules/*/presentation/**/*.ts"],
+    ignores: ["src/**/*.test.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "better-auth",
+                "better-auth/*",
+                "next",
+                "next/*",
+                "react",
+                "react/*",
+                "drizzle-orm",
+                "drizzle-orm/*",
+                "pg",
+                "pino",
+                "@/shared/database",
+                "@/shared/database/*",
+                "../infrastructure/*",
+                "../application/*",
+                "../delivery/*",
+              ],
+              message:
+                "Projections are pure: no framework, persistence, auth library, or outer layer.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // M1.5 delivery adapters translate outcomes; they never query storage
+    // or call the auth library directly (ADR-0011).
+    files: ["src/modules/*/delivery/**/*.ts"],
+    ignores: ["src/**/*.test.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "better-auth",
+                "better-auth/*",
+                "drizzle-orm",
+                "drizzle-orm/*",
+                "pg",
+                "@/shared/database",
+                "@/shared/database/*",
+                "../infrastructure/*",
+              ],
+              message:
+                "Delivery adapters call application services, never persistence or the auth library.",
             },
           ],
         },

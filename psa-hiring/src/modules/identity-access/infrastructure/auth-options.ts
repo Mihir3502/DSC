@@ -215,6 +215,9 @@ export const disabledAuthPaths = [
   "/two-factor/verify-backup-code",
   "/two-factor/generate-backup-codes",
   "/verify-password",
+  // M1.5 (ADR-0011): the library session endpoint serialized Better Auth
+  // user/session objects. Server code still uses auth.api.getSession.
+  "/get-session",
 ];
 
 export const staticAuthOptions = {

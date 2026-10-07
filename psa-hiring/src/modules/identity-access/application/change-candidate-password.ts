@@ -8,18 +8,26 @@ import {
   setCookiesOf,
   type CandidateAuthDependencies,
 } from "./candidate-auth-support";
-import { resolveCurrentCandidate } from "./manage-candidate-sessions";
+import {
+  authorizeAccountSelfService,
+  correlationOf,
+  refusalOf,
+  selfServiceAction,
+  type SelfServiceRefusal,
+} from "./authorize-self-service";
+import { resolveCurrentAccount } from "./current-account";
 
 // Authenticated password change (packet M1.2 §13.1). Requires the current
 // password, uses Better Auth's maintained change-password API, revokes every
 // other session, and rotates the current one (new cookie). Recent-auth
-// step-up and MFA are M1.3 and are not implemented here.
+// step-up and MFA are M1.3 and are not implemented here. M1.5: the
+// CANDIDATE_PASSWORD_CHANGE self-service policy is evaluated first.
 
 export type ChangePasswordResult =
   | Readonly<{ kind: "CHANGED"; setCookies: readonly string[] }>
   | Readonly<{ kind: "INVALID_INPUT"; password: readonly PasswordProblem[] }>
   | Readonly<{ kind: "CURRENT_PASSWORD_INVALID" }>
-  | Readonly<{ kind: "UNAUTHENTICATED" }>
+  | SelfServiceRefusal
   | Readonly<{ kind: "RATE_LIMITED" }>;
 
 export async function changeCandidatePassword(
@@ -31,7 +39,15 @@ export async function changeCandidatePassword(
   headers: Headers,
   deps: CandidateAuthDependencies = defaultDependencies(),
 ): Promise<ChangePasswordResult> {
-  const principal = await resolveCurrentCandidate(headers, deps);
+  const correlationId = correlationOf(headers);
+  const principal = await resolveCurrentAccount(headers, deps);
+  const decision = await authorizeAccountSelfService(
+    principal,
+    "CANDIDATE_PASSWORD_CHANGE",
+    deps,
+    { correlationId },
+  );
+  if (decision.decision === "DENY") return refusalOf(decision);
   if (!principal) return { kind: "UNAUTHENTICATED" };
   if (!deps.limiter.consume("changePasswordPerAccount", principal.accountId)) {
     deps.events.record({ code: "auth.rate_limited", category: "rate_limited" });
@@ -69,6 +85,9 @@ export async function changeCandidatePassword(
   deps.events.record({
     code: "auth.password_changed",
     accountRef: principal.accountId,
+    permissionCode: selfServiceAction("CANDIDATE_PASSWORD_CHANGE"),
+    policyVersion: decision.policyVersion,
+    correlationId,
   });
   return { kind: "CHANGED", setCookies: setCookiesOf(response) };
 }

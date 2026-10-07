@@ -1,42 +1,50 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import {
-  describeDevice,
-  maskEmail,
-} from "../domain/candidate-registration-policy";
-import {
+  deleteAllSessions,
+  deleteOwnedSession,
   deleteSessionsExcept,
   findAccountEmail,
   listActiveSessions,
-  lockAccountForUpdate,
 } from "../infrastructure/account-repository";
+import {
+  candidateSecurityContract,
+  type CandidateSecurityView,
+} from "../presentation/security-view-models";
+import { project } from "../presentation/authorized-projector";
+import {
+  authorizeAccountSelfService,
+  authorizeAccountSelfServiceInTransaction,
+  correlationOf,
+  refusalOf,
+  selfServiceAction,
+  type SelfServiceRefusal,
+} from "./authorize-self-service";
 import { resolveCurrentAccount, type Principal } from "./current-account";
 import {
   defaultDependencies,
   type CandidateAuthDependencies,
 } from "./candidate-auth-support";
-import { revokeAllSessions, revokeSession } from "./restrict-account";
 
 // Candidate-owned session management for /candidate/security (packet M1.2
-// §13, AC-M1.2-10). Candidates see opaque session references, never tokens
-// or database IDs, full IPs, or full user agents. Every command re-resolves
-// the current account and rechecks ownership at command time.
+// §13, AC-M1.2-10; M1.5 §9, §12.4). Every query and command:
+//
+// 1. resolves the current server-owned principal;
+// 2. validates its bounded input;
+// 3. calls the self-service authorization boundary (CANDIDATE_* policies),
+//    which re-reads the account and session on every call;
+// 4. reads only the principal's own rows (owner predicate in SQL);
+// 5. rechecks authorization inside the command transaction;
+// 6. returns an exact, projected view model or a closed result code.
+//
+// Candidates see opaque session references, never tokens, database IDs,
+// full IPs, or full user agents.
 
-export type CandidateSessionSummary = Readonly<{
-  /** HMAC-derived opaque reference, valid only for its owner. */
-  ref: string;
-  current: boolean;
-  deviceLabel: string;
-  createdAt: Date;
-  lastActiveAt: Date;
-  expiresAt: Date;
-}>;
+export type CandidateSessionSummary = CandidateSecurityView["sessions"][number];
+export type CandidateSecurityOverview = CandidateSecurityView;
 
-export type CandidateSecurityOverview = Readonly<{
-  maskedEmail: string;
-  emailVerified: boolean;
-  sessions: readonly CandidateSessionSummary[];
-}>;
+export type CandidateSecurityQueryResult =
+  Readonly<{ kind: "OK"; view: CandidateSecurityView }> | SelfServiceRefusal;
 
 /** The current principal only when it is an active, verified candidate. */
 export async function resolveCurrentCandidate(
@@ -68,6 +76,9 @@ export function sameRef(a: string, b: string): boolean {
   return left.length === right.length && timingSafeEqual(left, right);
 }
 
+/** Bounded opaque-reference shape; anything else is "not found". */
+export const sessionRefPattern = /^[A-Za-z0-9_-]{32}$/;
+
 /** Expires the session cookie in the browser (both cookie-name variants). */
 export function expiredSessionCookies(
   deps: CandidateAuthDependencies,
@@ -81,30 +92,63 @@ export function expiredSessionCookies(
   );
 }
 
-export async function getCandidateSecurityOverview(
+/** The candidate security page query (typed outcome for delivery). */
+export async function queryCandidateSecurity(
   headers: Headers,
   deps: CandidateAuthDependencies = defaultDependencies(),
-): Promise<CandidateSecurityOverview | null> {
-  const principal = await resolveCurrentCandidate(headers, deps);
-  if (!principal) return null;
+): Promise<CandidateSecurityQueryResult> {
+  const correlationId = correlationOf(headers);
+  const principal = await resolveCurrentAccount(headers, deps);
+  const decision = await authorizeAccountSelfService(
+    principal,
+    "CANDIDATE_SECURITY_READ",
+    deps,
+    { correlationId },
+  );
+  if (decision.decision !== "ALLOW" || !principal) {
+    return decision.decision === "DENY"
+      ? refusalOf(decision)
+      : { kind: "UNAUTHENTICATED" };
+  }
   const [email, rows] = await Promise.all([
     findAccountEmail(deps.db, principal.accountId),
     listActiveSessions(deps.db, principal.accountId),
   ]);
-  return Object.freeze({
-    maskedEmail: email ? maskEmail(email) : "•••",
-    emailVerified: principal.emailVerified,
-    sessions: rows.map((row) =>
-      Object.freeze({
+  const projected = project(
+    candidateSecurityContract,
+    {
+      email,
+      emailVerified: principal.emailVerified,
+      sessions: rows.map((row) => ({
         ref: sessionRef(deps, row.id),
         current: row.id === principal.sessionId,
-        deviceLabel: describeDevice(row.userAgent),
+        userAgent: row.userAgent,
         createdAt: row.createdAt,
-        lastActiveAt: row.updatedAt,
+        updatedAt: row.updatedAt,
         expiresAt: row.expiresAt,
-      }),
-    ),
-  });
+      })),
+    },
+    { audience: "CANDIDATE", purpose: "SECURITY", allowed: new Set() },
+  );
+  if (projected.kind !== "PROJECTED") {
+    deps.logger.error("authz.projection_refused", {
+      module: "authz",
+      action: selfServiceAction("CANDIDATE_SECURITY_READ"),
+      reasonCode: projected.reason,
+      correlationId,
+    });
+    return { kind: "NOT_PERMITTED" };
+  }
+  return { kind: "OK", view: projected.value };
+}
+
+/** Convenience form of queryCandidateSecurity: the view or null. */
+export async function getCandidateSecurityOverview(
+  headers: Headers,
+  deps: CandidateAuthDependencies = defaultDependencies(),
+): Promise<CandidateSecurityOverview | null> {
+  const result = await queryCandidateSecurity(headers, deps);
+  return result.kind === "OK" ? result.view : null;
 }
 
 export type SessionCommandResult =
@@ -117,7 +161,7 @@ export type SessionCommandResult =
     }>
   /** Unknown, foreign, or already-revoked reference; non-enumerating. */
   | Readonly<{ kind: "NOT_FOUND" }>
-  | Readonly<{ kind: "UNAUTHENTICATED" }>;
+  | SelfServiceRefusal;
 
 /** Revokes one of the candidate's own sessions by opaque reference. */
 export async function revokeCandidateSession(
@@ -125,21 +169,45 @@ export async function revokeCandidateSession(
   ref: unknown,
   deps: CandidateAuthDependencies = defaultDependencies(),
 ): Promise<SessionCommandResult> {
-  const principal = await resolveCurrentCandidate(headers, deps);
+  const correlationId = correlationOf(headers);
+  const principal = await resolveCurrentAccount(headers, deps);
+  const decision = await authorizeAccountSelfService(
+    principal,
+    "CANDIDATE_SESSION_REVOKE",
+    deps,
+    { correlationId },
+  );
+  if (decision.decision === "DENY") return refusalOf(decision);
   if (!principal) return { kind: "UNAUTHENTICATED" };
-  if (typeof ref !== "string" || !/^[A-Za-z0-9_-]{32}$/.test(ref)) {
+  if (typeof ref !== "string" || !sessionRefPattern.test(ref)) {
     return { kind: "NOT_FOUND" };
   }
+  // Ownership is a SQL predicate: only the principal's own sessions are
+  // ever loaded, then the opaque reference is matched in constant time.
   const rows = await listActiveSessions(deps.db, principal.accountId);
   const target = rows.find((row) => sameRef(sessionRef(deps, row.id), ref));
   if (!target) return { kind: "NOT_FOUND" };
 
-  const result = await revokeSession(principal.accountId, target.id, deps);
-  if (result.sessionsRevoked === 0) return { kind: "NOT_FOUND" };
+  const outcome = await deps.db.transaction(async (tx) => {
+    const recheck = await authorizeAccountSelfServiceInTransaction(
+      tx,
+      principal,
+      "CANDIDATE_SESSION_REVOKE",
+      deps,
+      { correlationId },
+    );
+    if (recheck.decision === "DENY") return recheck;
+    return deleteOwnedSession(tx, principal.accountId, target.id);
+  });
+  if (typeof outcome !== "number") return refusalOf(outcome);
+  if (outcome === 0) return { kind: "NOT_FOUND" };
   const endedCurrent = target.id === principal.sessionId;
   deps.events.record({
     code: "auth.session_revoked",
     accountRef: principal.accountId,
+    permissionCode: selfServiceAction("CANDIDATE_SESSION_REVOKE"),
+    policyVersion: decision.policyVersion,
+    correlationId,
   });
   return {
     kind: "REVOKED",
@@ -154,43 +222,92 @@ export async function revokeOtherCandidateSessions(
   headers: Headers,
   deps: CandidateAuthDependencies = defaultDependencies(),
 ): Promise<SessionCommandResult> {
-  const principal = await resolveCurrentCandidate(headers, deps);
+  const correlationId = correlationOf(headers);
+  const principal = await resolveCurrentAccount(headers, deps);
+  const decision = await authorizeAccountSelfService(
+    principal,
+    "CANDIDATE_SESSIONS_REVOKE_OTHERS",
+    deps,
+    { correlationId },
+  );
+  if (decision.decision === "DENY") return refusalOf(decision);
   if (!principal) return { kind: "UNAUTHENTICATED" };
-  const count = await deps.db.transaction(async (tx) => {
-    const account = await lockAccountForUpdate(tx, principal.accountId);
-    if (!account) return 0;
+  const outcome = await deps.db.transaction(async (tx) => {
+    const recheck = await authorizeAccountSelfServiceInTransaction(
+      tx,
+      principal,
+      "CANDIDATE_SESSIONS_REVOKE_OTHERS",
+      deps,
+      { correlationId },
+    );
+    if (recheck.decision === "DENY") return recheck;
     return deleteSessionsExcept(tx, principal.accountId, principal.sessionId);
   });
+  if (typeof outcome !== "number") return refusalOf(outcome);
   deps.events.record({
     code: "auth.sessions_revoked",
     accountRef: principal.accountId,
+    permissionCode: selfServiceAction("CANDIDATE_SESSIONS_REVOKE_OTHERS"),
+    policyVersion: decision.policyVersion,
+    correlationId,
   });
-  return { kind: "REVOKED", endedCurrent: false, count, setCookies: [] };
+  return {
+    kind: "REVOKED",
+    endedCurrent: false,
+    count: outcome,
+    setCookies: [],
+  };
 }
 
-/** Ends every session, including this one ("sign out everywhere"). */
+/**
+ * Ends every session, including this one ("sign out everywhere"). Without
+ * an eligible principal there is nothing to revoke: the browser's cookie is
+ * still expired, so the command is safe to repeat.
+ */
 export async function signOutCandidateEverywhere(
   headers: Headers,
   deps: CandidateAuthDependencies = defaultDependencies(),
 ): Promise<SessionCommandResult> {
-  const principal = await resolveCurrentCandidate(headers, deps);
-  if (!principal) {
-    return {
-      kind: "REVOKED",
-      endedCurrent: true,
-      count: 0,
-      setCookies: expiredSessionCookies(deps),
-    };
+  const correlationId = correlationOf(headers);
+  const signedOut = {
+    kind: "REVOKED",
+    endedCurrent: true,
+    count: 0,
+    setCookies: expiredSessionCookies(deps),
+  } as const;
+  const principal = await resolveCurrentAccount(headers, deps);
+  if (!principal) return signedOut;
+  const decision = await authorizeAccountSelfService(
+    principal,
+    "CANDIDATE_SESSIONS_END_ALL",
+    deps,
+    { correlationId },
+  );
+  if (decision.decision === "DENY") {
+    const refusal = refusalOf(decision);
+    return refusal.kind === "UNAUTHENTICATED" ? signedOut : refusal;
   }
-  const result = await revokeAllSessions(principal.accountId, deps);
+  const outcome = await deps.db.transaction(async (tx) => {
+    const recheck = await authorizeAccountSelfServiceInTransaction(
+      tx,
+      principal,
+      "CANDIDATE_SESSIONS_END_ALL",
+      deps,
+      { correlationId },
+    );
+    if (recheck.decision === "DENY") return recheck;
+    return deleteAllSessions(tx, principal.accountId);
+  });
+  if (typeof outcome !== "number") {
+    const refusal = refusalOf(outcome);
+    return refusal.kind === "UNAUTHENTICATED" ? signedOut : refusal;
+  }
   deps.events.record({
     code: "auth.sessions_revoked",
     accountRef: principal.accountId,
+    permissionCode: selfServiceAction("CANDIDATE_SESSIONS_END_ALL"),
+    policyVersion: decision.policyVersion,
+    correlationId,
   });
-  return {
-    kind: "REVOKED",
-    endedCurrent: true,
-    count: result.sessionsRevoked,
-    setCookies: expiredSessionCookies(deps),
-  };
+  return { ...signedOut, count: outcome };
 }

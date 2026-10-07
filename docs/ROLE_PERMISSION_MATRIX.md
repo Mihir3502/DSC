@@ -382,6 +382,10 @@ Break-glass access does not allow business approval, evidence alteration, or aud
 
 Publishing a configuration creates an immutable version and effective date. Historical records remain linked to the version that governed them.
 
+### 14a. Account self-service (implemented in M1.5, ADR-0011)
+
+A principal's own account security (masked summary, own sessions, own password, own backup codes, own reauthentication) is not a business resource and is not in the permission catalog. It is governed by closed self-service policies (`CANDIDATE_*`, `STAFF_*`) bound to the server-resolved principal's own account and audience; they grant nothing on any other record and cannot be held by a service account.
+
 ## 15. Authentication Strength by Action
 
 ### 15.1 Standard Authenticated Session

@@ -397,25 +397,20 @@ describe("public endpoints", () => {
     const { response, cookie } = await signIn(account);
     const signInBody = (await response.json()) as Record<string, unknown>;
     expect(signInBody).not.toHaveProperty("token");
+    // M1.5 (ADR-0011): get-session is closed. It serialized Better Auth's
+    // own user/session objects; session state reaches pages only through
+    // application projections.
     const sessionResponse = await call("/api/auth/get-session", {
       headers: { cookie: cookie! },
     });
-    const sessionBody = (await sessionResponse.json()) as {
-      session?: Record<string, unknown>;
-      user?: Record<string, unknown>;
-    };
-    expect(sessionBody.session).toBeDefined();
-    expect(sessionBody.session).not.toHaveProperty("token");
-    for (const field of [
-      "accountType",
-      "status",
-      "version",
-      "disabledAt",
-      "disabledReasonCode",
-      "emailDisplay",
-    ]) {
-      expect(sessionBody.user, field).not.toHaveProperty(field);
-    }
+    expect(sessionResponse.status).toBe(404);
+    const sessionBody = (await sessionResponse.json()) as Record<
+      string,
+      unknown
+    >;
+    expect(sessionBody).not.toHaveProperty("session");
+    expect(sessionBody).not.toHaveProperty("user");
+    expect(sessionBody.code).toBe("NOT_FOUND");
   });
 });
 

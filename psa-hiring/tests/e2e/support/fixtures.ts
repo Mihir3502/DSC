@@ -57,3 +57,19 @@ export async function tabToLink(page: Page, name: string, maxTabs = 10) {
   }
   throw new Error(`"${name}" was not reachable within ${maxTabs} Tab presses`);
 }
+
+const notFoundMessage =
+  /Failed to load resource: the server responded with a status of 404/;
+
+/**
+ * Accepts exactly `count` browser console messages for 404 responses the
+ * test deliberately requested (safe not-found pages and closed endpoints).
+ * Any other page/console error still fails the test.
+ */
+export function acceptExpectedNotFound(guards: Guards, count: number) {
+  const notFound = guards.pageErrors.filter((e) => notFoundMessage.test(e));
+  expect(notFound.length, "expected 404 console messages").toBe(count);
+  const rest = guards.pageErrors.filter((e) => !notFoundMessage.test(e));
+  guards.pageErrors.length = 0;
+  guards.pageErrors.push(...rest);
+}

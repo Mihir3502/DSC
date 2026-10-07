@@ -72,6 +72,9 @@ export const securityEventCodes = [
   "authz.catalog_applied",
   "authz.high_risk_denied",
   "authz.policy_unavailable",
+  // M1.5 route/field authorization (ADR-0011). Future-audit-ready only.
+  "authz.self_service_denied",
+  "authz.restricted_access_allowed",
 ] as const;
 export type SecurityEventCode = (typeof securityEventCodes)[number];
 
@@ -108,6 +111,8 @@ export type SecurityEvent = Readonly<{
   scopeType?: string;
   reasonCode?: string;
   policyVersion?: string;
+  /** M1.5: the request's validated correlation ID, when known. */
+  correlationId?: string;
 }>;
 
 export interface SecurityEventPort {
@@ -132,6 +137,7 @@ export class LogSecurityEvents implements SecurityEventPort {
       scopeType: event.scopeType,
       reasonCode: event.reasonCode,
       policyVersion: event.policyVersion,
+      correlationId: event.correlationId,
     });
   }
 }

@@ -35,6 +35,8 @@ export const messages = {
     "Your password was changed. Other signed-in sessions were ended.",
   currentPasswordInvalid: "The current password is incorrect.",
   signedOutRequired: "Your session has ended. Sign in again.",
+  formRejected:
+    "This form could not be processed. Reload the page and try again.",
 } as const;
 
 const passwordMessages: Record<PasswordProblem, string> = {
@@ -69,11 +71,6 @@ export function echoEmail(formData: FormData): { email?: string } {
   return typeof value === "string" && value.length <= 320
     ? { email: value }
     : {};
-}
-
-export function field(formData: FormData, name: string): string | undefined {
-  const value = formData.get(name);
-  return typeof value === "string" ? value : undefined;
 }
 
 /** Applies Better Auth Set-Cookie values through the Next.js cookie store. */

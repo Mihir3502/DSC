@@ -13,6 +13,12 @@ import {
   readSessionAssurance,
   recordReauthentication,
 } from "../infrastructure/better-auth-mfa-adapter";
+import {
+  authorizeAccountSelfService,
+  correlationOf,
+  refusalOf,
+  type SelfServiceRefusal,
+} from "./authorize-self-service";
 import { formString } from "./candidate-auth-support";
 import { resolveCurrentAccount, type Principal } from "./current-account";
 import {
@@ -62,12 +68,31 @@ export async function evaluateStaffAssurance(
   });
 }
 
+/**
+ * The reauthentication page query (STAFF_REAUTHENTICATE). It renders no
+ * protected data; the policy only decides whether the prompt is shown.
+ */
+export async function queryStaffReauthentication(
+  headers: Headers,
+  deps: StaffAuthDependencies = defaultStaffDependencies(),
+): Promise<Readonly<{ kind: "OK" }> | SelfServiceRefusal> {
+  const principal = await resolveCurrentAccount(headers, deps);
+  const decision = await authorizeAccountSelfService(
+    principal,
+    "STAFF_REAUTHENTICATE",
+    deps,
+    { correlationId: correlationOf(headers) },
+  );
+  return decision.decision === "ALLOW" ? { kind: "OK" } : refusalOf(decision);
+}
+
 export type ReauthenticateResult =
   | Readonly<{ kind: "REAUTHENTICATED"; destination: string }>
   /** One generic failure for a wrong password or code. */
   | Readonly<{ kind: "INVALID" }>
   | Readonly<{ kind: "RATE_LIMITED" }>
-  | Readonly<{ kind: "UNAUTHENTICATED" }>;
+  | Readonly<{ kind: "UNAUTHENTICATED" }>
+  | Readonly<{ kind: "NOT_PERMITTED" }>;
 
 /**
  * Verifies password + TOTP for the signed-in staff member and records
@@ -147,7 +172,19 @@ export async function reauthenticateStaff(
   headers: Headers,
   deps: StaffAuthDependencies = defaultStaffDependencies(),
 ): Promise<ReauthenticateResult> {
-  const principal = await resolveCurrentStaff(headers, deps);
+  const principal = await resolveCurrentAccount(headers, deps);
+  const decision = await authorizeAccountSelfService(
+    principal,
+    "STAFF_REAUTHENTICATE",
+    deps,
+    { correlationId: correlationOf(headers) },
+  );
+  if (decision.decision === "DENY") {
+    const refusal = refusalOf(decision);
+    return refusal.kind === "NOT_PERMITTED"
+      ? refusal
+      : { kind: "UNAUTHENTICATED" };
+  }
   if (!principal) return { kind: "UNAUTHENTICATED" };
   // Closed purpose registry; anything else (URLs, actions, inline-only
   // purposes such as backup-code regeneration or the M1.4 authorization

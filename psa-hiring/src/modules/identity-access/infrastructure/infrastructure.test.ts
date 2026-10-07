@@ -269,7 +269,9 @@ describe("auth HTTP sanitizing", () => {
       user: { id: "u1" },
       session: { id: "s1" },
     });
-    expect(safe.headers.get("cache-control")).toBe("no-store");
+    expect(safe.headers.get("cache-control")).toBe(
+      "private, no-store, max-age=0",
+    );
   });
 
   it("passes redirects through unchanged", async () => {
@@ -283,8 +285,9 @@ describe("auth HTTP sanitizing", () => {
 
 describe("auth HTTP surface", () => {
   it.each([
-    ["GET", "/api/auth/get-session", true],
-    ["GET", "/api/auth/get-session/", true],
+    // M1.5: get-session is closed too (it returned auth-library objects).
+    ["GET", "/api/auth/get-session", false],
+    ["GET", "/api/auth/get-session/", false],
     ["POST", "/api/auth/sign-in/email", false],
     ["POST", "/api/auth/sign-up/email", false],
     ["POST", "/api/auth/sign-out", false],

@@ -4,7 +4,7 @@ import {
   signIn,
   useDistinctClient,
 } from "./support/candidate-auth";
-import { expect, test } from "./support/fixtures";
+import { acceptExpectedNotFound, expect, test } from "./support/fixtures";
 import {
   activateStaff,
   expireStaffInvitationFor,
@@ -263,6 +263,7 @@ test.describe("staff authentication", { tag: "@critical" }, () => {
 
   test("candidates cannot use staff sign-in, MFA, or staff pages", async ({
     page,
+    guards,
   }) => {
     const email = await readyCandidate(page, "staff-boundary");
     await staffFirstFactor(page, email, PASSWORD);
@@ -271,13 +272,19 @@ test.describe("staff authentication", { tag: "@critical" }, () => {
     );
     await signIn(page, email);
     await expect(page).toHaveURL("/candidate/security");
-    for (const path of [
-      "/staff/security",
-      "/staff/reauthenticate",
-      "/staff/mfa",
-    ]) {
-      await page.goto(path);
-      await expect(page).toHaveURL("/staff/sign-in");
+    // M1.5: a signed-in candidate sees the same safe not-found as an
+    // unknown page on staff-only routes (packet §25: hidden, not
+    // redirected). The public MFA step still requires a staff challenge.
+    for (const path of ["/staff/security", "/staff/reauthenticate"]) {
+      const response = await page.goto(path);
+      expect(response?.status(), path).toBe(404);
+      await expect(page).toHaveURL(path);
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Page not found" }),
+      ).toBeVisible();
     }
+    acceptExpectedNotFound(guards, 2);
+    await page.goto("/staff/mfa");
+    await expect(page).toHaveURL("/staff/sign-in");
   });
 });

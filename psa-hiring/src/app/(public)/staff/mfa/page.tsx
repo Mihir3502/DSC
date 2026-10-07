@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { hasStaffChallenge } from "@/modules/identity-access";
+import { safeRedirect } from "@/modules/identity-access/delivery/route-authorization";
 import { AuthPage } from "@/modules/identity-access/ui/auth-page";
 import { StaffMfaForm } from "@/modules/identity-access/ui/staff-auth-forms";
 import { staffMfaAction } from "../staff-auth-actions";
@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "Staff verification" };
 export const dynamic = "force-dynamic";
 
 export default async function StaffMfaPage() {
-  if (!hasStaffChallenge(await headers())) redirect("/staff/sign-in");
+  if (!hasStaffChallenge(await headers())) safeRedirect("/staff/sign-in");
   return (
     <AuthPage
       title="Verify it is you"

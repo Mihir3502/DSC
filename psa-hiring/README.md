@@ -4,7 +4,7 @@ Web application for managing hiring and compliance readiness for a Kentucky priv
 
 Release 1 covers candidate intake through **Ready for Assignment**. Scheduling, visit tracking, timesheets, payroll, billing, and leave are out of scope. See [`CLAUDE.md`](../CLAUDE.md) for the full scope.
 
-> **Current state: M1.3 staff invitation and multifactor authentication.** Candidates can register (email-verified with a single-use code), sign in and out, recover and reset a password, change their password, and manage their own sessions (M1.2). Invitation-only staff activate with a password plus a mandatory authenticator app (TOTP) and one-time backup codes, sign in with password plus a second factor, and manage only their own account security (M1.3). Staff have no roles, permissions, or record access until M1.4–M1.5. Local email goes to Mailpit only. The foundation also provides local PostgreSQL and Mailpit, a Drizzle migration workflow, a layered automated test suite, and structured logging with correlation IDs and safe error handling. Besides the `auth` schema there is one technical table (`app.system_metadata`) and no business data. CI runs on every pull request and push to `main`.
+> **Current state: M1.5 route, object, and field authorization** on top of M1.4 roles and scopes and M1.3 staff invitation and multifactor authentication. Candidates can register (email-verified with a single-use code), sign in and out, recover and reset a password, change their password, and manage their own sessions (M1.2). Invitation-only staff activate with a password plus a mandatory authenticator app (TOTP) and one-time backup codes, sign in with password plus a second factor, and manage only their own account security (M1.3). Staff have no roles, permissions, or record access until M1.4–M1.5. Local email goes to Mailpit only. The foundation also provides local PostgreSQL and Mailpit, a Drizzle migration workflow, a layered automated test suite, and structured logging with correlation IDs and safe error handling. Besides the `auth` schema there is one technical table (`app.system_metadata`) and no business data. CI runs on every pull request and push to `main`.
 
 ## Prerequisites
 
@@ -146,6 +146,18 @@ Application authorization is separate from Better Auth (see [`docs/adr/ADR-0005-
 - **Decisions:** server code calls `authorize` (or `authorizeInTransaction` inside a protected command) from `@/modules/identity-access`. It returns an explicit `ALLOW`/`DENY` with a closed reason code, reading current account, session, assignment, catalog, scope, workflow, separation, and recent-authentication facts every time.
 - **Fail closed until M2:** no organization, branch, team, assignment-set, audit-assignment, or candidacy records exist yet, so the default scope and ownership resolvers answer "unavailable". No assignment can be created and no business decision can allow in the running application. Candidates have no business access until M2 ownership exists.
 - **No administration surface:** there is no page, API, or CLI to manage roles. Assignment commands exist for tests and later work items only; the bootstrap harness and synthetic resolvers refuse to run unless `APP_ENV=test`. There is no default user, administrator, or assignment.
+
+## Route, object, and field authorization (M1.5)
+
+See [`docs/adr/ADR-0011-ROUTE-OBJECT-FIELD-AUTHORIZATION.md`](../docs/adr/ADR-0011-ROUTE-OBJECT-FIELD-AUTHORIZATION.md).
+
+- **Every server entry point is classified** in `src/app/_security/route-manifest.ts`: pages, layouts, Server Actions, Route Handler methods, the proxy, instrumentation, and local harnesses. `pnpm test` (the boundary guard) fails on unclassified or inconsistent entries; `pnpm build && pnpm test:routes` compares the production build with the manifest. Add a manifest entry with every new route or action.
+- **Guards are conveniences:** the `(account)` route-group layouts send anonymous browsers to sign-in and show other audiences the same 404 as an unknown page. Each page and action calls its application query/command, which evaluates its self-service policy (`CANDIDATE_*`/`STAFF_*`) again from current account and session state.
+- **Responses are exact projections** (`src/modules/identity-access/presentation/`): explicit field mapping, include/mask/status-only/omit/deny rules, a never-return key list, and strict schemas. Never spread a database, auth-library, or provider object into a response.
+- **Inputs are exact:** each Server Action parses `formSchemas.<name>`; any unknown, repeated, file, or over-long field rejects the whole submission.
+- **Redirects** go only through `safeRedirect()` to registered destinations (`src/shared/security/safe-redirect.ts`). **Caching:** protected paths are `private, no-store`.
+- **No `/api/auth/*` endpoint is reachable** (every path is a 404); session state is server-side only.
+- Reusable contracts for later milestones (scoped lists, documents, jobs, provider callbacks) exist with synthetic tests only; there is no business endpoint.
 
 ## Logging and errors
 

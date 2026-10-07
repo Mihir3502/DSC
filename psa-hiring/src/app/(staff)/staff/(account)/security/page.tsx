@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { currentRequestHeaders } from "@/app/_auth/auth-messages";
-import { getStaffSecurityOverview } from "@/modules/identity-access";
+import { queryStaffSecurity } from "@/modules/identity-access";
+import { refuseAccess } from "@/modules/identity-access/delivery/route-authorization";
 import { ChangePasswordForm } from "@/modules/identity-access/ui/candidate-auth-forms";
 import { RegenerateBackupCodesForm } from "@/modules/identity-access/ui/staff-auth-forms";
 import {
@@ -19,7 +19,10 @@ import {
 // account, two-step verification, password, and session controls. No
 // roles, permissions, scopes, branch/team, candidate records, queues,
 // dashboards, reports, or administration. The TOTP secret and existing
-// backup codes are never shown.
+// backup codes are never shown. M1.5: rendered only when the
+// STAFF_SECURITY_READ self-service policy allows the current principal
+// (re-evaluated here, independently of the route-group guard), from the
+// exact staff.account_security.v1 projection.
 
 export const metadata: Metadata = { title: "Staff account security" };
 export const dynamic = "force-dynamic";
@@ -48,10 +51,9 @@ const methodLabels: Record<string, string> = {
 export default async function StaffSecurityPage({
   searchParams,
 }: PageProps<"/staff/security">) {
-  const overview = await getStaffSecurityOverview(
-    await currentRequestHeaders(),
-  );
-  if (!overview) redirect("/staff/sign-in");
+  const result = await queryStaffSecurity(await currentRequestHeaders());
+  if (result.kind !== "OK") refuseAccess(result.kind, "STAFF");
+  const overview = result.view;
   const { notice } = await searchParams;
   const noticeText =
     typeof notice === "string" && Object.hasOwn(notices, notice)

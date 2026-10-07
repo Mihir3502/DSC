@@ -32,6 +32,8 @@ export const staffMessages = {
   recoverySubmitted:
     "If this email address belongs to an active staff account, your request was recorded. An administrator must verify your identity before anything changes. Contact your administrator to continue; you will receive an email if your sign-in is reset.",
   fixErrors: "Check the highlighted fields and try again.",
+  formRejected:
+    "This form could not be processed. Reload the page and try again.",
   invalidEmail: "Enter an email address in the format name@example.com.",
 } as const;
 

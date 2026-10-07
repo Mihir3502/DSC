@@ -78,6 +78,8 @@ const digestPattern = /^[A-Za-z0-9]{1,64}$/;
 const publicCodes = new Set<string>([
   "VALIDATION_FAILED",
   "UNAUTHENTICATED",
+  "FORBIDDEN",
+  "REAUTHENTICATION_REQUIRED",
   "NOT_FOUND",
   "CONFLICT",
   "SERVICE_UNAVAILABLE",

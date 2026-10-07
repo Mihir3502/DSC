@@ -295,6 +295,8 @@ AND recent authentication present when required
 - Redact unauthorized fields before serialization.
 - Test direct requests to hidden routes and fields.
 
+Implemented in M1.5 (ADR-0011): exact projection contracts with a never-return key list, exact action inputs that reject unknown fields, registered redirect destinations, `Cache-Control: private, no-store` on every personal or capability path (Next.js owns `Vary` on page responses, so `Vary: Cookie` is defense in depth on Route Handlers only), and a fully closed `/api/auth/*` surface.
+
 ### Break-glass access
 
 If implemented, break-glass access requires:

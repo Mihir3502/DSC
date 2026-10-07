@@ -18,6 +18,10 @@ export type InternalErrorCode = (typeof internalErrorCodes)[number];
 export type PublicErrorCode =
   | "VALIDATION_FAILED"
   | "UNAUTHENTICATED"
+  /** M1.5: authenticated, existence already safely known, action denied. */
+  | "FORBIDDEN"
+  /** M1.5: the action needs recent authentication (step-up). */
+  | "REAUTHENTICATION_REQUIRED"
   | "NOT_FOUND"
   | "CONFLICT"
   | "SERVICE_UNAVAILABLE"
@@ -38,6 +42,11 @@ export const publicErrorRegistry: Readonly<
     title: "The request could not be processed",
   },
   UNAUTHENTICATED: { status: 401, title: "Sign-in is required" },
+  FORBIDDEN: { status: 403, title: "This action is not permitted" },
+  REAUTHENTICATION_REQUIRED: {
+    status: 403,
+    title: "Confirm your identity to continue",
+  },
   NOT_FOUND: { status: 404, title: "The requested resource was not found" },
   CONFLICT: {
     status: 409,

@@ -6,12 +6,21 @@ import {
 import { toHttpMethod } from "@/shared/logging/log-context";
 import { getLogger } from "@/shared/logging/pino-logger";
 import type { AppLogger } from "@/shared/logging/logger";
+import {
+  applyProtectedHeaders,
+  isProtectedPath,
+} from "@/shared/security/protected-cache-policy";
 
 // Trusted web boundary (Node.js runtime in Next.js 16). Assigns every request
 // one validated correlation ID, forwards it to rendering/route handlers as a
 // request header, returns it as a response header, and logs that the request
 // was received. Status and duration are not observable here, so none are
 // logged (route handlers log completion themselves).
+//
+// M1.5 (ADR-0011): this proxy is coarse plumbing only. It resolves no
+// session, reads no account or record, and makes no authorization
+// decision; the route-group guards are navigation conveniences and every
+// page, query, action, and handler authorizes itself on the server.
 
 /** Low-cardinality route labels; unknown paths are never logged raw. */
 const knownRoutes = new Set([
@@ -34,24 +43,11 @@ const knownRoutes = new Set([
 
 /**
  * Personal or capability-bearing pages are never cached (packet M1.2
- * §9.2, AC-M1.2-11). Every response gets Referrer-Policy: no-referrer.
+ * §9.2, AC-M1.2-11; M1.5 §18: `private, no-store` plus `Vary: Cookie`).
+ * Every response gets Referrer-Policy: no-referrer.
  */
-const noStorePaths = [
-  "/register",
-  "/sign-in",
-  "/verify-email",
-  "/recover",
-  "/reset-password",
-  "/candidate",
-  // M1.3: every staff page (activation, sign-in, MFA, recovery, security,
-  // reauthentication) carries one-time capabilities or personal state.
-  "/staff",
-];
-
 export function isNoStorePath(pathname: string): boolean {
-  return noStorePaths.some(
-    (path) => pathname === path || pathname.startsWith(`${path}/`),
-  );
+  return isProtectedPath(pathname);
 }
 
 export function routeLabel(pathname: string): string {
@@ -72,7 +68,7 @@ export function createProxy(logger: () => AppLogger) {
     response.headers.set(CORRELATION_HEADER, correlationId);
     response.headers.set("Referrer-Policy", "no-referrer");
     if (isNoStorePath(request.nextUrl.pathname)) {
-      response.headers.set("Cache-Control", "no-store");
+      applyProtectedHeaders(response.headers);
     }
 
     logger().info("request.received", {

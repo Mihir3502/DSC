@@ -46,11 +46,21 @@ function defaults(): ResolverDependencies {
 export async function resolveCurrentAccount(
   headers: Headers,
   deps: ResolverDependencies = defaults(),
+  options: Readonly<{
+    /**
+     * M1.5 route guards resolve silently: the page/query/action behind the
+     * guard resolves again and is the one place a rejection is recorded.
+     */
+    silent?: boolean;
+  }> = {},
 ): Promise<Principal | null> {
-  const log = deps.logger.child({
+  const logger = deps.logger.child({
     module: "auth",
     correlationId: getRequestContext()?.correlationId,
   });
+  const log = options.silent
+    ? { warn: (..._args: Parameters<AppLogger["warn"]>) => void _args }
+    : logger;
 
   let result: Awaited<ReturnType<Auth["api"]["getSession"]>>;
   try {

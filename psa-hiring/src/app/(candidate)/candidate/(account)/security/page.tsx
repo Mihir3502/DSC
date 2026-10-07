@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { currentRequestHeaders } from "@/app/_auth/auth-messages";
-import { getCandidateSecurityOverview } from "@/modules/identity-access";
+import { queryCandidateSecurity } from "@/modules/identity-access";
+import { refuseAccess } from "@/modules/identity-access/delivery/route-authorization";
 import { ChangePasswordForm } from "@/modules/identity-access/ui/candidate-auth-forms";
 import {
   changePasswordAction,
@@ -12,8 +12,10 @@ import {
   signOutEverywhereAction,
 } from "./actions";
 
-// Candidate account security (packet M1.2 §13). Rendered only for an
-// active, verified candidate session resolved on the server; shows a masked
+// Candidate account security (packet M1.2 §13; M1.5 §12.4). Rendered only
+// when the CANDIDATE_SECURITY_READ self-service policy allows the current
+// principal (re-evaluated here, independently of the route-group guard);
+// shows the exact candidate.account_security.v1 projection: a masked
 // email, verification status, password change, and the candidate's own
 // sessions by opaque reference (never tokens, IPs, or full user agents).
 
@@ -39,10 +41,9 @@ function formatUtc(date: Date) {
 export default async function CandidateSecurityPage({
   searchParams,
 }: PageProps<"/candidate/security">) {
-  const overview = await getCandidateSecurityOverview(
-    await currentRequestHeaders(),
-  );
-  if (!overview) redirect("/sign-in");
+  const result = await queryCandidateSecurity(await currentRequestHeaders());
+  if (result.kind !== "OK") refuseAccess(result.kind, "CANDIDATE");
+  const overview = result.view;
   const { notice } = await searchParams;
   const noticeText =
     typeof notice === "string" && Object.hasOwn(notices, notice)

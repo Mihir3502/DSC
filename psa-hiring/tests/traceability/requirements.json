@@ -33,7 +33,7 @@
       "id": "PRD-AUTH-002",
       "title": "Candidates access only their own information",
       "status": "partial",
-      "note": "Own-session management only; object-level authorization is M1.5.",
+      "note": "Own-account security and sessions (M1.2) are enforced by the CANDIDATE_* self-service policies and exact projections (M1.5, ADR-0011); candidate business-record ownership arrives with M2 and the full matrix with M1.7.",
       "tests": [
         {
           "file": "tests/integration/auth/candidate-registration.test.ts",
@@ -46,6 +46,14 @@
         {
           "file": "tests/integration/auth/candidate-registration.test.ts",
           "title": "does not show the candidate security overview to staff sessions"
+        },
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "Candidate A cannot revoke or detect Candidate B's sessions"
+        },
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "keeps staff out of every candidate query and command"
         }
       ]
     },
@@ -53,7 +61,7 @@
       "id": "PRD-AUTH-003",
       "title": "Staff permissions are role based",
       "status": "partial",
-      "note": "M1.4 delivers the role/permission catalog, scoped effective-dated staff assignments, and the central deny-by-default authorization service (ADR-0005). Route, object, and field enforcement is M1.5; no staff role reaches business records until then.",
+      "note": "M1.4 delivers the role/permission catalog, scoped effective-dated staff assignments, and the central deny-by-default authorization service (ADR-0005). M1.5 connects it to routes, objects, fields, scoped queries, files, and noninteractive contracts (ADR-0011); real scope adapters arrive in M2 and the exhaustive matrix in M1.7.",
       "tests": [
         {
           "file": "src/modules/identity-access/policy/authorization-catalog.test.ts",
@@ -66,6 +74,10 @@
         {
           "file": "tests/integration/authorization/authorization-service.test.ts",
           "title": "allows only within scope, using the effective assignment"
+        },
+        {
+          "file": "src/modules/identity-access/application/authorization-contracts.test.ts",
+          "title": "builds the union of current assignment scopes"
         }
       ]
     },
@@ -695,7 +707,7 @@
         },
         {
           "file": "tests/guards/traceability.test.ts",
-          "title": "keeps roles and authorization incomplete until M1.5 enforcement"
+          "title": "keeps roles and authorization incomplete until M2 scopes and the M1.7 matrix"
         }
       ]
     },
@@ -1026,6 +1038,386 @@
         {
           "file": "tests/integration/authorization/catalog.test.ts",
           "title": "creates no users, sessions, assignments, or authorization subjects"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.5-01",
+      "title": "Complete current route inventory",
+      "tests": [
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "classifies every server entry point found in the source tree"
+        },
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "has no stale, duplicate, or mis-kinded entries"
+        },
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "reports an unclassified entry point when the manifest lacks it"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.5-02",
+      "title": "Guards are nonauthoritative",
+      "tests": [
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "binds every protected entry to the application authorization boundary"
+        },
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "keeps candidates out of every staff query and command"
+        },
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "records one bounded denial per refused high-risk self-service command"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.5-03",
+      "title": "Candidate/staff isolation",
+      "tests": [
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "keeps staff out of every candidate query and command"
+        },
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "rejects anonymous, restricted, and stale principals on the next call"
+        },
+        {
+          "file": "src/modules/identity-access/domain/self-service-policy.test.ts",
+          "title": "never lets a service account use any interactive policy"
+        },
+        {
+          "file": "tests/e2e/route-field-authorization.spec.ts",
+          "title": "staff cannot enter candidate pages"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.5-04",
+      "title": "Object authorization",
+      "tests": [
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "Candidate A cannot revoke or detect Candidate B's sessions"
+        },
+        {
+          "file": "src/modules/identity-access/application/authorization-contracts.test.ts",
+          "title": "makes invalid, unknown, wrong-type, hidden, wrong-scope, and foreign IDs indistinguishable"
+        },
+        {
+          "file": "src/modules/identity-access/application/authorization-contracts.test.ts",
+          "title": "Candidate A cannot reach Candidate B's record or learn that it exists"
+        },
+        {
+          "file": "tests/e2e/route-field-authorization.spec.ts",
+          "title": "an unknown route and a hidden route look the same"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.5-05",
+      "title": "Action authorization",
+      "tests": [
+        {
+          "file": "src/modules/identity-access/application/authorization-contracts.test.ts",
+          "title": "view authority never grants edit, approve, download, or export"
+        },
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "requires origin-checked POST for every state change and no state change on GET"
+        },
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "refuses generic user/session mutation endpoints for every method"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.5-06",
+      "title": "Field-safe responses",
+      "tests": [
+        {
+          "file": "src/modules/identity-access/presentation/field-policy.test.ts",
+          "title": "masks and status-limits restricted values for narrower permissions"
+        },
+        {
+          "file": "src/modules/identity-access/presentation/field-policy.test.ts",
+          "title": "omits restricted keys entirely without a field permission"
+        },
+        {
+          "file": "src/modules/identity-access/presentation/field-policy.test.ts",
+          "title": "refuses an output carrying a never-return key at any depth"
+        },
+        {
+          "file": "src/modules/identity-access/presentation/field-policy.test.ts",
+          "title": "projects the exact candidate account-security contract"
+        },
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "filters restricted fields per role, scope, and step-up"
+        },
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "closes get-session"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.5-07",
+      "title": "Mass-assignment protection",
+      "tests": [
+        {
+          "file": "src/shared/validation/form-input.test.ts",
+          "title": "rejects a submission carrying server-owned or selector field"
+        },
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "gives every Server Action an exact reviewed input schema it actually parses"
+        },
+        {
+          "file": "tests/e2e/route-field-authorization.spec.ts",
+          "title": "injected server-owned fields reject the whole submission with no state change"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.5-08",
+      "title": "Scoped query contracts",
+      "tests": [
+        {
+          "file": "src/modules/identity-access/application/authorization-contracts.test.ts",
+          "title": "builds the union of current assignment scopes"
+        },
+        {
+          "file": "src/modules/identity-access/application/authorization-contracts.test.ts",
+          "title": "never falling back to a broad query"
+        },
+        {
+          "file": "src/modules/identity-access/application/authorization-contracts.test.ts",
+          "title": "never widens to a scope the principal does not hold"
+        },
+        {
+          "file": "src/modules/identity-access/application/authorization-contracts.test.ts",
+          "title": "bounds auditors by assignment record groups, dates, and categories"
+        },
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "returns only in-scope rows, excludes the actor's own file"
+        },
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "gives the administrator and an unassigned staff member no list at all"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.5-09",
+      "title": "File-access contract",
+      "tests": [
+        {
+          "file": "src/modules/identity-access/application/authorization-contracts.test.ts",
+          "title": "issues a short-lived grant without any storage key"
+        },
+        {
+          "file": "src/modules/identity-access/application/authorization-contracts.test.ts",
+          "title": "never treats storage keys, URLs, filenames, or wrong-scope IDs as authority"
+        },
+        {
+          "file": "src/modules/identity-access/application/authorization-contracts.test.ts",
+          "title": "separates view from download, print, and export"
+        },
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "gates a synthetic restricted document"
+        },
+        {
+          "file": "src/modules/identity-access/delivery/protected-response.test.ts",
+          "title": "sets attachment, nosniff, no-store, no-referrer, and a sandbox CSP"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.5-10",
+      "title": "Safe denials and redirects",
+      "tests": [
+        {
+          "file": "src/modules/identity-access/application/authorization-contracts.test.ts",
+          "title": "maps every M1.4 denial reason without disclosing it"
+        },
+        {
+          "file": "src/shared/security/safe-redirect.test.ts",
+          "title": "falls back to the safe default for"
+        },
+        {
+          "file": "src/shared/security/safe-redirect.test.ts",
+          "title": "rejects randomized mutations of registered destinations"
+        },
+        {
+          "file": "tests/e2e/route-field-authorization.spec.ts",
+          "title": "malicious continuation values never reach the page or the redirect"
+        },
+        {
+          "file": "tests/e2e/route-field-authorization.spec.ts",
+          "title": "reauthentication cannot be pointed at an arbitrary destination"
+        },
+        {
+          "file": "src/components/security/access-state.test.tsx",
+          "title": "never discloses resource, owner, role, scope, or policy in any state"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.5-11",
+      "title": "Cache and bundle safety",
+      "tests": [
+        {
+          "file": "tests/e2e/route-field-authorization.spec.ts",
+          "title": "two principals never receive each other's protected page"
+        },
+        {
+          "file": "tests/e2e/route-field-authorization.spec.ts",
+          "title": "candidate pages carry only the exact projection"
+        },
+        {
+          "file": "src/shared/security/safe-redirect.test.ts",
+          "title": "sets private no-store headers and overwrites cacheable values"
+        },
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "marks every personal, capability, or protected route private/no-store and dynamic"
+        },
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "keeps server authorization, repositories, and secrets out of client modules"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.5-12",
+      "title": "Current M1 surfaces secured",
+      "tests": [
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "serves each audience its own exact projection and nothing else"
+        },
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "re-runs the whole decision after reauthentication"
+        },
+        {
+          "file": "src/modules/identity-access/domain/self-service-policy.test.ts",
+          "title": "requires recent MFA for a staff password change"
+        },
+        {
+          "file": "tests/e2e/candidate-auth.spec.ts",
+          "title": "registers, verifies with a code, signs in"
+        },
+        {
+          "file": "tests/e2e/staff-auth.spec.ts",
+          "title": "invite → activate → TOTP → backup codes → staff security"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.5-13",
+      "title": "Architecture enforcement",
+      "tests": [
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "keeps delivery code away from persistence, the auth library, and infrastructure"
+        },
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "makes no role, admin, or permission decision in pages, components, or the proxy"
+        },
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "routes every redirect through the registered-destination helper"
+        },
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "never imports local/test adapters into production code"
+        },
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "never spreads persistence, auth, or provider records into responses"
+        },
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "flags a violation"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.5-14",
+      "title": "Safe future-audit context",
+      "tests": [
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "records one bounded denial per refused high-risk self-service command"
+        },
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "propagates safe allow context on successful security changes"
+        },
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "writes no emails, secrets, session data, or policy facts to logs"
+        },
+        {
+          "file": "src/modules/identity-access/application/authorization-contracts.test.ts",
+          "title": "requires recent authentication for restricted documents"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.5-15",
+      "title": "Representative integration/E2E proof",
+      "tests": [
+        {
+          "file": "tests/e2e/route-field-authorization.spec.ts",
+          "title": "anonymous direct requests to protected pages go to the right sign-in"
+        },
+        {
+          "file": "tests/e2e/route-field-authorization.spec.ts",
+          "title": "a security change behind an open browser session takes effect on the next request"
+        },
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "denies a staff session immediately after a role change"
+        },
+        {
+          "file": "tests/integration/authorization/route-object-field.test.ts",
+          "title": "rechecks at the command transaction boundary"
+        },
+        {
+          "file": "tests/accessibility/security-states.a11y.spec.ts",
+          "title": "the safe not-found state is accessible and keyboard operable"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.5-16",
+      "title": "Regression and scope containment",
+      "tests": [
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "adds no generic CRUD, GraphQL, or catch-all business endpoint"
+        },
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "refuses to run with APP_ENV=production"
+        },
+        {
+          "file": "tests/integration/database/foundation.test.ts",
+          "title": "contains no business-domain, audit, or job tables"
         }
       ]
     }

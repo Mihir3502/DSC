@@ -41,6 +41,7 @@ export {
 } from "./application/change-candidate-password";
 export {
   getCandidateSecurityOverview,
+  queryCandidateSecurity,
   resolveCurrentCandidate,
   revokeCandidateSession,
   revokeOtherCandidateSessions,
@@ -77,6 +78,7 @@ export {
 export {
   changeStaffPassword,
   getStaffSecurityOverview,
+  queryStaffSecurity,
   regenerateStaffBackupCodes,
   revokeOtherStaffSessions,
   revokeStaffSession,
@@ -86,6 +88,7 @@ export {
 } from "./application/manage-staff-security";
 export {
   evaluateStaffAssurance,
+  queryStaffReauthentication,
   reauthenticateStaff,
   resolveCurrentStaff,
   type ReauthenticateResult,
@@ -116,6 +119,18 @@ export {
   type AuthorizationDependencies,
 } from "./application/authorize";
 export { authorizationDependencies } from "./application/authorization-support";
+// M1.5 route/object/field authorization (ADR-0011).
+export {
+  authorizeAccountSelfService,
+  refusalOf,
+  type SelfServiceRefusal,
+} from "./application/authorize-self-service";
+export { navigationHint } from "./application/navigation-guard";
+export {
+  selfServicePolicies,
+  type SelfServiceDecision,
+  type SelfServicePolicyCode,
+} from "./domain/self-service-policy";
 export type {
   AuthorizationDecision,
   AuthorizationRequest,

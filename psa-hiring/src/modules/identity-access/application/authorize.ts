@@ -8,17 +8,22 @@ import {
 import {
   deny,
   isWellFormedRequest,
+  reasonCodePattern,
   type AllowDecision,
   type AuthorizationDecision,
+  type AuthorizationPrincipal,
   type AuthorizationRequest,
   type DenyDecision,
 } from "../domain/authorization-decision";
 import {
   isRoleCode,
   isScopeType,
+  isSensitivityLevel,
+  isUuid,
   type DenialReason,
   type RoleCode,
   type ScopeType,
+  type SensitivityLevel,
 } from "../domain/authorization-vocabulary";
 import {
   canonicalCondition,
@@ -163,28 +168,49 @@ export async function evaluateAuthorization(
   }
 }
 
-async function decide(
-  request: AuthorizationRequest,
+type Refuse = (
+  reason: DenialReason,
+  challenge?: DenyDecision["challenge"],
+) => DenyDecision;
+
+/** Steps 1–2 shared by record decisions and query-scope decisions. */
+type Preflight =
+  | Readonly<{ ok: false; decision: DenyDecision }>
+  | Readonly<{
+      ok: true;
+      definition: PermissionDefinition;
+      accountType: "STAFF" | "CANDIDATE";
+      evidence: AssuranceEvidence | null;
+      now: Date;
+      context: ResolverContext;
+      no: Refuse;
+    }>;
+
+async function preflight(
+  request: Pick<
+    AuthorizationRequest,
+    "principal" | "operation" | "correlationId"
+  > &
+    Partial<Pick<AuthorizationRequest, "reasonCode" | "workflow">>,
   definition: PermissionDefinition | null,
   facts: AuthorizationFactsSource,
   deps: Omit<AuthorizationDependencies, "db">,
-): Promise<AuthorizationDecision> {
-  // 1. Request shape and identity, before any resource facts are loaded.
-  if (!isWellFormedRequest(request)) {
-    return deny("unknown", POLICY, "INVALID_CONTEXT");
-  }
+): Promise<Preflight> {
   const code = definition?.code ?? "unknown";
-  const no = (reason: DenialReason, challenge?: DenyDecision["challenge"]) =>
+  const no: Refuse = (reason, challenge) =>
     deny(code, POLICY, reason, challenge);
-  if (!request.principal) return no("UNAUTHENTICATED");
-  if (!definition) return no("PERMISSION_UNKNOWN");
-  if (definition.status !== "ACTIVE") return no("PERMISSION_MISSING");
-  if (request.operation !== definition.operation) return no("INVALID_CONTEXT");
+  const fail = (reason: DenialReason) =>
+    ({ ok: false, decision: no(reason) }) as const;
+  if (!request.principal) return fail("UNAUTHENTICATED");
+  if (!definition) return fail("PERMISSION_UNKNOWN");
+  if (definition.status !== "ACTIVE") return fail("PERMISSION_MISSING");
+  if (request.operation !== definition.operation)
+    return fail("INVALID_CONTEXT");
   if (definition.requiresReason && request.reasonCode === undefined) {
-    return no("INVALID_CONTEXT");
+    return fail("INVALID_CONTEXT");
   }
   if (definition.workflowPolicy === null && request.workflow !== undefined) {
-    return no("INVALID_CONTEXT");
+    return fail("INVALID_CONTEXT");
   }
 
   const now = deps.clock();
@@ -196,7 +222,7 @@ async function decide(
     account.accountType !== principal.accountType ||
     (account.accountType !== "STAFF" && account.accountType !== "CANDIDATE")
   ) {
-    return no("ACCOUNT_INACTIVE");
+    return fail("ACCOUNT_INACTIVE");
   }
 
   // The session itself must still exist and be valid now: a revoked or
@@ -213,25 +239,57 @@ async function decide(
       now,
       recentWindowSeconds: 1,
     });
-    if (base.kind !== "ALLOW") return no("UNAUTHENTICATED");
+    if (base.kind !== "ALLOW") return fail("UNAUTHENTICATED");
   } else if (
     !evidence ||
     (evidence.sessionPurpose !== null && evidence.sessionPurpose !== "STANDARD")
   ) {
-    return no("UNAUTHENTICATED");
+    return fail("UNAUTHENTICATED");
   }
 
   // 2. The stored catalog row must match the reviewed manifest exactly.
   const stored = await facts.loadPermission(definition.code);
   if (!stored || !matchesManifest(stored, definition)) {
     policyUnavailable(definition, deps);
-    return no("POLICY_UNAVAILABLE");
+    return fail("POLICY_UNAVAILABLE");
   }
 
-  const context: ResolverContext = { correlationId: request.correlationId };
-  return account.accountType === "CANDIDATE"
-    ? decideCandidate(request, definition, facts, deps, now, context, no)
-    : decideStaff(request, definition, facts, deps, now, context, evidence, no);
+  return {
+    ok: true,
+    definition,
+    accountType: account.accountType,
+    evidence,
+    now,
+    context: { correlationId: request.correlationId },
+    no,
+  };
+}
+
+async function decide(
+  request: AuthorizationRequest,
+  definition: PermissionDefinition | null,
+  facts: AuthorizationFactsSource,
+  deps: Omit<AuthorizationDependencies, "db">,
+): Promise<AuthorizationDecision> {
+  // 1. Request shape and identity, before any resource facts are loaded.
+  if (!isWellFormedRequest(request)) {
+    return deny("unknown", POLICY, "INVALID_CONTEXT");
+  }
+  const ready = await preflight(request, definition, facts, deps);
+  if (!ready.ok) return ready.decision;
+  const { now, context, evidence, no } = ready;
+  return ready.accountType === "CANDIDATE"
+    ? decideCandidate(request, ready.definition, facts, deps, now, context, no)
+    : decideStaff(
+        request,
+        ready.definition,
+        facts,
+        deps,
+        now,
+        context,
+        evidence,
+        no,
+      );
 }
 
 async function decideCandidate(
@@ -281,59 +339,22 @@ async function decideStaff(
   now: Date,
   context: ResolverContext,
   evidence: AssuranceEvidence | null,
-  no: (
-    reason: DenialReason,
-    challenge?: DenyDecision["challenge"],
-  ) => DenyDecision,
+  no: Refuse,
 ): Promise<AuthorizationDecision> {
   const principal = request.principal!;
   if (definition.domain === "CANDIDATE_SELF") return no("PERMISSION_MISSING");
 
   // 3. Current effective assignments whose role grants the permission.
-  const rows = await facts.loadStaffGrants(
+  const effective = await effectiveCandidates(
     principal.accountId,
-    definition.code,
+    definition,
+    facts,
+    deps,
     now,
+    no,
   );
-  let tampered = false;
-  const candidates: (Candidate & { condition: GrantCondition | null })[] = [];
-  for (const row of rows) {
-    const condition = validGrantCondition(row, definition.code);
-    if (
-      condition === undefined ||
-      condition?.kind === "CANDIDATE_OWNERSHIP" ||
-      !isRoleCode(row.roleCode) ||
-      row.roleCode === "CANDIDATE" ||
-      !row.assignmentId ||
-      !isScopeType(row.scopeType) ||
-      !row.scopeReferenceId ||
-      !row.effectiveFrom
-    ) {
-      tampered = true;
-      continue;
-    }
-    candidates.push({
-      id: row.assignmentId,
-      assignmentId: row.assignmentId,
-      roleCode: row.roleCode,
-      scopeType: row.scopeType,
-      scopeReferenceId: row.scopeReferenceId,
-      effectiveFrom: row.effectiveFrom,
-      condition,
-    });
-  }
-  if (tampered) policyUnavailable(definition, deps);
-  if (candidates.length === 0) {
-    if (tampered) return no("POLICY_UNAVAILABLE");
-    return (await facts.hasIneffectiveAssignment(
-      principal.accountId,
-      definition.code,
-      now,
-    ))
-      ? no("ASSIGNMENT_INACTIVE")
-      : no("PERMISSION_MISSING");
-  }
-  candidates.sort(compareLeastPrivilege);
+  if (!Array.isArray(effective)) return effective as DenyDecision;
+  const candidates = effective;
 
   // 4. Resource placement from the owning module (never the request).
   const resource = request.resource;
@@ -445,37 +466,120 @@ async function decideStaff(
       firstDenial ??= no(separation.reason);
       continue;
     }
-    if (definition.recentAuth) {
-      const assurance = evaluateAssurance(evidence, {
-        policy: definition.recentAuth.policy,
-        accountId: principal.accountId,
-        sessionId: principal.sessionId,
-        purpose: definition.recentAuth.purpose,
-        now,
-        recentWindowSeconds: deps.recentWindowSeconds,
-      });
-      if (assurance.kind !== "ALLOW") {
-        firstDenial ??= no(
-          "RECENT_AUTH_REQUIRED",
-          assurance.kind === "CHALLENGE"
-            ? assurance.reason
-            : "REAUTHENTICATION_REQUIRED",
-        );
-        continue;
-      }
-      // Privilege expansion never reuses step-up made before it.
-      const floor = Math.max(
-        candidate.effectiveFrom.getTime(),
-        epoch?.versionChangedAt.getTime() ?? 0,
-      );
-      if (assurance.at.getTime() < floor) {
-        firstDenial ??= no("RECENT_AUTH_REQUIRED", "REAUTHENTICATION_REQUIRED");
-        continue;
-      }
+    const assurance = assuranceDenial(
+      definition,
+      candidate,
+      principal,
+      evidence,
+      epoch,
+      now,
+      deps,
+      no,
+    );
+    if (assurance) {
+      firstDenial ??= assurance;
+      continue;
     }
     return allow(definition, candidate.roleCode, candidate);
   }
   return firstDenial ?? no("POLICY_UNAVAILABLE");
+}
+
+type ConditionedCandidate = Candidate & { condition: GrantCondition | null };
+
+/**
+ * The principal's currently effective assignments whose role grants the
+ * permission, validated against the reviewed manifest and ordered least
+ * privilege first; or a denial.
+ */
+async function effectiveCandidates(
+  accountId: string,
+  definition: PermissionDefinition,
+  facts: AuthorizationFactsSource,
+  deps: Omit<AuthorizationDependencies, "db">,
+  now: Date,
+  no: Refuse,
+): Promise<ConditionedCandidate[] | DenyDecision> {
+  const rows = await facts.loadStaffGrants(accountId, definition.code, now);
+  let tampered = false;
+  const candidates: ConditionedCandidate[] = [];
+  for (const row of rows) {
+    const condition = validGrantCondition(row, definition.code);
+    if (
+      condition === undefined ||
+      condition?.kind === "CANDIDATE_OWNERSHIP" ||
+      !isRoleCode(row.roleCode) ||
+      row.roleCode === "CANDIDATE" ||
+      !row.assignmentId ||
+      !isScopeType(row.scopeType) ||
+      !row.scopeReferenceId ||
+      !row.effectiveFrom
+    ) {
+      tampered = true;
+      continue;
+    }
+    candidates.push({
+      id: row.assignmentId,
+      assignmentId: row.assignmentId,
+      roleCode: row.roleCode,
+      scopeType: row.scopeType,
+      scopeReferenceId: row.scopeReferenceId,
+      effectiveFrom: row.effectiveFrom,
+      condition,
+    });
+  }
+  if (tampered) policyUnavailable(definition, deps);
+  if (candidates.length === 0) {
+    if (tampered) return no("POLICY_UNAVAILABLE");
+    return (await facts.hasIneffectiveAssignment(
+      accountId,
+      definition.code,
+      now,
+    ))
+      ? no("ASSIGNMENT_INACTIVE")
+      : no("PERMISSION_MISSING");
+  }
+  candidates.sort(compareLeastPrivilege);
+  return candidates;
+}
+
+/** Recent-authentication check for one assignment, or null when satisfied. */
+function assuranceDenial(
+  definition: PermissionDefinition,
+  candidate: Candidate,
+  principal: NonNullable<AuthorizationRequest["principal"]>,
+  evidence: AssuranceEvidence | null,
+  epoch: Awaited<ReturnType<AuthorizationFactsSource["loadSubjectEpoch"]>>,
+  now: Date,
+  deps: Omit<AuthorizationDependencies, "db">,
+  no: Refuse,
+): DenyDecision | null {
+  if (!definition.recentAuth) return null;
+  const assurance = evaluateAssurance(evidence, {
+    policy: definition.recentAuth.policy,
+    accountId: principal.accountId,
+    sessionId: principal.sessionId,
+    purpose: definition.recentAuth.purpose,
+    now,
+    recentWindowSeconds: deps.recentWindowSeconds,
+  });
+  if (assurance.kind !== "ALLOW") {
+    return no(
+      "RECENT_AUTH_REQUIRED",
+      assurance.kind === "CHALLENGE"
+        ? assurance.reason
+        : "REAUTHENTICATION_REQUIRED",
+    );
+  }
+  // Privilege expansion never reuses step-up made before it.
+  const floor = Math.max(
+    candidate.effectiveFrom.getTime(),
+    epoch?.versionChangedAt.getTime() ?? 0,
+  );
+  if (assurance.at.getTime() < floor) {
+    return no("RECENT_AUTH_REQUIRED", "REAUTHENTICATION_REQUIRED");
+  }
+  return null;
 }
 
 async function conditionHolds(
@@ -637,4 +741,355 @@ function report(
       policyVersion: decision.policyVersion,
     });
   }
+}
+
+// ------------------------------------------------------------ query scope
+//
+// List/search authorization (packet M1.5 §14, ADR-0011). A list has no
+// single record to place, so instead of a per-record decision the service
+// returns the typed scope constraints under which the principal currently
+// holds the permission. Repositories apply them as SQL predicates before
+// pagination or materialization; each returned row is then rechecked with
+// authorize(). The constraint is built only from current server-owned
+// assignments and resolver descriptors, never from a browser-selected
+// scope (a later scope selector may only intersect, never widen).
+
+export type QueryScopeRequest = Readonly<{
+  principal: AuthorizationPrincipal | null;
+  permission: string;
+  operation: "READ" | "EXPORT";
+  /** Classification of the data the list returns (owning module). */
+  sensitivity: SensitivityLevel;
+  /** Server-chosen safe purpose code when the permission requires one. */
+  reasonCode?: string;
+  correlationId?: string;
+}>;
+
+/** One SQL-expressible boundary from one effective assignment. */
+export type ScopeConstraint =
+  | Readonly<{ type: "ORGANIZATION"; organizationId: string }>
+  | Readonly<{ type: "BRANCH"; organizationId: string; branchId: string }>
+  | Readonly<{
+      type: "TEAM";
+      organizationId: string;
+      branchId: string;
+      teamId: string;
+    }>
+  | Readonly<{
+      type: "ASSIGNED_RECORDS";
+      organizationId: string;
+      assignmentSetId: string;
+    }>
+  | Readonly<{
+      type: "AUDIT_ASSIGNMENT";
+      organizationId: string;
+      recordGroupIds: readonly string[];
+      /** Inclusive start / exclusive end of record dates. */
+      recordsFrom: Date;
+      recordsTo: Date;
+    }>;
+
+export type QueryConstraint =
+  /** Candidate self-service: rows owned by this account only. */
+  | Readonly<{ kind: "OWNER"; accountId: string }>
+  /** Staff: the union of these scopes, minus the actor's own file. */
+  | Readonly<{
+      kind: "SCOPES";
+      scopes: readonly ScopeConstraint[];
+      excludeSubjectAccountId: string;
+    }>;
+
+export type QueryScopeDecision =
+  | Readonly<{
+      decision: "ALLOW";
+      permissionCode: string;
+      policyVersion: string;
+      reasonCode: "ALLOWED";
+      effectiveRoleCodes: readonly RoleCode[];
+      constraint: QueryConstraint;
+    }>
+  | DenyDecision;
+
+const queryKeys = new Set([
+  "principal",
+  "permission",
+  "operation",
+  "sensitivity",
+  "reasonCode",
+  "correlationId",
+]);
+
+function isWellFormedQuery(request: unknown): request is QueryScopeRequest {
+  if (
+    typeof request !== "object" ||
+    request === null ||
+    Object.getPrototypeOf(request) !== Object.prototype
+  ) {
+    return false;
+  }
+  const r = request as Record<string, unknown>;
+  if (!Object.keys(r).every((k) => queryKeys.has(k))) return false;
+  if (typeof r.permission !== "string") return false;
+  if (r.operation !== "READ" && r.operation !== "EXPORT") return false;
+  if (!isSensitivityLevel(r.sensitivity)) return false;
+  if (
+    r.reasonCode !== undefined &&
+    (typeof r.reasonCode !== "string" || !reasonCodePattern.test(r.reasonCode))
+  ) {
+    return false;
+  }
+  if (r.correlationId !== undefined && typeof r.correlationId !== "string") {
+    return false;
+  }
+  if (r.principal === null) return true;
+  const p = r.principal as Record<string, unknown> | undefined;
+  return (
+    typeof p === "object" &&
+    p !== null &&
+    isUuid(p.accountId) &&
+    isUuid(p.sessionId) &&
+    typeof p.accountType === "string"
+  );
+}
+
+function constraintOf(descriptor: ScopeDescriptor): ScopeConstraint {
+  switch (descriptor.type) {
+    case "ORGANIZATION":
+      return { type: "ORGANIZATION", organizationId: descriptor.id };
+    case "BRANCH":
+      return {
+        type: "BRANCH",
+        organizationId: descriptor.organizationId,
+        branchId: descriptor.id,
+      };
+    case "TEAM":
+      return {
+        type: "TEAM",
+        organizationId: descriptor.organizationId,
+        branchId: descriptor.branchId,
+        teamId: descriptor.id,
+      };
+    case "ASSIGNED_RECORDS":
+      return {
+        type: "ASSIGNED_RECORDS",
+        organizationId: descriptor.organizationId,
+        assignmentSetId: descriptor.id,
+      };
+    case "AUDIT_ASSIGNMENT":
+      return {
+        type: "AUDIT_ASSIGNMENT",
+        organizationId: descriptor.organizationId,
+        recordGroupIds: [...descriptor.recordGroupIds],
+        recordsFrom: descriptor.recordsFrom,
+        recordsTo: descriptor.recordsTo,
+      };
+  }
+}
+
+/** Authorizes a list/search query against current committed state. */
+export function authorizeQueryScope(
+  request: QueryScopeRequest,
+  deps: AuthorizationDependencies,
+): Promise<QueryScopeDecision> {
+  return evaluateQueryScope(
+    request,
+    new DatabaseAuthorizationFacts(deps.db),
+    deps,
+  );
+}
+
+/** The query-scope pipeline over an injected facts source. */
+export async function evaluateQueryScope(
+  request: QueryScopeRequest,
+  facts: AuthorizationFactsSource,
+  deps: Omit<AuthorizationDependencies, "db">,
+): Promise<QueryScopeDecision> {
+  const definition = isWellFormedQuery(request)
+    ? findPermission(request.permission)
+    : null;
+  let decision: QueryScopeDecision;
+  try {
+    decision = isWellFormedQuery(request)
+      ? await decideQueryScope(request, definition, facts, deps)
+      : deny("unknown", POLICY, "INVALID_CONTEXT");
+  } catch {
+    decision = deny(
+      definition?.code ?? "unknown",
+      POLICY,
+      "POLICY_UNAVAILABLE",
+    );
+  }
+  if (decision.decision === "DENY") {
+    deps.logger.info("authz.denied", {
+      module: "authz",
+      action: definition?.code,
+      reasonCode: decision.reasonCode,
+      policyVersion: decision.policyVersion,
+    });
+  }
+  return decision;
+}
+
+async function decideQueryScope(
+  request: QueryScopeRequest,
+  definition: PermissionDefinition | null,
+  facts: AuthorizationFactsSource,
+  deps: Omit<AuthorizationDependencies, "db">,
+): Promise<QueryScopeDecision> {
+  const ready = await preflight(request, definition, facts, deps);
+  if (!ready.ok) return ready.decision;
+  const { now, context, evidence, no } = ready;
+  const def = ready.definition;
+  const principal = request.principal!;
+  // A list has no single workflow state to evaluate.
+  if (def.workflowPolicy !== null) return no("WORKFLOW_STATE_DENIED");
+  if (!sensitivityPermits(def.maxSensitivity, request.sensitivity)) {
+    return no("SENSITIVITY_DENIED");
+  }
+
+  if (ready.accountType === "CANDIDATE") {
+    if (def.domain !== "CANDIDATE_SELF") return no("PERMISSION_MISSING");
+    const grants = (await facts.loadCandidateGrants(def.code)).filter(
+      (g) => validGrantCondition(g, def.code)?.kind === "CANDIDATE_OWNERSHIP",
+    );
+    if (grants.length === 0) return no("PERMISSION_MISSING");
+    // Ownership is bound from the server principal; each row is still
+    // rechecked through the ownership resolver.
+    return Object.freeze({
+      decision: "ALLOW",
+      permissionCode: def.code,
+      policyVersion: POLICY,
+      reasonCode: "ALLOWED",
+      effectiveRoleCodes: Object.freeze(["CANDIDATE" as const]),
+      constraint: Object.freeze({
+        kind: "OWNER",
+        accountId: principal.accountId,
+      }),
+    });
+  }
+
+  if (def.domain === "CANDIDATE_SELF") return no("PERMISSION_MISSING");
+  const effective = await effectiveCandidates(
+    principal.accountId,
+    def,
+    facts,
+    deps,
+    now,
+    no,
+  );
+  if (!Array.isArray(effective)) return effective as DenyDecision;
+
+  const epoch = await facts.loadSubjectEpoch(principal.accountId);
+  const scopes: ScopeConstraint[] = [];
+  const roles = new Set<RoleCode>();
+  let firstDenial: DenyDecision | null = null;
+  let scopeUnavailable = false;
+  let conditionUnmet = false;
+  for (const candidate of effective) {
+    const scope = await deps.resolver.resolveScope(
+      candidate.scopeType,
+      candidate.scopeReferenceId,
+      now,
+      context,
+    );
+    if (scope.status === "UNAVAILABLE") {
+      scopeUnavailable = true;
+      continue;
+    }
+    if (
+      scope.status !== "ACTIVE" ||
+      !isValidDescriptor(
+        scope.descriptor,
+        candidate.scopeType,
+        candidate.scopeReferenceId,
+      )
+    ) {
+      continue;
+    }
+    const descriptor = scope.descriptor;
+    if (
+      descriptor.type === "AUDIT_ASSIGNMENT" &&
+      (descriptor.auditorAccountId !== principal.accountId ||
+        !descriptor.categories.includes(request.sensitivity))
+    ) {
+      continue;
+    }
+    // Only conditions provable for a whole scope are list-expressible.
+    // Participant/hold conditions need the individual record and never
+    // widen a list; they apply only through per-record decisions.
+    const condition = candidate.condition;
+    if (condition) {
+      const holds =
+        condition.kind === "DESIGNATION" &&
+        (await deps.resolver.hasDesignation(
+          principal.accountId,
+          condition.designation,
+          descriptor,
+          now,
+          context,
+        )) === true;
+      if (!holds) {
+        conditionUnmet = true;
+        continue;
+      }
+    }
+    const separation = deps.separation.evaluate({
+      actorAccountId: principal.accountId,
+      actorPrincipalType: "STAFF",
+      effectiveRoleCode: candidate.roleCode,
+      operation: def.operation,
+      permissionDomain: def.domain,
+      policy: def.separationPolicy,
+      dualControlHook: def.dualControlHook,
+      subjectAccountIds: null,
+      facts: {},
+      elevation: "NONE",
+      dualControl: deps.dualControl,
+    });
+    if (separation.kind === "DENY") {
+      firstDenial ??= no(separation.reason);
+      continue;
+    }
+    const assurance = assuranceDenial(
+      def,
+      candidate,
+      principal,
+      evidence,
+      epoch,
+      now,
+      deps,
+      no,
+    );
+    if (assurance) {
+      firstDenial ??= assurance;
+      continue;
+    }
+    scopes.push(constraintOf(descriptor));
+    roles.add(candidate.roleCode);
+  }
+  if (scopes.length === 0) {
+    return (
+      firstDenial ??
+      no(
+        conditionUnmet
+          ? "CONDITION_UNMET"
+          : scopeUnavailable
+            ? "SCOPE_UNAVAILABLE"
+            : "SCOPE_MISMATCH",
+      )
+    );
+  }
+  return Object.freeze({
+    decision: "ALLOW",
+    permissionCode: def.code,
+    policyVersion: POLICY,
+    reasonCode: "ALLOWED",
+    effectiveRoleCodes: Object.freeze([...roles].sort()),
+    constraint: Object.freeze({
+      kind: "SCOPES",
+      scopes: Object.freeze(scopes),
+      // Own candidacy/worker file never appears in a staff list.
+      excludeSubjectAccountId: principal.accountId,
+    }),
+  });
 }

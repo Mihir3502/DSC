@@ -297,6 +297,14 @@ Better Auth establishes the account and session. The application authorization s
 
 Role changes must take effect without waiting for a new login. High-risk decisions record the acting user, effective role/scope, reason, timestamp, and correlation ID.
 
+Delivery integration (M1.5, ADR-0011):
+
+- Every server entry point is classified in `src/app/_security/route-manifest.ts`; CI fails on drift (`tests/guards/authorization-boundaries.test.ts`, `pnpm test:routes`).
+- Route-group layouts are navigation hints only. Pages, Server Actions, and Route Handlers call application queries/commands, which authorize again (catalog permissions through `authorize`, or the closed account self-service policies for a principal's own account security).
+- Objects are authorized through a minimal envelope before any projection is loaded; lists apply typed scope constraints as SQL predicates before pagination and recheck each row.
+- Responses use exact, audience- and purpose-specific projection contracts with typed field outcomes; inputs use exact schemas that reject unknown fields.
+- One typed mapper turns denials into sign-in, not-found, forbidden, reauthentication, validation, conflict, rate-limit, or system outcomes; redirects use registered destinations only.
+
 ## 9. Data and Transaction Design
 
 ### Migrations

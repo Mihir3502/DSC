@@ -137,6 +137,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Production build
         run: pnpm build
+      - name: Built routes match the authorization manifest
+        run: pnpm test:routes
 
   critical-e2e:
     name: critical-e2e

@@ -87,6 +87,7 @@ flowchart TD
 - Return URLs must be validated before redirecting.
 - Unauthorized and nonexistent records return indistinguishable safe responses where record discovery would create a privacy risk.
 - Browser history must not contain sensitive form values.
+- Implemented (M1.5, ADR-0011): authenticated pages live in `(account)` route groups whose layouts only redirect anonymous browsers to sign-in and show other audiences the same 404 as an unknown page; each page authorizes again. Redirects use a registered-destination list; anything else goes to `/`.
 
 ## 5. Public and Authentication Screens
 
@@ -746,6 +747,8 @@ Every screen must define these states where applicable:
 | Partial completion | Identify complete and remaining items |
 | Success | Confirm the action, timestamp, resulting status, and next step |
 | System error | Provide correlation/reference number without technical or sensitive detail |
+
+M1.5 provides the shared `AccessState` component (authentication required, denied, not found, reauthentication required, session no longer eligible, system error) with fixed safe text, a focused level-1 heading, one status/alert announcement, and fixed same-origin actions. `src/app/not-found.tsx` uses it for every unknown or hidden route.
 
 ## 15. Confirmation and High-Risk Action Standard
 
