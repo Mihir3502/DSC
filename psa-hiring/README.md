@@ -39,6 +39,7 @@ pnpm config:check       # validate .env.local
 pnpm db:bootstrap:local # create/grant the local database roles (idempotent)
 pnpm db:migrate         # apply committed migrations
 pnpm db:bootstrap:local # again: grants on tables the migrations just created
+pnpm db:catalog:apply   # apply the reviewed role/permission catalog (idempotent)
 pnpm db:seed            # insert the technical seed record (idempotent)
 pnpm db:check           # verify connection, UTC, schema, least privilege
 pnpm dev
@@ -70,6 +71,8 @@ Open <http://localhost:3000>.
 | `pnpm db:seed`            | Insert/refresh the synthetic technical seed (idempotent)            |
 | `pnpm db:check`           | Verify runtime connection, UTC, schema, and least privilege         |
 | `pnpm db:verify-empty`    | Rebuild the schema in a temporary database to prove reproducibility |
+| `pnpm db:catalog:apply`   | Apply the reviewed authorization catalog with the migration role    |
+| `pnpm db:catalog:check`   | Read-only check that the database matches the authorization catalog |
 
 `tsx` is a development dependency used only to run the TypeScript scripts in `scripts/`.
 
@@ -134,6 +137,15 @@ See [`docs/adr/ADR-0004-STAFF-INVITATION-MFA.md`](../docs/adr/ADR-0004-STAFF-INV
 - **Activation:** open the Mailpit link, create a password, add the account to an authenticator app by QR code or setup key, enter a code, then save the 10 backup codes (shown once).
 - **Local recovery harness (local/test only):** after `/staff/recover`, drive the case with `pnpm auth:staff:recovery:local --target=<staff email> --actor=<another staff email> --step=START_VERIFICATION|CONFIRM_IDENTITY|APPROVE|COMPLETE|REJECT|CANCEL`. The verifier and approver must be different people, and neither can be the target. Completion signs the staff member out everywhere, removes their authenticator and backup codes, and emails a reenrollment link.
 - **Browser tests** use `--reason=TEST_HARNESS`, file-captured email, and test-only 5-second lockout and 20-second recent-authentication windows. Traces, screenshots, and videos are off for staff specs because pages show setup keys and backup codes.
+
+## Roles, permissions, and scopes (M1.4)
+
+Application authorization is separate from Better Auth (see [`docs/adr/ADR-0005-AUTHORIZATION-POLICY-SCOPE-EVALUATION.md`](../docs/adr/ADR-0005-AUTHORIZATION-POLICY-SCOPE-EVALUATION.md)).
+
+- **Catalog:** the nine controlled roles, the narrow `<resource>.<action>` permissions, and their grants live in one reviewed TypeScript manifest (`src/modules/identity-access/policy/`). `pnpm db:catalog:apply` writes it with the migration role as a deliberate deployment step after `db:migrate`; the application never seeds it at startup, and the runtime role can only read it. Re-running changes nothing. `pnpm db:catalog:check` fails on drift or tampering. Changing the catalog means bumping its version and digest (a unit test prints the new digest) and updating ADR-0005.
+- **Decisions:** server code calls `authorize` (or `authorizeInTransaction` inside a protected command) from `@/modules/identity-access`. It returns an explicit `ALLOW`/`DENY` with a closed reason code, reading current account, session, assignment, catalog, scope, workflow, separation, and recent-authentication facts every time.
+- **Fail closed until M2:** no organization, branch, team, assignment-set, audit-assignment, or candidacy records exist yet, so the default scope and ownership resolvers answer "unavailable". No assignment can be created and no business decision can allow in the running application. Candidates have no business access until M2 ownership exists.
+- **No administration surface:** there is no page, API, or CLI to manage roles. Assignment commands exist for tests and later work items only; the bootstrap harness and synthetic resolvers refuse to run unless `APP_ENV=test`. There is no default user, administrator, or assignment.
 
 ## Logging and errors
 
@@ -204,7 +216,7 @@ To change the schema:
 
 ### Current schema
 
-M0.3 contains technical metadata only: `app.system_metadata` (`key`, `value` JSONB, `created_at`, `updated_at`) holding a single `foundation.seed` record. There are no people, accounts, or business tables.
+M0.3 contains technical metadata only: `app.system_metadata` (`key`, `value` JSONB, `created_at`, `updated_at`) holding a single `foundation.seed` record. M1.1–M1.3 add the identity tables in the `auth` schema. M1.4 adds `auth.role`, `auth.permission`, `auth.role_permission` (read-only to the runtime role), `auth.user_role_assignment` (insert plus lifecycle-column updates only, never deleted), and `auth.authorization_subject`. There are no organization, person, candidacy, audit, or other business tables.
 
 ## Troubleshooting
 

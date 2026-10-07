@@ -53,7 +53,8 @@ No `.env` file, Compose database, or volume is needed. Tests use only generated 
 | `guard:sensitive` | `test:data-guard` (plus `test:critical-guard` and `test:artifact-guard`) |
 | `test:unit` + `test:component` + `test:coverage` | `test:coverage` in CI (`test:unit` and `test:component` exist for local use) |
 | `test:security` | `test:security` |
-| `db:test:migrations` | `test:integration` (migration-from-empty in a disposable database, including the M1.1–M1.3 auth tests) |
+| `db:test:migrations` | `test:integration` (migration-from-empty in a disposable database, including the M1.1–M1.3 auth tests and the M1.4 authorization tests) |
+| catalog idempotence/drift | `test:integration` (`tests/integration/authorization/catalog.test.ts` runs the real `db:catalog:apply`/`db:catalog:check`) plus the unit catalog digest and `tests/guards/authorization-matrix.test.ts` matrix traceability |
 
 ### Test environment variables
 
@@ -61,7 +62,7 @@ CI defines only `NEXT_TELEMETRY_DISABLED=1`. `tests/e2e/support/run-with-databas
 
 ## Disposable database isolation
 
-`test:integration` starts its own `postgres:18.6-trixie` container through Testcontainers, labeled `psa-hiring.test-harness-run=<run>`. The container listens on `127.0.0.1` on a random port with random credentials. Each test file creates a `psa_test_<run>_*` database, runs the real `db:bootstrap:local` → `db:migrate` → `db:bootstrap:local` (and `db:seed` where tested) against it, and drops only databases it created. The container is removed at the end, with Ryuk as a backup. See `psa-hiring/tests/integration/support/`.
+`test:integration` starts its own `postgres:18.6-trixie` container through Testcontainers, labeled `psa-hiring.test-harness-run=<run>`. The container listens on `127.0.0.1` on a random port with random credentials. Each test file creates a `psa_test_<run>_*` database, runs the real `db:bootstrap:local` → `db:migrate` → `db:bootstrap:local` (and `db:catalog:apply` or `db:seed` where tested) against it, and drops only databases it created. The container is removed at the end, with Ryuk as a backup. See `psa-hiring/tests/integration/support/`.
 
 ## Artifacts
 

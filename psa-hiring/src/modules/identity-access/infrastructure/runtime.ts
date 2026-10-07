@@ -14,7 +14,21 @@ import {
   LocalDenylistCompromisedPassword,
   type CompromisedPasswordPort,
 } from "./compromised-password";
+import type { AuthorizationPorts } from "../application/authorize";
+import {
+  MandatorySeparationOfDutiesPolicy,
+  restrictiveDualControl,
+} from "../domain/separation-of-duties-policy";
+import { productionWorkflowPolicies } from "../policy/workflow-policies";
+import {
+  RefusingAssignmentHarness,
+  type AssignmentHarnessGate,
+} from "./assignment-harness";
 import { RegistrationIntentRepository } from "./registration-intent-repository";
+import {
+  UnavailableCandidateOwnership,
+  UnavailableScopeResolver,
+} from "./scope-resolvers";
 import { LogSecurityEvents, type SecurityEventPort } from "./security-events";
 import {
   RefusingStaffAdministrationGate,
@@ -38,6 +52,13 @@ export type IdentityRuntime = Readonly<{
   limiter: FixedWindowRateLimiter;
   /** Staff administration authorization (refusing until M1.4–M1.6). */
   staffAdmin: StaffAdministrationGate;
+  /**
+   * M1.4 authorization ports. Defaults fail closed: no scope, ownership,
+   * or workflow adapter exists before M2, and dual control is on.
+   */
+  authorization: AuthorizationPorts;
+  /** Role-assignment bootstrap gate (refusing outside tests). */
+  assignmentHarness: AssignmentHarnessGate;
 }>;
 
 /** The configured local/test email transport (auth-env validated it). */
@@ -64,6 +85,10 @@ export function createIdentityRuntime(options: {
   limiter?: FixedWindowRateLimiter;
   /** Only local/test harnesses pass a non-refusing gate. */
   staffAdmin?: StaffAdministrationGate;
+  /** Tests pass synthetic resolvers, a fixed clock, or workflow policies. */
+  authorization?: Partial<AuthorizationPorts>;
+  /** Only tests pass NonproductionAssignmentHarness. */
+  assignmentHarness?: AssignmentHarnessGate;
 }): IdentityRuntime {
   const { env, db, logger } = options;
   const email = new AuthEmailDispatcher(
@@ -92,6 +117,17 @@ export function createIdentityRuntime(options: {
     intents,
     limiter: options.limiter ?? new FixedWindowRateLimiter(),
     staffAdmin: options.staffAdmin ?? new RefusingStaffAdministrationGate(),
+    authorization: Object.freeze({
+      resolver: new UnavailableScopeResolver(),
+      ownership: new UnavailableCandidateOwnership(),
+      workflow: productionWorkflowPolicies,
+      separation: new MandatorySeparationOfDutiesPolicy(),
+      dualControl: restrictiveDualControl,
+      clock: () => new Date(),
+      ...options.authorization,
+    }),
+    assignmentHarness:
+      options.assignmentHarness ?? new RefusingAssignmentHarness(),
   });
 }
 

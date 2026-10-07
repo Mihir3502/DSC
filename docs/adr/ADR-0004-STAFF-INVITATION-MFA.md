@@ -4,6 +4,7 @@
 - **Date:** 2026-10-06
 - **Work item:** M1.3 (`docs/tasks/M1.3_STAFF_INVITATION_MFA.md`)
 - **Depends on:** ADR-0001, ADR-0002, ADR-0003
+- **Consumed by:** ADR-0005 (M1.4 authorization composes the assurance primitive into permission-level named recent-auth requirements and adds inline-only purposes)
 
 ## Context
 

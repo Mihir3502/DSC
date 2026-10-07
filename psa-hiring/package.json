@@ -26,6 +26,8 @@
     "db:check": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/db/check.ts",
     "db:seed": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/db/seed.ts",
     "db:verify-empty": "tsx --env-file-if-exists=.env.local scripts/db/verify-empty.ts",
+    "db:catalog:apply": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/db/authorization-catalog.ts apply",
+    "db:catalog:check": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/db/authorization-catalog.ts check",
     "test": "vitest run --project unit --project component",
     "test:watch": "vitest --project unit --project component",
     "test:unit": "vitest run --project unit",

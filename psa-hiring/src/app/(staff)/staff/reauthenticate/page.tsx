@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { currentRequestHeaders } from "@/app/_auth/auth-messages";
 import {
+  isInlineReauthenticationPurpose,
   isReauthenticationPurpose,
   resolveCurrentStaff,
 } from "@/modules/identity-access";
@@ -23,7 +24,8 @@ export default async function StaffReauthenticatePage({
   }
   const { purpose } = await searchParams;
   const key =
-    isReauthenticationPurpose(purpose) && purpose !== "REGENERATE_BACKUP_CODES"
+    isReauthenticationPurpose(purpose) &&
+    !isInlineReauthenticationPurpose(purpose)
       ? purpose
       : "STAFF_SECURITY";
   return (

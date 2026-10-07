@@ -67,8 +67,9 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    // Module domain layers stay framework-neutral (ARCHITECTURE §5.1).
-    files: ["src/modules/*/domain/**/*.ts"],
+    // Module domain layers (and the pure authorization policy catalog)
+    // stay framework-neutral (ARCHITECTURE §5.1, ADR-0005).
+    files: ["src/modules/*/domain/**/*.ts", "src/modules/*/policy/**/*.ts"],
     ignores: ["src/**/*.test.ts"],
     rules: {
       "no-restricted-imports": [

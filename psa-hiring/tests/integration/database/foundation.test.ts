@@ -319,17 +319,24 @@ describe("scope", () => {
       SELECT schemaname || '.' || tablename AS t FROM pg_tables
       WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY 1`);
     // M1.1 adds the four Better Auth tables (ADR-0002); M1.3 adds the
-    // two-factor table and staff identity tables (ADR-0004). No role,
-    // scope, audit, or business table exists yet.
+    // two-factor table and staff identity tables (ADR-0004); M1.4 adds the
+    // role/permission catalog, staff assignments, and the authorization
+    // epoch (ADR-0005). No organization, scope-entity, audit, or business
+    // table exists yet.
     expect(rows.map((r) => r.t)).toEqual([
       "app.system_metadata",
       "auth.account",
+      "auth.authorization_subject",
+      "auth.permission",
+      "auth.role",
+      "auth.role_permission",
       "auth.session",
       "auth.staff_invitation",
       "auth.staff_recovery_case",
       "auth.totp_replay_guard",
       "auth.two_factor",
       "auth.user",
+      "auth.user_role_assignment",
       "auth.verification",
       "drizzle.__drizzle_migrations",
     ]);
@@ -337,6 +344,15 @@ describe("scope", () => {
       /candida|account|person|screening|offer|onboard|readiness|assignment|timesheet|payroll|leave|audit|job|outbox/;
     expect(
       rows.filter((r) => !r.t.startsWith("auth.") && forbidden.test(r.t)),
+    ).toEqual([]);
+    // M1.4 resolves scopes through a port: no organization, branch, team,
+    // person, candidacy, or audit-assignment placeholder exists anywhere.
+    expect(
+      rows.filter((r) =>
+        /organization|branch|team|person|candidacy|audit_assignment|audit_event/.test(
+          r.t,
+        ),
+      ),
     ).toEqual([]);
   });
 });

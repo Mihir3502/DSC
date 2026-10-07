@@ -144,14 +144,19 @@ Key fields:
 
 ### 4.3 `role`
 
-Key fields:
+Implemented in M1.4 as `auth.role` (ADR-0005). Key fields:
 
 - `id`
-- `code`
+- `code` (stable, unique)
 - `name`
 - `description`
+- `principal_type`: `CANDIDATE` or `STAFF`
+- `status`: `ACTIVE` or `RETIRED`
 - `is_system_role`
-- `status`
+- `catalog_version`
+- common timestamps
+
+There is no admin, wildcard, superuser, or bypass field. Rows are written only by the reviewed catalog apply step (`pnpm db:catalog:apply`); the runtime role can only read them.
 
 Initial role codes:
 
@@ -165,44 +170,69 @@ Initial role codes:
 - `SYSTEM_ADMINISTRATOR`
 - `AUDITOR_READ_ONLY`
 
+Candidate entitlement is an account-to-candidacy ownership relationship (M2), not a staff assignment.
+
 ### 4.4 `permission`
 
-Key fields:
+Implemented in M1.4 as `auth.permission`. Key fields:
 
 - `id`
-- `code`
+- `code` (`<resource>.<action>`, 2–4 lowercase segments, no wildcard)
 - `resource`
 - `action`
-- `sensitivity_level`
+- `operation`
+- `max_sensitivity` (the classification upper bound)
+- `permission_domain`: `BUSINESS`, `TECHNICAL`, or `CANDIDATE_SELF`
 - `description`
+- `status`
+- Policy references and flags: `requires_scope`, `workflow_policy_code`, `recent_auth_policy` and `recent_auth_purpose`, `separation_policy_code`, `dual_control_hook`, `requires_reason`, `restricted_data`, `is_export`, `high_risk`
+- `catalog_version`
+- common timestamps
 
 ### 4.5 `role_permission`
 
-Join table:
+Implemented in M1.4 as `auth.role_permission`. Join table:
 
 - `role_id`
-- `permission_id`
-- `conditions_json`
+- `permission_id` (composite primary key with `role_id`)
+- `condition`: a closed, versioned, declarative condition (`CANDIDATE_OWNERSHIP`, `DESIGNATION`, `PARTICIPANT`, or `HOLD_CATEGORY`); never an executable expression
+- `status`
+- `catalog_version`
+- common timestamps
 
 ### 4.6 `user_role_assignment`
 
-Key fields:
+Implemented in M1.4 as `auth.user_role_assignment`. Key fields:
 
 - `id`
 - `user_account_id`
-- `role_id`
+- `role_id`, plus `principal_type` (always `STAFF`) in a composite foreign key to `role(id, principal_type)`
 - `scope_type`: `ASSIGNED_RECORDS`, `TEAM`, `BRANCH`, `ORGANIZATION`, `AUDIT_ASSIGNMENT`
-- `scope_reference_id`
-- `effective_from`
-- `effective_to`
-- `approved_by_user_id`
-- `reason`
-- `revoked_at`
+- `scope_reference_id` (required; resolved through the scope-resolver port until the M2 entities exist)
+- `effective_from` (inclusive)
+- `effective_to` (exclusive, nullable)
+- `status`: `PROPOSED`, `ACTIVE`, `REJECTED`, `REVOKED`, `SUPERSEDED`
+- `reason_code`
+- `reason_reference` (optional opaque reference; no free text)
+- `created_by_user_id`
+- `approved_by_user_id`, `approved_at`
+- `revoked_at`, `revoked_by_user_id`, `revocation_reason_code`
+- `replaces_assignment_id`, `superseded_by_assignment_id`
+- `version`
+- common timestamps
 
 Constraints:
 
-- Active privileged assignments require an approver.
-- A role removal must take effect without requiring a new login.
+- Active privileged assignments require an approver, who is neither the subject nor the requester.
+- `effective_to` is after `effective_from`.
+- Equivalent pending or active assignments may not overlap.
+- Role, scope, and dates are never rewritten. A change creates a successor that supersedes the old row, and revoked rows never reactivate.
+- A role removal takes effect without requiring a new login. Approval, revocation, and supersession also end the subject's sessions.
+- The runtime role may insert rows and update lifecycle columns only. Nothing is deleted.
+
+### 4.6a `authorization_subject`
+
+Implemented in M1.4 as `auth.authorization_subject`: a one-to-one, monotonic `authorization_version` and `version_changed_at` per account. They are incremented in the same transaction as every assignment change affecting the subject.
 
 ### 4.7 `audit_assignment`
 

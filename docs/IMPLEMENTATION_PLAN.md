@@ -952,14 +952,18 @@ Create ADRs only when the decision is needed:
 
 | ADR | Decision | Target milestone |
 |---|---|---|
-| ADR-0001 | Modular monolith and selected TypeScript stack | M0 |
-| ADR-0002 | Authentication/session/MFA configuration | M1 |
-| ADR-0003 | Authorization policy and scope evaluation | M1 |
-| ADR-0004 | Document storage, scanning, and encryption | M2/M5 |
-| ADR-0005 | Requirement rule representation | M5 |
-| ADR-0006 | Screening provider selection/integration | M6 |
-| ADR-0007 | E-signature provider selection | M4/M5 |
-| ADR-0008 | Production hosting, key management, and observability | M10 or earlier procurement |
+| ADR-0001 | Modular monolith and selected TypeScript stack | M0 (accepted) |
+| ADR-0002 | Authentication persistence | M1.1 (accepted) |
+| ADR-0003 | Candidate registration and recovery | M1.2 (accepted) |
+| ADR-0004 | Staff invitation, MFA, and recent authentication | M1.3 (accepted) |
+| ADR-0005 | Authorization policy and scope evaluation | M1.4 |
+| ADR-0006 | Document storage, scanning, and encryption | M2/M5 |
+| ADR-0007 | Requirement rule representation | M5 |
+| ADR-0008 | Screening provider selection/integration | M6 |
+| ADR-0009 | E-signature provider selection | M4/M5 |
+| ADR-0010 | Production hosting, key management, and observability | M10 or earlier procurement |
+
+Numbering note (approved during M1.4): M1.2 and M1.3 recorded decisions as ADR-0003 and ADR-0004, so the authorization ADR originally planned as ADR-0003 is ADR-0005 and later planned ADRs moved to ADR-0006–ADR-0010. Work-item packets that cite the old planned numbers refer to the topics above.
 
 Do not write an ADR that pretends an unresolved vendor or cloud decision is final.
 

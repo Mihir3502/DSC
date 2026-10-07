@@ -101,12 +101,25 @@ export {
 export {
   assurancePolicies,
   evaluateAssurance,
+  isInlineReauthenticationPurpose,
   isReauthenticationPurpose,
   type AssuranceDecision,
   type AssuranceEvidence,
   type AssurancePolicy,
   type ReauthenticationPurpose,
 } from "./domain/authentication-assurance";
+// M1.4 central authorization (ADR-0005). Assignment administration is not
+// exported: no production surface may manage roles before M1.5/M1.6.
+export {
+  authorize,
+  authorizeInTransaction,
+  type AuthorizationDependencies,
+} from "./application/authorize";
+export { authorizationDependencies } from "./application/authorization-support";
+export type {
+  AuthorizationDecision,
+  AuthorizationRequest,
+} from "./domain/authorization-decision";
 export {
   isRecoveryReasonCode,
   recoveryReasonCodes,

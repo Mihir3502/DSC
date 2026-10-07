@@ -148,15 +148,21 @@ describe("schema and migration", () => {
       "SELECT tablename AS t FROM pg_tables WHERE schemaname = 'auth' ORDER BY 1",
     );
     // M1.3 adds the two-factor plugin table and the staff invitation,
-    // recovery-case, and TOTP replay-guard tables (ADR-0004).
+    // recovery-case, and TOTP replay-guard tables (ADR-0004); M1.4 adds
+    // the authorization catalog, assignments, and epoch (ADR-0005).
     expect(tables.rows.map((r) => r.t)).toEqual([
       "account",
+      "authorization_subject",
+      "permission",
+      "role",
+      "role_permission",
       "session",
       "staff_invitation",
       "staff_recovery_case",
       "totp_replay_guard",
       "two_factor",
       "user",
+      "user_role_assignment",
       "verification",
     ]);
 

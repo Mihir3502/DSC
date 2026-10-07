@@ -128,6 +128,31 @@ export async function applyLocalDatabaseGrants(
     }
   }
 
+  // M1.4 authorization (ADR-0005). The catalog tables are written only by
+  // the reviewed catalog apply step under the migration role, so the
+  // runtime role may only read them. Assignments are insert-only for the
+  // runtime role except their lifecycle columns, so subject, role, scope,
+  // and effective dates can never be rewritten; the authorization epoch is
+  // never deleted.
+  for (const table of ["role", "permission", "role_permission"]) {
+    if (await tableExists(admin, `auth.${table}`)) {
+      statements.push(
+        `REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON auth.${table} FROM ${app}`,
+      );
+    }
+  }
+  if (await tableExists(admin, "auth.user_role_assignment")) {
+    statements.push(
+      `REVOKE UPDATE, DELETE, TRUNCATE ON auth.user_role_assignment FROM ${app}`,
+      `GRANT UPDATE (${assignmentLifecycleColumns.join(", ")}) ON auth.user_role_assignment TO ${app}`,
+    );
+  }
+  if (await tableExists(admin, "auth.authorization_subject")) {
+    statements.push(
+      `REVOKE DELETE, TRUNCATE ON auth.authorization_subject FROM ${app}`,
+    );
+  }
+
   await admin.query("BEGIN");
   try {
     for (const statement of statements) await admin.query(statement);
@@ -141,8 +166,22 @@ export async function applyLocalDatabaseGrants(
     `schemas app, drizzle, auth: owned by ${migrator}; ${app} has USAGE on app and auth`,
     `${app}: SELECT/INSERT/UPDATE/DELETE on app tables, including future ones (default privileges)`,
     `schema auth: owned by ${migrator}; ${app} has SELECT/INSERT/UPDATE, DELETE only on auth.session, auth.verification, auth.two_factor, and auth.totp_replay_guard`,
+    `authorization: ${app} has SELECT only on auth.role, auth.permission, auth.role_permission; INSERT and lifecycle-column UPDATE only on auth.user_role_assignment; no DELETE`,
   ];
 }
+
+/** Assignment columns the runtime role may update (lifecycle only). */
+export const assignmentLifecycleColumns = [
+  "status",
+  "approved_by_user_id",
+  "approved_at",
+  "revoked_at",
+  "revoked_by_user_id",
+  "revocation_reason_code",
+  "superseded_by_assignment_id",
+  "version",
+  "updated_at",
+] as const;
 
 async function tableExists(client: Client, table: string): Promise<boolean> {
   const { rows } = await client.query<{ exists: boolean }>(

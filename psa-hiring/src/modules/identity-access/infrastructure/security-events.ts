@@ -61,6 +61,17 @@ export const securityEventCodes = [
   "staff.password_changed",
   "staff.password_change_failed",
   "staff.sign_out",
+  // M1.4 authorization foundation (ADR-0005). Future-audit-ready only.
+  "authz.assignment_proposed",
+  "authz.assignment_approved",
+  "authz.assignment_rejected",
+  "authz.assignment_revoked",
+  "authz.assignment_superseded",
+  "authz.assignment_refused",
+  "authz.subject_version_changed",
+  "authz.catalog_applied",
+  "authz.high_risk_denied",
+  "authz.policy_unavailable",
 ] as const;
 export type SecurityEventCode = (typeof securityEventCodes)[number];
 
@@ -85,9 +96,18 @@ export type SecurityEvent = Readonly<{
   code: SecurityEventCode;
   /** Opaque account UUID when known; never an email address. */
   accountRef?: string;
-  /** Opaque invitation or recovery-case UUID (M1.3). */
+  /** Opaque invitation, recovery-case, or assignment UUID. */
   recordRef?: string;
   category?: SecurityEventCategory;
+  /**
+   * M1.4 authorization context: catalog codes and versions only. Never
+   * scope or resource identifiers, reason references, or policy facts.
+   */
+  permissionCode?: string;
+  roleCode?: string;
+  scopeType?: string;
+  reasonCode?: string;
+  policyVersion?: string;
 }>;
 
 export interface SecurityEventPort {
@@ -107,6 +127,11 @@ export class LogSecurityEvents implements SecurityEventPort {
       resultCode: event.category ?? "ok",
       actorRef: event.accountRef?.replaceAll("-", ""),
       recordRef: event.recordRef?.replaceAll("-", ""),
+      action: event.permissionCode,
+      roleCode: event.roleCode,
+      scopeType: event.scopeType,
+      reasonCode: event.reasonCode,
+      policyVersion: event.policyVersion,
     });
   }
 }

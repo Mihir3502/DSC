@@ -1,6 +1,7 @@
 import "server-only";
 import {
   evaluateAssurance,
+  isInlineReauthenticationPurpose,
   isReauthenticationPurpose,
   reauthenticationDestination,
   type AssuranceDecision,
@@ -148,11 +149,12 @@ export async function reauthenticateStaff(
 ): Promise<ReauthenticateResult> {
   const principal = await resolveCurrentStaff(headers, deps);
   if (!principal) return { kind: "UNAUTHENTICATED" };
-  // Closed purpose registry; anything else (URLs, actions, the inline-only
-  // backup-code purpose) falls back to the general security purpose.
+  // Closed purpose registry; anything else (URLs, actions, inline-only
+  // purposes such as backup-code regeneration or the M1.4 authorization
+  // purposes) falls back to the general security purpose.
   const purpose: ReauthenticationPurpose =
     isReauthenticationPurpose(input.purpose) &&
-    input.purpose !== "REGENERATE_BACKUP_CODES"
+    !isInlineReauthenticationPurpose(input.purpose)
       ? input.purpose
       : "STAFF_SECURITY";
   const outcome = await verifyStaffStepUp(

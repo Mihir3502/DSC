@@ -127,6 +127,52 @@ void runScript("db:check", async () => {
       "auth schema privileges: DML as designed, DELETE only on sessions/verifications/two-factor/replay markers, no DDL",
     );
 
+    // Authorization (M1.4, ADR-0005): catalog read-only; assignments are
+    // insert-only except lifecycle columns; nothing is deletable.
+    const authz = await one<Record<string, boolean | null>>(sql`
+      SELECT to_regclass('auth.user_role_assignment') IS NOT NULL AS present,
+        has_table_privilege('auth.role', 'SELECT') AS role_select,
+        has_table_privilege('auth.role', 'INSERT') OR has_table_privilege('auth.role', 'UPDATE') OR has_table_privilege('auth.role', 'DELETE') AS role_write,
+        has_table_privilege('auth.permission', 'SELECT') AS permission_select,
+        has_table_privilege('auth.permission', 'INSERT') OR has_table_privilege('auth.permission', 'UPDATE') OR has_table_privilege('auth.permission', 'DELETE') AS permission_write,
+        has_table_privilege('auth.role_permission', 'SELECT') AS grant_select,
+        has_table_privilege('auth.role_permission', 'INSERT') OR has_table_privilege('auth.role_permission', 'UPDATE') OR has_table_privilege('auth.role_permission', 'DELETE') AS grant_write,
+        has_table_privilege('auth.user_role_assignment', 'INSERT') AS assignment_insert,
+        has_table_privilege('auth.user_role_assignment', 'UPDATE') AS assignment_table_update,
+        has_table_privilege('auth.user_role_assignment', 'DELETE') OR has_table_privilege('auth.user_role_assignment', 'TRUNCATE') AS assignment_delete,
+        has_column_privilege('auth.user_role_assignment', 'status', 'UPDATE') AS assignment_status_update,
+        has_column_privilege('auth.user_role_assignment', 'role_id', 'UPDATE')
+          OR has_column_privilege('auth.user_role_assignment', 'user_account_id', 'UPDATE')
+          OR has_column_privilege('auth.user_role_assignment', 'scope_reference_id', 'UPDATE')
+          OR has_column_privilege('auth.user_role_assignment', 'effective_from', 'UPDATE')
+          OR has_column_privilege('auth.user_role_assignment', 'effective_to', 'UPDATE') AS assignment_material_update,
+        has_table_privilege('auth.authorization_subject', 'DELETE') AS subject_delete`);
+    assertCheck(
+      authz.present,
+      "authorization tables are missing (run pnpm db:migrate)",
+    );
+    assertCheck(
+      authz.role_select &&
+        authz.permission_select &&
+        authz.grant_select &&
+        authz.role_write === false &&
+        authz.permission_write === false &&
+        authz.grant_write === false,
+      "application role must only read the authorization catalog (run pnpm db:bootstrap:local after db:migrate)",
+    );
+    assertCheck(
+      authz.assignment_insert &&
+        authz.assignment_status_update &&
+        authz.assignment_table_update === false &&
+        authz.assignment_material_update === false &&
+        authz.assignment_delete === false &&
+        authz.subject_delete === false,
+      "application role must insert assignments and update only lifecycle columns, never delete (run pnpm db:bootstrap:local after db:migrate)",
+    );
+    ok(
+      "authorization privileges: catalog read-only, assignments insert + lifecycle-column update, no DELETE",
+    );
+
     // DML round trip inside a transaction that is always rolled back.
     try {
       await db.transaction(async (tx) => {

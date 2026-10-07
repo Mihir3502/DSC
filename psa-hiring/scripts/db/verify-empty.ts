@@ -157,11 +157,11 @@ void runScript("db:verify-empty", async () => {
         WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY 1`);
         assertCheck(
           tables.rows.map((r) => r.t).join(",") ===
-            "app.system_metadata,auth.account,auth.session,auth.staff_invitation,auth.staff_recovery_case,auth.totp_replay_guard,auth.two_factor,auth.user,auth.verification,drizzle.__drizzle_migrations",
+            "app.system_metadata,auth.account,auth.authorization_subject,auth.permission,auth.role,auth.role_permission,auth.session,auth.staff_invitation,auth.staff_recovery_case,auth.totp_replay_guard,auth.two_factor,auth.user,auth.user_role_assignment,auth.verification,drizzle.__drizzle_migrations",
           `unexpected tables: ${tables.rows.map((r) => r.t).join(",")}`,
         );
         ok(
-          "tables are exactly app.system_metadata, the M1.1–M1.3 auth tables, and the migration journal",
+          "tables are exactly app.system_metadata, the M1.1–M1.4 auth tables, and the migration journal",
         );
 
         const columns = await c.query<{ c: string }>(`

@@ -52,12 +52,20 @@
     {
       "id": "PRD-AUTH-003",
       "title": "Staff permissions are role based",
-      "status": "deferred",
-      "note": "Roles, permissions, and scopes are M1.4; authorization enforcement is M1.5. M1.3 grants staff no roles, scopes, or record access.",
+      "status": "partial",
+      "note": "M1.4 delivers the role/permission catalog, scoped effective-dated staff assignments, and the central deny-by-default authorization service (ADR-0005). Route, object, and field enforcement is M1.5; no staff role reaches business records until then.",
       "tests": [
         {
-          "file": "tests/integration/auth/staff-authentication.test.ts",
-          "title": "shows only account, MFA, and session controls"
+          "file": "src/modules/identity-access/policy/authorization-catalog.test.ts",
+          "title": "defines exactly the nine controlled roles with stable codes"
+        },
+        {
+          "file": "src/modules/identity-access/application/authorize.test.ts",
+          "title": "allows with the effective role, assignment, scope, and policy version"
+        },
+        {
+          "file": "tests/integration/authorization/authorization-service.test.ts",
+          "title": "allows only within scope, using the effective assignment"
         }
       ]
     },
@@ -65,7 +73,7 @@
       "id": "PRD-AUTH-004",
       "title": "Recent authentication for sensitive actions",
       "status": "partial",
-      "note": "M1.3 delivers the server-owned recent-authentication primitive (named policies, purpose binding, /staff/reauthenticate) and applies it to staff password change and backup-code regeneration. Business high-risk actions adopt it in their own work items; candidate step-up is not configured.",
+      "note": "M1.3 delivers the server-owned recent-authentication primitive (named policies, purpose binding, /staff/reauthenticate) and applies it to staff password change and backup-code regeneration. Business high-risk actions adopt it in their own work items; candidate step-up is not configured. M1.4 composes the primitive into permission-level named recent-auth requirements (purpose-bound, strong methods, no reuse across privilege expansion); route adoption is M1.5.",
       "tests": [
         {
           "file": "tests/integration/auth/candidate-registration.test.ts",
@@ -86,6 +94,10 @@
         {
           "file": "tests/e2e/staff-auth.spec.ts",
           "title": "recent-auth challenge after expiry"
+        },
+        {
+          "file": "tests/integration/authorization/authorization-service.test.ts",
+          "title": "requires purpose-bound strong recent authentication for high-risk approvals"
         }
       ]
     },
@@ -132,6 +144,10 @@
         {
           "file": "tests/integration/auth/staff-authentication.test.ts",
           "title": "invalidates assurance on session revocation and account restriction"
+        },
+        {
+          "file": "tests/integration/authorization/authorization-service.test.ts",
+          "title": "denies immediately when the account is restricted"
         }
       ]
     },
@@ -139,7 +155,7 @@
       "id": "PRD-AUTH-007",
       "title": "Authentication events are auditable",
       "status": "partial",
-      "note": "M1.2 and M1.3 emit allowlisted, future-audit-ready security event codes (opaque account/record references only) through the logger; immutable audit persistence is M1.6. Not satisfied until then.",
+      "note": "M1.2 and M1.3 emit allowlisted, future-audit-ready security event codes (opaque account/record references only) through the logger; immutable audit persistence is M1.6. Not satisfied until then. M1.4 adds authz.* assignment, catalog, policy, and high-risk denial events through the same port.",
       "tests": [
         {
           "file": "src/modules/identity-access/infrastructure/candidate-auth-adapters.test.ts",
@@ -148,6 +164,10 @@
         {
           "file": "src/modules/identity-access/infrastructure/staff-auth-adapters.test.ts",
           "title": "logs only the allowlisted code, result, and opaque references"
+        },
+        {
+          "file": "tests/integration/authorization/role-assignments.test.ts",
+          "title": "emits only safe, future-audit-ready events"
         }
       ]
     }
@@ -675,7 +695,7 @@
         },
         {
           "file": "tests/guards/traceability.test.ts",
-          "title": "keeps roles and authorization incomplete until M1.4–M1.5"
+          "title": "keeps roles and authorization incomplete until M1.5 enforcement"
         }
       ]
     },
@@ -690,6 +710,322 @@
         {
           "file": "tests/integration/auth/staff-authentication.test.ts",
           "title": "shows only account, MFA, and session controls"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.4-01",
+      "title": "Controlled role catalog",
+      "tests": [
+        {
+          "file": "src/modules/identity-access/policy/authorization-catalog.test.ts",
+          "title": "defines exactly the nine controlled roles with stable codes"
+        },
+        {
+          "file": "tests/integration/authorization/catalog.test.ts",
+          "title": "stores exactly the manifest, at the catalog version"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.4-02",
+      "title": "Narrow permission catalog",
+      "tests": [
+        {
+          "file": "src/modules/identity-access/policy/authorization-catalog.test.ts",
+          "title": "uses narrow, unique, stable permission codes with no wildcard"
+        },
+        {
+          "file": "tests/guards/authorization-matrix.test.ts",
+          "title": "traces every"
+        },
+        {
+          "file": "tests/integration/authorization/catalog.test.ts",
+          "title": "is idempotent: re-running changes nothing"
+        },
+        {
+          "file": "tests/integration/authorization/catalog.test.ts",
+          "title": "rejects wildcard codes and malformed conditions at the database"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.4-03",
+      "title": "Correct role grants",
+      "tests": [
+        {
+          "file": "src/modules/identity-access/policy/authorization-catalog.test.ts",
+          "title": "limits the system administrator to technical permissions"
+        },
+        {
+          "file": "src/modules/identity-access/policy/authorization-catalog.test.ts",
+          "title": "keeps the auditor read/export-only within audit assignments"
+        },
+        {
+          "file": "src/modules/identity-access/policy/authorization-catalog.test.ts",
+          "title": "applies the restrictive interpretation to key matrix cells"
+        },
+        {
+          "file": "src/modules/identity-access/policy/authorization-catalog.test.ts",
+          "title": "grants pending-decision permissions to nobody"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.4-04",
+      "title": "Protected assignments",
+      "tests": [
+        {
+          "file": "tests/integration/authorization/role-assignments.test.ts",
+          "title": "refuses self-grant, self-approval, non-staff subjects, and the candidate role"
+        },
+        {
+          "file": "tests/integration/authorization/role-assignments.test.ts",
+          "title": "refuses invalid dates, reasons, scope types, overlaps, and retired roles"
+        },
+        {
+          "file": "tests/integration/authorization/role-assignments.test.ts",
+          "title": "makes a CANDIDATE-role staff assignment impossible"
+        },
+        {
+          "file": "src/modules/identity-access/domain/authorization-policy.test.ts",
+          "title": "approves only by a distinct, non-requesting approver"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.4-05",
+      "title": "Typed scopes",
+      "tests": [
+        {
+          "file": "src/modules/identity-access/domain/authorization-policy.test.ts",
+          "title": "never crosses organizations, whatever the other IDs say"
+        },
+        {
+          "file": "src/modules/identity-access/domain/authorization-policy.test.ts",
+          "title": "bounds audit scope by auditor, category, record group, and dates"
+        },
+        {
+          "file": "src/modules/identity-access/application/authorize.test.ts",
+          "title": "denies when the record or scope cannot be resolved"
+        },
+        {
+          "file": "tests/integration/authorization/authorization-service.test.ts",
+          "title": "allows only within scope, using the effective assignment"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.4-06",
+      "title": "No premature business schema",
+      "tests": [
+        {
+          "file": "tests/integration/database/foundation.test.ts",
+          "title": "contains no business-domain, audit, or job tables"
+        },
+        {
+          "file": "tests/integration/authorization/role-assignments.test.ts",
+          "title": "never persists an assignment whose scope cannot be resolved by an approved adapter"
+        },
+        {
+          "file": "src/modules/identity-access/infrastructure/authorization-adapters.test.ts",
+          "title": "refuses to construct test-only adapters outside APP_ENV=test"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.4-07",
+      "title": "Central deny-by-default service",
+      "tests": [
+        {
+          "file": "src/modules/identity-access/application/authorize.test.ts",
+          "title": "denies malformed or contract-violating requests without throwing"
+        },
+        {
+          "file": "src/modules/identity-access/application/authorize.test.ts",
+          "title": "turns unexpected failures into POLICY_UNAVAILABLE without leaking"
+        },
+        {
+          "file": "tests/integration/authorization/authorization-service.test.ts",
+          "title": "ignores request-supplied roles, scopes, and claims"
+        },
+        {
+          "file": "src/modules/identity-access/domain/authorization-policy.test.ts",
+          "title": "rejects request-supplied roles, scopes, approvers, assurance, or decisions"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.4-08",
+      "title": "Separation of duties",
+      "tests": [
+        {
+          "file": "src/modules/identity-access/domain/authorization-policy.test.ts",
+          "title": "the mandatory policy composes generic, named, and dual-control rules"
+        },
+        {
+          "file": "src/modules/identity-access/domain/authorization-policy.test.ts",
+          "title": "rule 5: an administrator never makes business decisions"
+        },
+        {
+          "file": "src/modules/identity-access/application/authorize.test.ts",
+          "title": "denies missing separation facts, same-actor dual approval, and own records"
+        },
+        {
+          "file": "src/modules/identity-access/application/authorize.test.ts",
+          "title": "does not let organization-wide administrator scope reach business records"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.4-09",
+      "title": "Recent-auth composition",
+      "tests": [
+        {
+          "file": "src/modules/identity-access/application/authorize.test.ts",
+          "title": "requires bound, strong, purpose-specific recent authentication"
+        },
+        {
+          "file": "src/modules/identity-access/application/authorize.test.ts",
+          "title": "never reuses step-up made before a privilege expansion"
+        },
+        {
+          "file": "tests/integration/authorization/authorization-service.test.ts",
+          "title": "requires purpose-bound strong recent authentication for high-risk approvals"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.4-10",
+      "title": "Immediate revocation",
+      "tests": [
+        {
+          "file": "tests/integration/authorization/authorization-service.test.ts",
+          "title": "stops granting on the next decision after revocation, despite a stale browser session"
+        },
+        {
+          "file": "tests/integration/authorization/authorization-service.test.ts",
+          "title": "expires exactly at the exclusive effective_to boundary on the server clock"
+        },
+        {
+          "file": "tests/integration/authorization/authorization-service.test.ts",
+          "title": "denies immediately when the account is restricted"
+        },
+        {
+          "file": "tests/integration/authorization/role-assignments.test.ts",
+          "title": "proposes, approves with a distinct approver, and applies session/version effects"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.4-11",
+      "title": "Concurrency safety",
+      "tests": [
+        {
+          "file": "tests/integration/authorization/concurrency.test.ts",
+          "title": "lets exactly one of two concurrent approvals activate an assignment"
+        },
+        {
+          "file": "tests/integration/authorization/concurrency.test.ts",
+          "title": "lets at most one of two concurrent equivalent proposals exist"
+        },
+        {
+          "file": "tests/integration/authorization/concurrency.test.ts",
+          "title": "serializes revocation behind a protected command that authorized first"
+        },
+        {
+          "file": "tests/integration/authorization/concurrency.test.ts",
+          "title": "never commits on authority revoked before the protected boundary"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.4-12",
+      "title": "Safe events and errors",
+      "tests": [
+        {
+          "file": "tests/integration/authorization/role-assignments.test.ts",
+          "title": "emits only safe, future-audit-ready events"
+        },
+        {
+          "file": "src/modules/identity-access/application/authorize.test.ts",
+          "title": "logs safe denial codes and emits high-risk denial events without resource IDs"
+        },
+        {
+          "file": "tests/integration/authorization/authorization-service.test.ts",
+          "title": "keeps logs and events free of sensitive values"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.4-13",
+      "title": "No unauthorized production surface",
+      "tests": [
+        {
+          "file": "tests/guards/authorization-matrix.test.ts",
+          "title": "no route, page, action, proxy, or CLI script reaches assignment commands or test adapters"
+        },
+        {
+          "file": "tests/integration/authorization/role-assignments.test.ts",
+          "title": "refuses the bootstrap actor in the application's own runtime"
+        },
+        {
+          "file": "src/modules/identity-access/infrastructure/authorization-adapters.test.ts",
+          "title": "refuses bootstrap and resolves nothing by default"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.4-14",
+      "title": "Real integration proof",
+      "tests": [
+        {
+          "file": "tests/integration/authorization/catalog.test.ts",
+          "title": "applies the reviewed catalog through the migration role"
+        },
+        {
+          "file": "tests/integration/authorization/catalog.test.ts",
+          "title": "lets the runtime role read but never write the catalog"
+        },
+        {
+          "file": "tests/integration/authorization/catalog.test.ts",
+          "title": "passes the least-privilege runtime check"
+        },
+        {
+          "file": "tests/integration/authorization/role-assignments.test.ts",
+          "title": "enforces dates, approval evidence, separation, and revocation evidence"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.4-15",
+      "title": "ADR and traceability",
+      "tests": [
+        {
+          "file": "tests/guards/traceability.test.ts",
+          "title": "covers every"
+        },
+        {
+          "file": "tests/guards/authorization-matrix.test.ts",
+          "title": "references only rows that exist in the matrix"
+        }
+      ]
+    },
+    {
+      "id": "AC-M1.4-16",
+      "title": "Regression and scope containment",
+      "tests": [
+        {
+          "file": "tests/integration/database/foundation.test.ts",
+          "title": "contains no business-domain, audit, or job tables"
+        },
+        {
+          "file": "tests/guards/authorization-matrix.test.ts",
+          "title": "the module's public index does not export assignment administration"
+        },
+        {
+          "file": "tests/integration/authorization/catalog.test.ts",
+          "title": "creates no users, sessions, assignments, or authorization subjects"
         }
       ]
     }

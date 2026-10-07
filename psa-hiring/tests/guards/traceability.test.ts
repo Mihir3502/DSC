@@ -44,6 +44,7 @@ describe("requirement traceability", () => {
   it.each([
     ["M1.2", 17],
     ["M1.3", 16],
+    ["M1.4", 16],
   ] as const)(
     "covers every %s acceptance criterion exactly once",
     (item, count) => {
@@ -60,9 +61,9 @@ describe("requirement traceability", () => {
     },
   );
 
-  it("keeps roles and authorization incomplete until M1.4–M1.5", () => {
+  it("keeps roles and authorization incomplete until M1.5 enforcement", () => {
     const roles = data.requirements.find((e) => e.id === "PRD-AUTH-003");
-    expect(roles?.status).toBe("deferred");
+    expect(roles?.status).toBe("partial");
     const recent = data.requirements.find((e) => e.id === "PRD-AUTH-004");
     expect(recent?.status).not.toBe("covered");
   });

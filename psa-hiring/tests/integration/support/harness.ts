@@ -134,12 +134,26 @@ export function buildHarnessEnv(
 export type ScriptResult = { code: number; output: string };
 
 const run = promisify(execFile);
-const scripts = {
+const scripts: Record<
+  "bootstrap" | "migrate" | "seed" | "check" | "catalog" | "catalogCheck",
+  { file: string; serverOnly: boolean; args?: readonly string[] }
+> = {
   bootstrap: { file: "scripts/db/bootstrap-local.ts", serverOnly: false },
   migrate: { file: "scripts/db/migrate.ts", serverOnly: false },
   seed: { file: "scripts/db/seed.ts", serverOnly: true },
   check: { file: "scripts/db/check.ts", serverOnly: true },
-} as const;
+  // M1.4 reviewed authorization catalog apply / read-only drift check.
+  catalog: {
+    file: "scripts/db/authorization-catalog.ts",
+    serverOnly: true,
+    args: ["apply"],
+  },
+  catalogCheck: {
+    file: "scripts/db/authorization-catalog.ts",
+    serverOnly: true,
+    args: ["check"],
+  },
+};
 
 /**
  * Runs a real M0.3 database script (the same files the pnpm db:* commands
@@ -149,8 +163,12 @@ export async function runDbScript(
   name: keyof typeof scripts,
   env: NodeJS.ProcessEnv,
 ): Promise<ScriptResult> {
-  const { file, serverOnly } = scripts[name];
-  const args = [...(serverOnly ? ["--conditions=react-server"] : []), file];
+  const { file, serverOnly, args: extra = [] } = scripts[name];
+  const args = [
+    ...(serverOnly ? ["--conditions=react-server"] : []),
+    file,
+    ...extra,
+  ];
   try {
     const { stdout, stderr } = await run(
       path.join(projectRoot, "node_modules/.bin/tsx"),

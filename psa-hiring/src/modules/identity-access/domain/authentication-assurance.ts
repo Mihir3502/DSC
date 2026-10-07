@@ -41,14 +41,39 @@ const reauthenticationDestinations = Object.freeze({
   STAFF_SECURITY: "/staff/security",
   CHANGE_PASSWORD: "/staff/security#password",
 } as const);
+/**
+ * Purposes satisfied only by an inline step-up made by the command that
+ * needs them, never through the reauthentication page. M1.4 adds the
+ * named purposes its permission catalog requires (ADR-0005).
+ */
+export const inlineReauthenticationPurposes = [
+  "REGENERATE_BACKUP_CODES",
+  "PRIVILEGED_ACCESS_CHANGE",
+  "RESTRICTED_DATA_ACCESS",
+  "HIGH_RISK_APPROVAL",
+  "RESTRICTED_EXPORT",
+  "BREAK_GLASS",
+] as const;
+export type InlineReauthenticationPurpose =
+  (typeof inlineReauthenticationPurposes)[number];
+
 export type ReauthenticationPurpose =
-  keyof typeof reauthenticationDestinations | "REGENERATE_BACKUP_CODES";
+  keyof typeof reauthenticationDestinations | InlineReauthenticationPurpose;
+
+export function isInlineReauthenticationPurpose(
+  value: unknown,
+): value is InlineReauthenticationPurpose {
+  return (
+    typeof value === "string" &&
+    (inlineReauthenticationPurposes as readonly string[]).includes(value)
+  );
+}
 
 export function isReauthenticationPurpose(
   value: unknown,
 ): value is ReauthenticationPurpose {
   return (
-    value === "REGENERATE_BACKUP_CODES" ||
+    isInlineReauthenticationPurpose(value) ||
     (typeof value === "string" &&
       Object.prototype.hasOwnProperty.call(reauthenticationDestinations, value))
   );

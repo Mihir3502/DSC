@@ -44,6 +44,8 @@ log.info("gate.evaluated", { resultCode: "blocked", recordRef: "rr_8f2k" });
 | `statusCode` | Integer 100–599 |
 | `durationMs` | Integer 0–3,600,000, measured, never estimated |
 | `actorRef`, `recordRef` | Opaque internal reference `[A-Za-z0-9_-]{1,64}`, never an email, name, or SSN |
+| `roleCode`, `scopeType`, `reasonCode` | Closed uppercase catalog code `[A-Z][A-Z0-9_]{0,63}` (M1.4), never a scope or resource ID |
+| `policyVersion` | Lowercase token such as `authz-p1-c1` (M1.4) |
 
 Every record passes `toSafeLogFields()` before serialization. Unknown keys, nested objects, and invalid values are **omitted**, not truncated or hashed.
 
@@ -143,6 +145,22 @@ export const GET = withRouteHandler({ routeTemplate: "/api/example" }, async () 
 | `account.session_revoke`, `account.sessions_revoke_all`, `account.restricted` | Restriction primitives (`recordRef` = account ID, `resultCode`) |
 
 Auth route errors use the same closed problem codes (plus `RATE_LIMITED`, 429). Library messages are never returned, and session tokens are stripped from JSON bodies.
+
+## 5a. Authorization events (M1.4)
+
+| Event code | Meaning |
+|---|---|
+| `authz.denied` | Bounded telemetry for every denial: `action` = permission code, `reasonCode`, `policyVersion`. Never resource, scope, or session identifiers |
+| `authz.high_risk_denied` | Future-audit-ready denial of a high-risk permission (`actorRef`, `action`, `reasonCode`, `policyVersion`) |
+| `authz.policy_unavailable` | Stored catalog/grant drift or tampering made a permission unusable (`action`) |
+| `authz.assignment_proposed`, `_approved`, `_rejected`, `_revoked`, `_superseded` | Assignment lifecycle (`actorRef` = subject, `recordRef` = assignment, `roleCode`, `scopeType`, `reasonCode`) |
+| `authz.assignment_refused` | An assignment command was refused (`reasonCode` = closed refusal code) |
+| `authz.subject_version_changed` | The subject's authorization version changed and their sessions ended |
+| `authz.catalog_applied` | `pnpm db:catalog:apply` changed the catalog (`policyVersion`) |
+
+Free-text reasons, reason references, emails, scope/resource IDs, and policy facts are never logged. These are operational events only; immutable audit persistence is M1.6.
+
+Deployment order: `db:migrate` → `db:catalog:apply` (migration role) → start the application. `pnpm db:catalog:check` (runtime role, read-only) verifies the catalog after deployment.
 
 ## 6. Known limitations
 

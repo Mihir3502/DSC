@@ -25,6 +25,8 @@ type Token = string;
 type RouteTemplate = string;
 /** Opaque, non-secret internal reference (never an email, name, or SSN). */
 type OpaqueRef = string;
+/** Closed uppercase vocabulary code such as a role or denial reason. */
+type ControlledCode = string;
 
 export type LogContext = {
   module?: Token;
@@ -41,6 +43,11 @@ export type LogContext = {
   durationMs?: number;
   actorRef?: OpaqueRef;
   recordRef?: OpaqueRef;
+  /** Authorization context (M1.4): catalog codes and versions only. */
+  roleCode?: ControlledCode;
+  scopeType?: ControlledCode;
+  reasonCode?: ControlledCode;
+  policyVersion?: Token;
 };
 
 export const logContextKeys = [
@@ -57,11 +64,16 @@ export const logContextKeys = [
   "durationMs",
   "actorRef",
   "recordRef",
+  "roleCode",
+  "scopeType",
+  "reasonCode",
+  "policyVersion",
 ] as const satisfies readonly (keyof LogContext)[];
 
 const tokenPattern = /^[a-z][a-z0-9_.-]{0,63}$/;
 const routePattern = /^\/[A-Za-z0-9_\-/[\].()]{0,119}$/;
 const refPattern = /^[A-Za-z0-9_-]{1,64}$/;
+const codePattern = /^[A-Z][A-Z0-9_]{0,63}$/;
 const digestPattern = /^[A-Za-z0-9]{1,64}$/;
 const publicCodes = new Set<string>([
   "VALIDATION_FAILED",
@@ -109,6 +121,10 @@ const validators: Record<(typeof logContextKeys)[number], Validator> = {
   durationMs: boundedInt(0, 3_600_000),
   actorRef: matching(refPattern),
   recordRef: matching(refPattern),
+  roleCode: matching(codePattern),
+  scopeType: matching(codePattern),
+  reasonCode: matching(codePattern),
+  policyVersion: matching(tokenPattern),
 };
 
 /**
