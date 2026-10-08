@@ -12,6 +12,15 @@ const password = { maxLength: 4096 };
 const code = { maxLength: 64 };
 const capability = { maxLength: 2048 };
 const key = { maxLength: 64 };
+// M2.1 configuration (packet M2.1 §15, §23): references and versions are
+// re-validated by each command; status, ancestry, actor, worker-path
+// classification, and time-of-action fields do not exist here at all.
+const ref = { maxLength: 64 };
+const version = { maxLength: 10 };
+const shortText = { maxLength: 400 };
+const summary = { maxLength: 1200 };
+const body = { maxLength: 20000 };
+const localTime = { maxLength: 32 };
 
 export const formSchemas = Object.freeze({
   // Public candidate authentication.
@@ -53,4 +62,108 @@ export const formSchemas = Object.freeze({
   noFields: defineFormSchema({}),
   regenerateBackupCodes: defineFormSchema({ password, code }),
   reauthenticate: defineFormSchema({ password, code, purpose: key }),
+  // M2.1 staff position administration.
+  organizationUpdate: defineFormSchema({
+    commandKey: ref,
+    organizationId: ref,
+    expectedVersion: version,
+    code: key,
+    legalName: shortText,
+    displayName: shortText,
+    timezone: key,
+  }),
+  branchCreate: defineFormSchema({
+    commandKey: ref,
+    organizationId: ref,
+    code: key,
+    name: shortText,
+    publicLocationLabel: shortText,
+    timezone: key,
+  }),
+  branchUpdate: defineFormSchema({
+    commandKey: ref,
+    branchId: ref,
+    expectedVersion: version,
+    code: key,
+    name: shortText,
+    publicLocationLabel: shortText,
+    timezone: key,
+  }),
+  teamCreate: defineFormSchema({
+    commandKey: ref,
+    branchId: ref,
+    code: key,
+    name: shortText,
+  }),
+  teamUpdate: defineFormSchema({
+    commandKey: ref,
+    teamId: ref,
+    expectedVersion: version,
+    code: key,
+    name: shortText,
+  }),
+  configurationStatus: defineFormSchema({
+    commandKey: ref,
+    targetId: ref,
+    expectedVersion: version,
+    reasonCode: key,
+  }),
+  positionCreate: defineFormSchema({
+    commandKey: ref,
+    organizationId: ref,
+    code: key,
+    internalTitle: shortText,
+    publicTitle: shortText,
+    workerPathsAllowed: key,
+  }),
+  positionUpdate: defineFormSchema({
+    commandKey: ref,
+    positionId: ref,
+    expectedVersion: version,
+    code: key,
+    internalTitle: shortText,
+    publicTitle: shortText,
+    workerPathsAllowed: key,
+  }),
+  descriptionCreate: defineFormSchema({
+    commandKey: ref,
+    positionId: ref,
+    publicTitle: shortText,
+    summary,
+    body,
+  }),
+  descriptionUpdate: defineFormSchema({
+    commandKey: ref,
+    positionId: ref,
+    descriptionId: ref,
+    expectedVersion: version,
+    publicTitle: shortText,
+    summary,
+    body,
+  }),
+  cycleCreate: defineFormSchema({
+    commandKey: ref,
+    positionId: ref,
+    placement: { maxLength: 80 },
+    code: key,
+    internalLabel: shortText,
+    publicLabel: shortText,
+    opensAt: localTime,
+    closesAt: localTime,
+    openEnded: key,
+  }),
+  cycleUpdate: defineFormSchema({
+    commandKey: ref,
+    positionId: ref,
+    cycleId: ref,
+    expectedVersion: version,
+    code: key,
+    internalLabel: shortText,
+    publicLabel: shortText,
+    opensAt: localTime,
+    closesAt: localTime,
+    openEnded: key,
+  }),
+  // M2.1 public start-application handoff: only the public reference.
+  startApplication: defineFormSchema({ reference: key }),
 });

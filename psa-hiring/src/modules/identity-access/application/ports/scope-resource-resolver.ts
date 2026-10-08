@@ -10,12 +10,16 @@ import type {
 
 // Server-owned scope/resource resolution port (packet M1.4 §10.2,
 // ADR-0005). Organization, branch, team, assignment-set, audit-assignment,
-// person, and candidacy records belong to later modules (M2+); they will
-// provide the real adapters. Until then:
+// person, and candidacy records belong to later modules (M2+); they
+// provide the real adapters:
 //
-// - UnavailableScopeResolver (the runtime default) answers UNAVAILABLE to
-//   everything, so no scoped decision can allow and no assignment with an
-//   unresolved reference can be persisted.
+// - OrganizationScopeResolver (organization module, M2.1) is the runtime
+//   default. It resolves organization/branch/team scopes and the
+//   organization module's records from real rows, and answers UNAVAILABLE
+//   for assignment-set and audit-assignment scopes, which have no tables
+//   yet.
+// - UnavailableScopeResolver answers UNAVAILABLE to everything (tests of
+//   the fail-closed path).
 // - SyntheticScopeResolver exists for tests only and refuses to construct
 //   outside APP_ENV=test.
 //

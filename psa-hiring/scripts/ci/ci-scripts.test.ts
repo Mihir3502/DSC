@@ -13,6 +13,7 @@ import path from "node:path";
 import {
   scannedCommits,
   summarize,
+  textCommitCount,
   validateGitleaksConfig,
 } from "./secret-scan";
 
@@ -132,6 +133,28 @@ describe("secret-scan", () => {
     expect(scannedCommits("INF 9 commits scanned.")).toBe(9);
     expect(scannedCommits("INF 1 commit scanned.")).toBe(1);
     expect(scannedCommits("fatal: detected dubious ownership")).toBeUndefined();
+  });
+
+  it("expects only commits with a text change (binary-only commits have no patch)", () => {
+    const a = "a".repeat(40);
+    const b = "b".repeat(40);
+    const c = "c".repeat(40);
+    const log = [
+      `@@${a}`,
+      "",
+      "-\t-\t.DS_Store",
+      `@@${b}`,
+      "",
+      "3\t1\tsrc/x.ts",
+      "-\t-\timage.png",
+      `@@${c}`,
+      "",
+      "0\t2\tREADME.md",
+      "",
+    ].join("\n");
+    expect(textCommitCount(log)).toBe(2);
+    expect(textCommitCount("")).toBe(0);
+    expect(textCommitCount(`@@${a}\n`)).toBe(0);
   });
 
   it("summarizes findings without any secret value", () => {

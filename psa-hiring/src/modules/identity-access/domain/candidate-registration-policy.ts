@@ -54,6 +54,8 @@ export type RegistrationSource = (typeof registrationSources)[number];
  */
 const continuationDestinations = Object.freeze({
   CANDIDATE_SECURITY: "/candidate/security",
+  /** M2.1 start-application handoff boundary (M2.2 creates the candidacy). */
+  APPLICATION_START: "/candidate/applications/new",
 } as const);
 export type ContinuationKey = keyof typeof continuationDestinations;
 export const DEFAULT_CONTINUATION: ContinuationKey = "CANDIDATE_SECURITY";

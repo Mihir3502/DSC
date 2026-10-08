@@ -36,6 +36,13 @@
       "when": 1791350518953,
       "tag": "0004_audit_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791426598217,
+      "tag": "0005_organization_hiring_cycle",
+      "breakpoints": true
     }
   ]
 }

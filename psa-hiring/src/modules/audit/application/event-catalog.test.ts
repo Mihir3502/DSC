@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { scopeTypes } from "@/modules/identity-access/domain/authorization-vocabulary";
-import { auditScopeTypes } from "../domain/vocabulary";
+import { auditScopeTypes, targetTypes } from "../domain/vocabulary";
 import * as auditModule from "../index";
 import {
   catalogEventNames,
@@ -36,14 +36,17 @@ describe("audit event catalog", () => {
       ...sourceFiles(path.join(root, "scripts")),
     ]) {
       const text = readFileSync(file, "utf8");
-      for (const match of text.matchAll(/\bcode:\s*"([a-z]+\.[a-z0-9_]+)"/g)) {
+      for (const match of text.matchAll(
+        /\bcode:\s*"([a-z][a-z_]*\.[a-z0-9_]+)"/g,
+      )) {
         emitted.add(match[1]);
       }
     }
     const unregistered = [...emitted].filter(
       (name) =>
-        /^(auth|staff|authz|account|audit)\./.test(name) &&
-        !findEventDefinition(name),
+        /^(auth|staff|authz|account|audit|organization|branch|team|position|job_description|hiring_cycle)\./.test(
+          name,
+        ) && !findEventDefinition(name),
     );
     expect(unregistered).toEqual([]);
   });
@@ -66,6 +69,17 @@ describe("audit event catalog", () => {
 
   it("mirrors the identity scope vocabulary", () => {
     expect([...auditScopeTypes]).toEqual([...scopeTypes]);
+  });
+
+  it("keeps the target-type CHECK constraint in step with the vocabulary", () => {
+    const schema = readFileSync(
+      path.join(root, "src/modules/audit/infrastructure/audit-schema.ts"),
+      "utf8",
+    );
+    const check = /target_type IN \(([^)]*)\)/.exec(schema)?.[1] ?? "";
+    expect(check.split(",").map((t) => t.trim().replaceAll("'", ""))).toEqual([
+      ...targetTypes,
+    ]);
   });
 
   it("exposes no update, delete, repair, rehash, export, or generic append", () => {

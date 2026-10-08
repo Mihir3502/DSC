@@ -158,6 +158,21 @@ export async function applyLocalDatabaseGrants(
     );
   }
 
+  // M2.1 organization configuration (packet M2.1 §22, ADR-0013): the
+  // runtime role never deletes or truncates configuration history, and
+  // command receipts are insert-only. Triggers refuse the same changes for
+  // every role; these privileges are defense in depth.
+  for (const table of organizationTables) {
+    if (await tableExists(admin, `app.${table}`)) {
+      statements.push(`REVOKE DELETE, TRUNCATE ON app.${table} FROM ${app}`);
+    }
+  }
+  if (await tableExists(admin, "app.organization_command_receipt")) {
+    statements.push(
+      `REVOKE UPDATE, DELETE, TRUNCATE ON app.organization_command_receipt FROM ${app}`,
+    );
+  }
+
   // The runtime role reaches audit storage only through the reviewed
   // SECURITY DEFINER append functions, and may read only the projection
   // columns of audit_event: never integrity hashes, key versions, chain
@@ -185,8 +200,20 @@ export async function applyLocalDatabaseGrants(
     `schema auth: owned by ${migrator}; ${app} has SELECT/INSERT/UPDATE, DELETE only on auth.session, auth.verification, auth.two_factor, and auth.totp_replay_guard`,
     `authorization: ${app} has SELECT only on auth.role, auth.permission, auth.role_permission; INSERT and lifecycle-column UPDATE only on auth.user_role_assignment; no DELETE`,
     `audit: owned by ${migrator}, no default privileges; ${app} has EXECUTE on the append functions and column-limited SELECT on audit.audit_event only`,
+    `organization configuration: ${app} has SELECT/INSERT/UPDATE (no DELETE/TRUNCATE); command receipts are INSERT/SELECT only`,
   ];
 }
+
+/** M2.1 organization-module tables (no runtime DELETE/TRUNCATE). */
+export const organizationTables = [
+  "organization",
+  "branch",
+  "team",
+  "position",
+  "job_description_version",
+  "hiring_cycle",
+  "organization_command_receipt",
+] as const;
 
 /** Assignment columns the runtime role may update (lifecycle only). */
 export const assignmentLifecycleColumns = [

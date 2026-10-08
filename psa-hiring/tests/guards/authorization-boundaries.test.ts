@@ -6,6 +6,8 @@ import { routeManifest } from "@/app/_security/route-manifest";
 import { formSchemas } from "@/app/_auth/form-schemas";
 import { selfServicePolicies } from "@/modules/identity-access/domain/self-service-policy";
 import { securityProjectionNames } from "@/modules/identity-access/presentation/security-view-models";
+import { findPermission } from "@/modules/identity-access/policy/permission-catalog";
+import { organizationProjectionNames } from "@/modules/organization/presentation/staff-views";
 import { isProtectedPath } from "@/shared/security/protected-cache-policy";
 import {
   codeLines,
@@ -48,6 +50,25 @@ const patterns = {
   staticRendering: /force-static|revalidate\s*=|["']use cache["']/,
   secretRetrieval: /viewBackupCodes|getTOTPURI|get-totp-uri\b(?!["'])/,
 } as const;
+
+/** An exported (async or plain) function's text up to the next export. */
+function exportedFunction(text: string, name: string): string | null {
+  const start = text.search(
+    new RegExp(`^export\\s+(?:async\\s+)?function\\s+${name}\\b`, "m"),
+  );
+  if (start < 0) return null;
+  const rest = text.slice(start + 1);
+  const next = rest.search(/^export\s/m);
+  return next < 0 ? text.slice(start) : text.slice(start, start + 1 + next);
+}
+
+/** The organization-module application file defining a service. */
+function organizationService(name: string) {
+  return listFiles("src/modules/organization/application")
+    .filter((f) => /\.ts$/.test(f) && !/\.test\.ts$/.test(f))
+    .map((f) => ({ text: read(f), body: exportedFunction(read(f), name) }))
+    .find((x) => x.body);
+}
 
 /** Findings as "file:line rule" (never source text). */
 function scan(
@@ -128,6 +149,68 @@ describe("route and entry-point manifest", () => {
         }
         continue;
       }
+      if (entry.authorization.kind === "PERMISSION" && entry.service) {
+        // M2.1: the delivery calls one named organization service, which
+        // authorizes the declared catalog permissions through the M1
+        // central service; recent-auth declarations match the catalog.
+        const body =
+          entry.kind === "SERVER_ACTION"
+            ? functionBody(text, entry.export!)
+            : text;
+        if (!body?.includes(`${entry.service}(`)) {
+          problems.push(`${entry.id}: delivery does not call ${entry.service}`);
+        }
+        const owner = organizationService(entry.service);
+        if (!owner) {
+          problems.push(
+            `${entry.id}: ${entry.service} is not an organization service`,
+          );
+          continue;
+        }
+        if (
+          !/authorizeConfiguration\(|authorizeScopedList\(|authorizeQueryScope\(|\ballows\(/.test(
+            owner.body ?? "",
+          )
+        ) {
+          problems.push(
+            `${entry.id}: ${entry.service} skips the authorization service`,
+          );
+        }
+        for (const code of entry.authorization.permissions) {
+          const permission = findPermission(code);
+          if (!permission || permission.status !== "ACTIVE") {
+            problems.push(`${entry.id}: unknown permission ${code}`);
+          }
+          if (!owner.text.includes(`"${code}"`)) {
+            problems.push(`${entry.id}: ${entry.service} never names ${code}`);
+          }
+          if (entry.kind === "SERVER_ACTION") {
+            const required = permission?.recentAuth?.policy ?? "NONE";
+            if (required !== entry.recentAuth) {
+              problems.push(`${entry.id}: recent-auth mismatch for ${code}`);
+            }
+          }
+        }
+        continue;
+      }
+      if (
+        entry.authorization.kind === "HANDOFF_REVALIDATION" &&
+        entry.service
+      ) {
+        if (!text.includes(`${entry.service}(`)) {
+          problems.push(`${entry.id}: delivery does not call ${entry.service}`);
+        }
+        const owner = organizationService(entry.service)?.body ?? "";
+        if (
+          !owner.includes("resolveCurrentCandidate(") ||
+          !owner.includes("verifyApplicationHandoff(")
+        ) {
+          problems.push(
+            `${entry.id}: handoff is not re-validated for a candidate`,
+          );
+        }
+        continue;
+      }
       if (entry.authorization.kind !== "SELF_SERVICE" || !entry.service) {
         problems.push(`${entry.id}: no application authorization`);
         continue;
@@ -198,7 +281,10 @@ describe("route and entry-point manifest", () => {
   it("names a reviewed exact projection for every protected data response", () => {
     for (const entry of routeManifest) {
       if (entry.output.endsWith(".v1")) {
-        expect(securityProjectionNames, entry.id).toContain(entry.output);
+        expect(
+          [...securityProjectionNames, ...organizationProjectionNames],
+          entry.id,
+        ).toContain(entry.output);
       }
       if (
         entry.authorization.kind === "SELF_SERVICE" &&
@@ -330,6 +416,16 @@ describe("delivery and client boundaries", () => {
     expect(problems).toEqual([]);
     expect(
       scan(sourceFiles, "test fixture import", /from\s+["'][^"']*tests\//),
+    ).toEqual([]);
+  });
+
+  it("never renders stored or request content as raw HTML (M2.1 content safety)", () => {
+    expect(
+      scan(
+        sourceFiles,
+        "raw HTML rendering",
+        /dangerouslySetInnerHTML|\.innerHTML\s*=|\.outerHTML\s*=|insertAdjacentHTML|document\.write/,
+      ),
     ).toEqual([]);
   });
 

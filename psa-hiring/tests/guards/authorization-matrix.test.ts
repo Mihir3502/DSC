@@ -39,7 +39,7 @@ describe("authorization matrix traceability", () => {
   const sections = [
     ["§7", "## 7. Data-Domain Permission Matrix", 31],
     ["§8", "## 8. Workflow Command Permission Matrix", 33],
-    ["§14", "## 14. Configuration Permissions", 12],
+    ["§14", "## 14. Configuration Permissions", 15],
   ] as const;
 
   for (const [ref, heading, expected] of sections) {

@@ -23,6 +23,14 @@ import {
 
 export const INVITATION_NAMESPACE = "registration-intent:";
 const PUBLIC_PURPOSE = "registration-intent.v1";
+/**
+ * M2.1 start-application handoff (ADR-0003 note): the same HMAC
+ * construction under a distinct purpose, so neither token verifies as the
+ * other. It carries only a hiring cycle's public reference.
+ */
+const HANDOFF_PURPOSE = "application-handoff.v1";
+export const APPLICATION_HANDOFF_TTL_SECONDS = 1800;
+const publicReferenceShape = /^[0-9a-hjkmnp-tv-z]{12}$/;
 const tokenShape = /^[A-Za-z0-9_-]{16,700}(\.[A-Za-z0-9_-]{16,128})?$/;
 
 /** The subset of Better Auth's internal adapter this repository uses. */
@@ -49,6 +57,15 @@ type PublicPayload = {
   n: string;
 };
 
+type HandoffPayload = {
+  v: 1;
+  p: typeof HANDOFF_PURPOSE;
+  ref: string;
+  iat: number;
+  exp: number;
+  n: string;
+};
+
 type InvitationValue = {
   source: "CANDIDATE_INVITATION";
   boundEmail: string;
@@ -68,10 +85,65 @@ export class RegistrationIntentRepository {
     private readonly now: () => Date = () => new Date(),
   ) {}
 
-  #sign(payloadPart: string): string {
+  #sign(payloadPart: string, purpose: string = PUBLIC_PURPOSE): string {
     return createHmac("sha256", this.settings.secret)
-      .update(`${PUBLIC_PURPOSE}.${payloadPart}`)
+      .update(`${purpose}.${payloadPart}`)
       .digest("base64url");
+  }
+
+  /**
+   * A signed, short-lived handoff bound to one hiring cycle's public
+   * reference. It grants nothing (availability is re-checked wherever it
+   * is used), so like the public intent it is not persisted.
+   */
+  issueApplicationHandoff(publicReference: string): string {
+    if (!publicReferenceShape.test(publicReference)) {
+      throw new Error("invalid public reference");
+    }
+    const iat = Math.floor(this.now().getTime() / 1000);
+    const payload: HandoffPayload = {
+      v: 1,
+      p: HANDOFF_PURPOSE,
+      ref: publicReference,
+      iat,
+      exp: iat + APPLICATION_HANDOFF_TTL_SECONDS,
+      n: randomBytes(9).toString("base64url"),
+    };
+    const part = Buffer.from(JSON.stringify(payload)).toString("base64url");
+    return `${part}.${this.#sign(part, HANDOFF_PURPOSE)}`;
+  }
+
+  /** The bound public reference, or null for anything invalid or expired. */
+  verifyApplicationHandoff(token: unknown): string | null {
+    if (typeof token !== "string" || !tokenShape.test(token)) return null;
+    const [part, signature] = token.split(".");
+    if (!part || !signature) return null;
+    const expected = Buffer.from(this.#sign(part, HANDOFF_PURPOSE));
+    const given = Buffer.from(signature);
+    if (expected.length !== given.length || !timingSafeEqual(expected, given)) {
+      return null;
+    }
+    let payload: Partial<HandoffPayload>;
+    try {
+      payload = JSON.parse(Buffer.from(part, "base64url").toString("utf8"));
+    } catch {
+      return null;
+    }
+    const nowSeconds = Math.floor(this.now().getTime() / 1000);
+    if (
+      payload.v !== 1 ||
+      payload.p !== HANDOFF_PURPOSE ||
+      typeof payload.ref !== "string" ||
+      !publicReferenceShape.test(payload.ref) ||
+      typeof payload.iat !== "number" ||
+      typeof payload.exp !== "number" ||
+      payload.iat > nowSeconds + 60 ||
+      payload.exp <= nowSeconds ||
+      payload.exp - payload.iat > APPLICATION_HANDOFF_TTL_SECONDS
+    ) {
+      return null;
+    }
+    return payload.ref;
   }
 
   /** Signed public intent with the generic candidate continuation. */

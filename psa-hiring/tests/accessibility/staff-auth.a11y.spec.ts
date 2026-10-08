@@ -106,6 +106,9 @@ test.describe("staff screens", { tag: "@critical" }, () => {
     await expect(page.getByRole("main").getByRole("alert")).toContainText(
       /saved your backup codes/,
     );
+    // The Server Action re-render briefly replaces the document title; wait
+    // for the settled title before axe (a missing title would still fail).
+    await expect(page).toHaveTitle(/^Activate staff account/);
     await expectNoBlockingViolations(page, testInfo);
   });
 

@@ -738,7 +738,7 @@ describe("event coverage (§17)", () => {
     }
   });
 
-  it("records exactly one classified event for every catalog event exercised by the M1 suites", () => {
+  it("records exactly one classified event for every catalog event exercised by the M1 and M2.1 suites", () => {
     // Events asserted here plus those asserted exactly-once elsewhere.
     const elsewhere = [
       "auth.registration_account_created",
@@ -760,6 +760,37 @@ describe("event coverage (§17)", () => {
       "audit.query_executed",
       "audit.query_denied",
       "audit.integrity_verification_failed",
+      // M2.1 configuration events: each asserted exactly once for its
+      // target, with codes-only metadata, in
+      // tests/integration/organization/configuration.test.ts.
+      "organization.created",
+      "organization.updated",
+      "organization.activated",
+      "organization.inactivated",
+      "branch.created",
+      "branch.updated",
+      "branch.activated",
+      "branch.inactivated",
+      "team.created",
+      "team.updated",
+      "team.activated",
+      "team.inactivated",
+      "position.created",
+      "position.updated",
+      "position.activated",
+      "position.inactivated",
+      "position.retired",
+      "job_description.draft_created",
+      "job_description.updated",
+      "job_description.published",
+      "job_description.superseded",
+      "hiring_cycle.created",
+      "hiring_cycle.updated",
+      "hiring_cycle.published",
+      "hiring_cycle.opened",
+      "hiring_cycle.closed",
+      "hiring_cycle.cancelled",
+      "hiring_cycle.archived",
     ];
     for (const name of elsewhere) covered.add(name);
     const all = [...new Set(eventCatalog.map((d) => d.name))];

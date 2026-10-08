@@ -52,7 +52,8 @@ export type FactKey =
   | "methodCategory"
   | "organizationRef"
   | "candidacyRef"
-  | "filterCodes";
+  | "filterCodes"
+  | "changeCodes";
 
 /** Who the actor is: the subject itself, a distinct acting account, or the system. */
 export type ActorRule = "SUBJECT" | "ACTOR" | "ACTOR_OR_SYSTEM" | "SYSTEM";
@@ -246,6 +247,43 @@ const assignment = (
       "assigned_scope_type",
       "policy_version",
     ],
+    ...extra,
+  });
+
+/**
+ * M2.1 organization configuration (packet M2.1 §20). Atomic with the
+ * change; one row per (target, new record version). Metadata carries only
+ * codes: changed field categories, reason, and policy version. Never
+ * names, labels, description content, dates, or URLs.
+ */
+const configuration = (
+  name: string,
+  action: string,
+  target: TargetType,
+  extra: Partial<Spec> = {},
+): EventDefinition =>
+  def({
+    name,
+    stream: "AUDIT",
+    category: "CONFIGURATION",
+    outcome: "SUCCEEDED",
+    atomicity: "IN_TRANSACTION",
+    action,
+    actor: "ACTOR_OR_SYSTEM",
+    target,
+    targetFrom: "recordRef",
+    requires: ["recordRef", "organizationRef", "newVersion"],
+    allows: [
+      "actorRef",
+      "systemActor",
+      "effective",
+      "permissionCode",
+      "reasonCode",
+      "previousVersion",
+      "changeCodes",
+    ],
+    idempotent: true,
+    projectable: ["changed_fields", "policy_version"],
     ...extra,
   });
 
@@ -482,7 +520,71 @@ const definitions: readonly EventDefinition[] = [
   security("audit.integrity_verification_failed", "FAILED", {
     requires: ["reasonCode"],
     allows: [],
-  }),
+  }), // M2.1 organization, position, and hiring-cycle configuration.
+  configuration("organization.created", "ORGANIZATION_CREATE", "ORGANIZATION"),
+  configuration("organization.updated", "ORGANIZATION_UPDATE", "ORGANIZATION"),
+  configuration(
+    "organization.activated",
+    "ORGANIZATION_ACTIVATE",
+    "ORGANIZATION",
+  ),
+  configuration(
+    "organization.inactivated",
+    "ORGANIZATION_INACTIVATE",
+    "ORGANIZATION",
+  ),
+  configuration("branch.created", "BRANCH_CREATE", "BRANCH"),
+  configuration("branch.updated", "BRANCH_UPDATE", "BRANCH"),
+  configuration("branch.activated", "BRANCH_ACTIVATE", "BRANCH"),
+  configuration("branch.inactivated", "BRANCH_INACTIVATE", "BRANCH"),
+  configuration("team.created", "TEAM_CREATE", "TEAM"),
+  configuration("team.updated", "TEAM_UPDATE", "TEAM"),
+  configuration("team.activated", "TEAM_ACTIVATE", "TEAM"),
+  configuration("team.inactivated", "TEAM_INACTIVATE", "TEAM"),
+  configuration("position.created", "POSITION_CREATE", "POSITION"),
+  configuration("position.updated", "POSITION_UPDATE", "POSITION"),
+  configuration("position.activated", "POSITION_ACTIVATE", "POSITION"),
+  configuration("position.inactivated", "POSITION_INACTIVATE", "POSITION"),
+  configuration("position.retired", "POSITION_RETIRE", "POSITION"),
+  configuration(
+    "job_description.draft_created",
+    "JOB_DESCRIPTION_DRAFT_CREATE",
+    "JOB_DESCRIPTION_VERSION",
+  ),
+  configuration(
+    "job_description.updated",
+    "JOB_DESCRIPTION_UPDATE",
+    "JOB_DESCRIPTION_VERSION",
+  ),
+  configuration(
+    "job_description.published",
+    "JOB_DESCRIPTION_PUBLISH",
+    "JOB_DESCRIPTION_VERSION",
+  ),
+  configuration(
+    "job_description.superseded",
+    "JOB_DESCRIPTION_SUPERSEDE",
+    "JOB_DESCRIPTION_VERSION",
+  ),
+  configuration("hiring_cycle.created", "HIRING_CYCLE_CREATE", "HIRING_CYCLE"),
+  configuration("hiring_cycle.updated", "HIRING_CYCLE_UPDATE", "HIRING_CYCLE"),
+  configuration(
+    "hiring_cycle.published",
+    "HIRING_CYCLE_PUBLISH",
+    "HIRING_CYCLE",
+  ),
+  configuration("hiring_cycle.opened", "HIRING_CYCLE_OPEN", "HIRING_CYCLE"),
+  configuration("hiring_cycle.closed", "HIRING_CYCLE_CLOSE", "HIRING_CYCLE"),
+  configuration(
+    "hiring_cycle.cancelled",
+    "HIRING_CYCLE_CANCEL",
+    "HIRING_CYCLE",
+  ),
+  configuration(
+    "hiring_cycle.archived",
+    "HIRING_CYCLE_ARCHIVE",
+    "HIRING_CYCLE",
+  ),
 ];
 
 const registry = new Map<string, EventDefinition>();
@@ -566,6 +668,34 @@ export const catalogEventNames = [
   "audit.query_executed",
   "audit.query_denied",
   "audit.integrity_verification_failed",
+  "organization.created",
+  "organization.updated",
+  "organization.activated",
+  "organization.inactivated",
+  "branch.created",
+  "branch.updated",
+  "branch.activated",
+  "branch.inactivated",
+  "team.created",
+  "team.updated",
+  "team.activated",
+  "team.inactivated",
+  "position.created",
+  "position.updated",
+  "position.activated",
+  "position.inactivated",
+  "position.retired",
+  "job_description.draft_created",
+  "job_description.updated",
+  "job_description.published",
+  "job_description.superseded",
+  "hiring_cycle.created",
+  "hiring_cycle.updated",
+  "hiring_cycle.published",
+  "hiring_cycle.opened",
+  "hiring_cycle.closed",
+  "hiring_cycle.cancelled",
+  "hiring_cycle.archived",
 ] as const;
 export type CatalogEventName = (typeof catalogEventNames)[number];
 

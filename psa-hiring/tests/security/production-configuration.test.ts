@@ -10,6 +10,9 @@ import {
 } from "@/modules/identity-access/infrastructure/scope-resolvers";
 import { NonproductionHarnessGate } from "@/modules/identity-access/infrastructure/staff-administration-gate";
 import { buildProductionEnvInput } from "../fixtures/foundation";
+import type { ScopeResourceResolver } from "@/modules/identity-access/application/ports/scope-resource-resolver";
+import { refusingBootstrap } from "@/modules/organization/application/configuration-runtime";
+import { OrganizationScopeResolver } from "@/modules/organization/infrastructure/organization-scope-resolver";
 
 // M1.7 §20, §31(14), AC-M1.7-13: production-like configuration rejects
 // every test adapter, test key/secret, insecure setting, and harness, in
@@ -131,6 +134,31 @@ describe("production-like configuration refuses unsafe settings (§20)", () => {
       }
     },
   );
+
+  it("refuses the M2.1 bootstrap provisioning actor by default and fails scope resolution closed (M2.1)", async () => {
+    expect(refusingBootstrap.allowsBootstrap()).toBe(false);
+    // A real resolver whose database is unreachable answers UNAVAILABLE,
+    // and assignment-set/audit-assignment scopes have no adapter yet.
+    const broken: ScopeResourceResolver = new OrganizationScopeResolver(() => {
+      throw new Error("TEST database unavailable");
+    });
+    const id = "00000000-0000-4000-8000-000000000001";
+    const at = new Date();
+    expect(await broken.resolveScope("ORGANIZATION", id, at, {})).toEqual({
+      status: "UNAVAILABLE",
+    });
+    expect(await broken.resolveResource(id, at, {})).toEqual({
+      status: "UNAVAILABLE",
+    });
+    for (const type of ["ASSIGNED_RECORDS", "AUDIT_ASSIGNMENT"] as const) {
+      expect(await broken.resolveScope(type, id, at, {})).toEqual({
+        status: "UNAVAILABLE",
+      });
+    }
+    expect(await broken.resolveScope("TEAM", "not-a-uuid", at, {})).toEqual({
+      status: "MISSING",
+    });
+  });
 
   it("accepts the same production-shaped configuration once every unsafe value is removed", () => {
     expect(parseServerEnv(buildProductionEnvInput()).APP_ENV).toBe(

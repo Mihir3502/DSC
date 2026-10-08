@@ -261,7 +261,12 @@ Every denial writes one bounded log line (`authz.denied`: permission, reason, po
 - **M1.5:** route, object, and field guards; serializers and redaction; files, search, and exports; adapters from denial reasons to HTTP or UI.
 - **M1.6:** append-only audit persistence, atomic with the transaction. *Delivered by ADR-0012: assignment events, the subject-version change, and the catalog apply append inside their transactions; a denied high-risk command records exactly one `authz.high_risk_denied`.*
 - **M1.7 (defect D1, regression-tested):** the decision engine now also refuses any stored assignment whose scope type is outside the role's approved set (`allowedScopeTypesByRole`: auditor only `AUDIT_ASSIGNMENT`, administrator only `ORGANIZATION`). Before, only proposal validation enforced it, so a row written around that validation was honored. Such a row is now treated as tampering (`POLICY_UNAVAILABLE`), exactly like an unknown role; no grant or scope semantics changed.
-- **M2+:** scope entities and real resolvers, ownership, designations, and workflow policies.
+- **M2.1 (catalog version 2, approved 2026-10-07):**
+  - **Permissions.** Adds 25 narrow configuration permissions. They are traced to the new `ROLE_PERMISSION_MATRIX.md` §14 rows "Organization hierarchy", "Positions and job descriptions", and "Hiring cycles". The grants are the restrictive mapping recorded there.
+  - **Recent authentication.** Status-changing and publishing actions require `RECENT_STAFF_AUTH` with the new page-continuable purpose `CONFIGURATION_CHANGE` and a reason code.
+  - **Real resolver.** `OrganizationScopeResolver` (organization module) replaces `UnavailableScopeResolver` as the runtime default for `ORGANIZATION`, `BRANCH`, and `TEAM` scopes and for organization-module records. It resolves ACTIVE only when the entity and every ancestor are ACTIVE. `ASSIGNED_RECORDS`, `AUDIT_ASSIGNMENT`, relationships, designations, and candidate ownership still resolve unavailable.
+  - **Existing references.** No backfill was needed: no production assignment exists, and pre-production references that do not resolve keep denying. Proposals still refuse unless the reference resolves ACTIVE.
+- **M2.2+:** remaining scope entities and resolvers, ownership, designations, and workflow policies.
 
 ## Rejected alternatives
 

@@ -98,6 +98,12 @@ describe("proxy (trusted web boundary)", () => {
     "/candidate/security",
     "/staff",
     "/api/auth/get-session",
+    // M2.1: staff position administration, the handoff page, and the
+    // candidate application boundary.
+    "/staff/admin/positions",
+    "/staff/admin/positions/00000000-0000-4000-8000-000000000001",
+    "/apply/k3m9x2p7q4ad",
+    "/candidate/applications/new",
   ])("marks protected path %s private no-store (M1.7)", (path) => {
     const { response } = run(path);
     expect(response.headers.get("cache-control")).toBe(
@@ -114,9 +120,27 @@ describe("proxy (trusted web boundary)", () => {
     );
   });
 
+  it.each(["/positions", "/positions/k3m9x2p7q4ad"])(
+    "makes public position page %s revalidate every request with no shared storage (M2.1, ADR-0013)",
+    (path) => {
+      const { response } = run(path);
+      expect(response.headers.get("cache-control")).toBe(
+        "public, max-age=0, must-revalidate",
+      );
+      expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+    },
+  );
+
   it.each([
     ["/", "/"],
     ["/staff", "/staff"],
+    ["/positions/k3m9x2p7q4ad", "/positions/[positionId]"],
+    ["/apply/k3m9x2p7q4ad", "/apply/[positionId]"],
+    [
+      "/staff/admin/positions/00000000-0000-4000-8000-000000000001/cycles/00000000-0000-4000-8000-000000000002",
+      "/staff/admin/positions/[positionId]/cycles/[cycleId]",
+    ],
+    ["/positions/a/b", "/(other)"],
     ["/candidate/123", "/(other)"],
     ["/api/anything/else", "/api/(other)"],
     ["/%0Aforged", "/(other)"],

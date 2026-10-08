@@ -1,4 +1,5 @@
 import type { SelfServicePolicyCode } from "@/modules/identity-access/domain/self-service-policy";
+import type { organizationProjectionNames } from "@/modules/organization/presentation/staff-views";
 import type { formSchemas } from "@/app/_auth/form-schemas";
 
 // Reviewed route and entry-point authorization manifest (packet M1.5 §7,
@@ -63,11 +64,28 @@ export type EntryAuthorization =
   | Readonly<{
       kind: "LOCAL_ONLY";
       environments: readonly ("local" | "test")[];
-    }>;
+    }>
+  /**
+   * M2.1 business configuration: the named organization-module service
+   * authorizes these catalog permissions through the M1 central service
+   * (role, server-resolved scope, sensitivity, recent auth, reason).
+   */
+  | Readonly<{ kind: "PERMISSION"; permissions: readonly string[] }>
+  /**
+   * M2.1 start-application boundary: the verified candidate's own signed
+   * handoff, re-validated against the opening's live availability.
+   */
+  | Readonly<{ kind: "HANDOFF_REVALIDATION" }>;
 
 export type OutputContract =
   | "candidate.account_security.v1"
   | "staff.account_security.v1"
+  | (typeof organizationProjectionNames)[number]
+  /** M2.1 public-only hiring-cycle projections (classification PUBLIC). */
+  | "PUBLIC_POSITION_LIST"
+  | "PUBLIC_POSITION_DETAIL"
+  /** M2.1 handoff boundary: closed state plus public opening fields. */
+  | "HANDOFF_STATE"
   | "FORM_STATE"
   | "ONE_TIME_SECRET_DISPLAY"
   | "REDIRECT_ONLY"
@@ -96,7 +114,16 @@ export type ManifestEntry = Readonly<{
   /** The application query/command the entry calls (identity-access). */
   service?: string;
   /** How the target resource is bound (always server-side). */
-  resource?: "OWN_ACCOUNT" | "OWN_SESSION_BY_OPAQUE_REF" | "NONE";
+  resource?:
+    | "OWN_ACCOUNT"
+    | "OWN_SESSION_BY_OPAQUE_REF"
+    /** M2.1: organization-module records re-resolved on the server. */
+    | "ORGANIZATION_CONFIGURATION"
+    /** M2.1: a hiring cycle addressed only by its public reference. */
+    | "PUBLIC_HIRING_CYCLE"
+    /** M2.1: the caller's own signed start-application handoff. */
+    | "OWN_HANDOFF"
+    | "NONE";
   output: OutputContract;
   input?: keyof typeof formSchemas;
   /** State-changing requests: Next.js Server Action origin check. */
@@ -216,6 +243,70 @@ const publicActions = `${A}/(public)/auth-actions.ts`;
 const staffPublicActions = `${A}/(public)/staff/staff-auth-actions.ts`;
 const candidateActions = `${A}/(candidate)/candidate/(account)/security/actions.ts`;
 const staffActions = `${A}/(staff)/staff/(account)/security/actions.ts`;
+const adminPositions = `${A}/(staff)/staff/(account)/admin/positions`;
+const positionActions = `${adminPositions}/actions.ts`;
+
+/** M2.1 staff configuration page (organization module, ADR-0013). */
+const configPage = (
+  id: string,
+  file: string,
+  route: string,
+  service: string,
+  output: OutputContract,
+  permissions: readonly string[],
+): ManifestEntry => ({
+  id,
+  kind: "PAGE",
+  file,
+  method: "RENDER",
+  route,
+  audience: "STAFF",
+  authentication: "REQUIRED",
+  account: "ACTIVE_MFA_COMPLETE_STAFF",
+  authorization: { kind: "PERMISSION", permissions },
+  service,
+  resource: "ORGANIZATION_CONFIGURATION",
+  output,
+  csrf: "NO_STATE_CHANGE",
+  rateLimit: [],
+  cache: "PRIVATE_NO_STORE",
+  denial: "SIGN_IN_OR_NOT_FOUND",
+  recentAuth: "NONE",
+  futureAudit: "NONE",
+});
+
+/** M2.1 staff configuration command (named, audited, idempotent). */
+const configAction = (
+  id: string,
+  name: string,
+  service: string,
+  input: keyof typeof formSchemas,
+  permissions: readonly string[],
+  recentAuth: "NONE" | "RECENT_STAFF_AUTH",
+): ManifestEntry => ({
+  id,
+  kind: "SERVER_ACTION",
+  file: positionActions,
+  export: name,
+  method: "POST",
+  route: "/staff/admin/positions",
+  audience: "STAFF",
+  authentication: "REQUIRED",
+  account: "ACTIVE_MFA_COMPLETE_STAFF",
+  authorization: { kind: "PERMISSION", permissions },
+  service,
+  resource: "ORGANIZATION_CONFIGURATION",
+  output: "FORM_STATE",
+  input,
+  csrf: "NEXT_SERVER_ACTION_ORIGIN",
+  rateLimit: [],
+  cache: "PRIVATE_NO_STORE",
+  denial: "SIGN_IN_NOT_FOUND_OR_REAUTH",
+  recentAuth,
+  futureAudit: "SECURITY_EVENT_AND_DENIAL",
+});
+
+const R = "RECENT_STAFF_AUTH" as const;
 
 export const routeManifest: readonly ManifestEntry[] = Object.freeze([
   // ------------------------------------------------------------ framework
@@ -798,6 +889,336 @@ export const routeManifest: readonly ManifestEntry[] = Object.freeze([
     denial: "NONE",
     recentAuth: "NONE",
     futureAudit: "SECURITY_EVENT",
+  },
+
+  // ------------------------------------- M2.1 position administration
+  configPage(
+    "staff.positions_page",
+    `${adminPositions}/page.tsx`,
+    "/staff/admin/positions",
+    "queryPositionList",
+    "staff.position_list.v1",
+    ["position.read", "position.create"],
+  ),
+  configPage(
+    "staff.position_new_page",
+    `${adminPositions}/new/page.tsx`,
+    "/staff/admin/positions/new",
+    "queryPositionForm",
+    "staff.position_form.v1",
+    ["organization.read", "position.create"],
+  ),
+  configPage(
+    "staff.position_page",
+    `${adminPositions}/[positionId]/page.tsx`,
+    "/staff/admin/positions/[positionId]",
+    "queryPositionDetail",
+    "staff.position_detail.v1",
+    ["position.read", "job_description.read", "hiring_cycle.read"],
+  ),
+  configPage(
+    "staff.job_description_page",
+    `${adminPositions}/[positionId]/descriptions/[versionId]/page.tsx`,
+    "/staff/admin/positions/[positionId]/descriptions/[versionId]",
+    "queryDescriptionDetail",
+    "staff.job_description_detail.v1",
+    ["job_description.read"],
+  ),
+  configPage(
+    "staff.hiring_cycle_new_page",
+    `${adminPositions}/[positionId]/cycles/new/page.tsx`,
+    "/staff/admin/positions/[positionId]/cycles/new",
+    "queryCycleForm",
+    "staff.hiring_cycle_form.v1",
+    ["position.read", "hiring_cycle.create"],
+  ),
+  configPage(
+    "staff.hiring_cycle_page",
+    `${adminPositions}/[positionId]/cycles/[cycleId]/page.tsx`,
+    "/staff/admin/positions/[positionId]/cycles/[cycleId]",
+    "queryCycleDetail",
+    "staff.hiring_cycle_detail.v1",
+    ["hiring_cycle.read"],
+  ),
+  configPage(
+    "staff.hierarchy_page",
+    `${adminPositions}/hierarchy/page.tsx`,
+    "/staff/admin/positions/hierarchy",
+    "queryHierarchy",
+    "staff.organization_hierarchy.v1",
+    ["organization.read"],
+  ),
+  configAction(
+    "staff.update_organization",
+    "updateOrganizationAction",
+    "updateOrganizationDetails",
+    "organizationUpdate",
+    ["organization.configure"],
+    "NONE",
+  ),
+  configAction(
+    "staff.activate_organization",
+    "activateOrganizationAction",
+    "changeOrganizationStatus",
+    "configurationStatus",
+    ["organization.status_change"],
+    R,
+  ),
+  configAction(
+    "staff.inactivate_organization",
+    "inactivateOrganizationAction",
+    "changeOrganizationStatus",
+    "configurationStatus",
+    ["organization.status_change"],
+    R,
+  ),
+  configAction(
+    "staff.create_branch",
+    "createBranchAction",
+    "createBranch",
+    "branchCreate",
+    ["branch.configure"],
+    "NONE",
+  ),
+  configAction(
+    "staff.update_branch",
+    "updateBranchAction",
+    "updateBranchDetails",
+    "branchUpdate",
+    ["branch.configure"],
+    "NONE",
+  ),
+  configAction(
+    "staff.activate_branch",
+    "activateBranchAction",
+    "changeBranchStatus",
+    "configurationStatus",
+    ["branch.status_change"],
+    R,
+  ),
+  configAction(
+    "staff.inactivate_branch",
+    "inactivateBranchAction",
+    "changeBranchStatus",
+    "configurationStatus",
+    ["branch.status_change"],
+    R,
+  ),
+  configAction(
+    "staff.create_team",
+    "createTeamAction",
+    "createTeam",
+    "teamCreate",
+    ["team.configure"],
+    "NONE",
+  ),
+  configAction(
+    "staff.update_team",
+    "updateTeamAction",
+    "updateTeamDetails",
+    "teamUpdate",
+    ["team.configure"],
+    "NONE",
+  ),
+  configAction(
+    "staff.activate_team",
+    "activateTeamAction",
+    "changeTeamStatus",
+    "configurationStatus",
+    ["team.status_change"],
+    R,
+  ),
+  configAction(
+    "staff.inactivate_team",
+    "inactivateTeamAction",
+    "changeTeamStatus",
+    "configurationStatus",
+    ["team.status_change"],
+    R,
+  ),
+  configAction(
+    "staff.create_position",
+    "createPositionAction",
+    "createPosition",
+    "positionCreate",
+    ["position.create"],
+    "NONE",
+  ),
+  configAction(
+    "staff.update_position",
+    "updatePositionAction",
+    "updatePositionDetails",
+    "positionUpdate",
+    ["position.edit"],
+    "NONE",
+  ),
+  configAction(
+    "staff.activate_position",
+    "activatePositionAction",
+    "changePositionStatus",
+    "configurationStatus",
+    ["position.activate"],
+    R,
+  ),
+  configAction(
+    "staff.inactivate_position",
+    "inactivatePositionAction",
+    "changePositionStatus",
+    "configurationStatus",
+    ["position.activate"],
+    R,
+  ),
+  configAction(
+    "staff.retire_position",
+    "retirePositionAction",
+    "changePositionStatus",
+    "configurationStatus",
+    ["position.retire"],
+    R,
+  ),
+  configAction(
+    "staff.create_job_description_draft",
+    "createDescriptionDraftAction",
+    "createDescriptionDraft",
+    "descriptionCreate",
+    ["job_description.edit"],
+    "NONE",
+  ),
+  configAction(
+    "staff.update_job_description_draft",
+    "updateDescriptionDraftAction",
+    "updateDescriptionDraftContent",
+    "descriptionUpdate",
+    ["job_description.edit"],
+    "NONE",
+  ),
+  configAction(
+    "staff.publish_job_description",
+    "publishDescriptionAction",
+    "publishDescription",
+    "configurationStatus",
+    ["job_description.publish"],
+    R,
+  ),
+  configAction(
+    "staff.create_hiring_cycle",
+    "createHiringCycleAction",
+    "createHiringCycle",
+    "cycleCreate",
+    ["hiring_cycle.create"],
+    "NONE",
+  ),
+  configAction(
+    "staff.update_hiring_cycle",
+    "updateHiringCycleAction",
+    "updateHiringCycleDraft",
+    "cycleUpdate",
+    ["hiring_cycle.edit"],
+    "NONE",
+  ),
+  configAction(
+    "staff.publish_hiring_cycle",
+    "publishHiringCycleAction",
+    "transitionHiringCycle",
+    "configurationStatus",
+    ["hiring_cycle.publish"],
+    R,
+  ),
+  configAction(
+    "staff.open_hiring_cycle",
+    "openHiringCycleAction",
+    "transitionHiringCycle",
+    "configurationStatus",
+    ["hiring_cycle.open"],
+    R,
+  ),
+  configAction(
+    "staff.close_hiring_cycle",
+    "closeHiringCycleAction",
+    "transitionHiringCycle",
+    "configurationStatus",
+    ["hiring_cycle.close"],
+    R,
+  ),
+  configAction(
+    "staff.cancel_hiring_cycle",
+    "cancelHiringCycleAction",
+    "transitionHiringCycle",
+    "configurationStatus",
+    ["hiring_cycle.cancel"],
+    R,
+  ),
+  configAction(
+    "staff.archive_hiring_cycle",
+    "archiveHiringCycleAction",
+    "transitionHiringCycle",
+    "configurationStatus",
+    ["hiring_cycle.archive"],
+    R,
+  ),
+
+  // ------------------------------- M2.1 public positions and handoff
+  publicPage(
+    "public.positions",
+    `${A}/(public)/positions/page.tsx`,
+    "/positions",
+    "PUBLIC_NO_PERSONAL_DATA",
+    "PUBLIC_POSITION_LIST",
+    { service: "queryPublicPositions", resource: "PUBLIC_HIRING_CYCLE" },
+  ),
+  publicPage(
+    "public.position_detail",
+    `${A}/(public)/positions/[positionId]/page.tsx`,
+    "/positions/[positionId]",
+    "PUBLIC_NO_PERSONAL_DATA",
+    "PUBLIC_POSITION_DETAIL",
+    {
+      service: "queryPublicPosition",
+      resource: "PUBLIC_HIRING_CYCLE",
+      denial: "NOT_FOUND",
+    },
+  ),
+  publicPage(
+    "public.start_application_page",
+    `${A}/(public)/apply/[positionId]/page.tsx`,
+    "/apply/[positionId]",
+    "PRIVATE_NO_STORE",
+    "PUBLIC_POSITION_DETAIL",
+    {
+      service: "queryHandoffOpening",
+      resource: "PUBLIC_HIRING_CYCLE",
+      denial: "NOT_FOUND",
+    },
+  ),
+  publicAction(
+    "public.start_application",
+    `${A}/(public)/apply/[positionId]/actions.ts`,
+    "startApplicationAction",
+    "/apply/[positionId]",
+    "startApplication",
+    "beginApplicationHandoff",
+    [],
+    { resource: "PUBLIC_HIRING_CYCLE", output: "REDIRECT_ONLY" },
+  ),
+  {
+    id: "candidate.application_start",
+    kind: "PAGE",
+    file: `${A}/(candidate)/candidate/(account)/applications/new/page.tsx`,
+    method: "RENDER",
+    route: "/candidate/applications/new",
+    audience: "CANDIDATE",
+    authentication: "REQUIRED",
+    account: "ACTIVE_VERIFIED_CANDIDATE",
+    authorization: { kind: "HANDOFF_REVALIDATION" },
+    service: "confirmApplicationHandoff",
+    resource: "OWN_HANDOFF",
+    output: "HANDOFF_STATE",
+    csrf: "NO_STATE_CHANGE",
+    rateLimit: [],
+    cache: "PRIVATE_NO_STORE",
+    denial: "SIGN_IN_OR_NOT_FOUND",
+    recentAuth: "NONE",
+    futureAudit: "NONE",
   },
 
   // ------------------------------------------------ Better Auth endpoints

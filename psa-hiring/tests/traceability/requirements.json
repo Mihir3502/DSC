@@ -65,7 +65,7 @@
       "id": "PRD-AUTH-003",
       "title": "Staff permissions are role based",
       "status": "partial",
-      "note": "M1.4 delivers the role/permission catalog, scoped effective-dated staff assignments, and the central deny-by-default authorization service (ADR-0005). M1.5 connects it to routes, objects, fields, scoped queries, files, and noninteractive contracts (ADR-0011); real scope adapters arrive in M2 and the exhaustive matrix in M1.7. M1.7: every role × permission pair (9 × 167) and every scope type is proven at policy level against the accepted catalog with drift control; real M2 scope resolvers remain synthetic, so this stays partial.",
+      "note": "M1.4 delivers the role/permission catalog, scoped effective-dated staff assignments, and the central deny-by-default authorization service (ADR-0005). M1.5 connects it to routes, objects, fields, scoped queries, files, and noninteractive contracts (ADR-0011); real scope adapters arrive in M2 and the exhaustive matrix in M1.7. M1.7: every role × permission pair (9 × 167) and every scope type is proven at policy level against the accepted catalog with drift control; real M2 scope resolvers remain synthetic, so this stays partial. M2.1: organization, branch, and team scopes now resolve through the real organization adapter; assigned-record and audit-assignment scopes remain unresolved until their entities exist.",
       "tests": [
         {
           "file": "src/modules/identity-access/policy/authorization-catalog.test.ts",
@@ -240,6 +240,102 @@
         {
           "file": "tests/integration/audit/persistence.test.ts",
           "title": "appends one exact, chained envelope for a registered event"
+        }
+      ]
+    },
+    {
+      "id": "PRD-APP-002",
+      "title": "Required questions shall be configurable by worker path and position",
+      "status": "partial",
+      "note": "M2.1 delivers the reusable position, worker-path eligibility, and hiring-cycle foundation; application templates and questions arrive in M2.3.",
+      "tests": [
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "records position lifecycle events and never lets a retired position return"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "keeps a published cycle's snapshot"
+        }
+      ]
+    },
+    {
+      "id": "PRD-CLS-001",
+      "title": "W-2 shall be the default proposed path",
+      "status": "partial",
+      "note": "M2.1 positions declare only which paths an opening may support and never classify anyone; the candidacy default and classification decisions arrive in M2.2/M4.",
+      "tests": [
+        {
+          "file": "src/modules/organization/domain/values.test.ts",
+          "title": "knows only the three reviewed worker-path values"
+        },
+        {
+          "file": "src/modules/organization/presentation/public-position-view.test.ts",
+          "title": "describes contractor eligibility without classifying anyone"
+        }
+      ]
+    },
+    {
+      "id": "PRD-CFG-002",
+      "title": "Configuration changes shall be versioned and effective dated",
+      "status": "partial",
+      "note": "M2.1 versions job descriptions and freezes published hiring-cycle snapshots; requirement and template configuration follow in later milestones.",
+      "tests": [
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "allocates unique monotonic versions"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "keeps a published cycle's snapshot"
+        }
+      ]
+    },
+    {
+      "id": "PRD-CFG-003",
+      "title": "Configuration shall not silently rewrite historical records",
+      "status": "partial",
+      "note": "Enforced for M2.1 organization configuration by triggers and commands.",
+      "tests": [
+        {
+          "file": "tests/integration/organization/database.test.ts",
+          "title": "refuses edits to a published description"
+        },
+        {
+          "file": "tests/integration/organization/database.test.ts",
+          "title": "refuses snapshot, window, reference, and backward-status changes"
+        }
+      ]
+    },
+    {
+      "id": "PRD-CFG-004",
+      "title": "High-risk configuration changes shall be audited",
+      "status": "partial",
+      "note": "Every M2.1 configuration mutation appends its audit event atomically; other configuration areas follow.",
+      "tests": [
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "records each hierarchy event exactly once"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "rolls the configuration back when the audit append fails"
+        }
+      ]
+    },
+    {
+      "id": "UIF-POSITIONS",
+      "title": "Public open-position list and detail (UI_FLOW §5)",
+      "status": "covered",
+      "note": "M2.1 public projections; the start-application handoff ends at the M2.2 boundary.",
+      "tests": [
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "lists and shows only the exact public projection"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "answers draft, cancelled, never-opened"
         }
       ]
     }
@@ -777,7 +873,7 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains no business-domain or job tables, and only the M1.6 audit tables"
+          "title": "contains only the M2.1 organization tables beyond M1, and no person, candidacy, or posting table"
         },
         {
           "file": "tests/integration/auth/staff-authentication.test.ts",
@@ -893,7 +989,7 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains no business-domain or job tables, and only the M1.6 audit tables"
+          "title": "contains only the M2.1 organization tables beyond M1, and no person, candidacy, or posting table"
         },
         {
           "file": "tests/integration/authorization/role-assignments.test.ts",
@@ -1089,7 +1185,7 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains no business-domain or job tables, and only the M1.6 audit tables"
+          "title": "contains only the M2.1 organization tables beyond M1, and no person, candidacy, or posting table"
         },
         {
           "file": "tests/guards/authorization-matrix.test.ts",
@@ -1477,7 +1573,7 @@
         },
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains no business-domain or job tables, and only the M1.6 audit tables"
+          "title": "contains only the M2.1 organization tables beyond M1, and no person, candidacy, or posting table"
         }
       ]
     },
@@ -1690,7 +1786,7 @@
         },
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains no business-domain or job tables, and only the M1.6 audit tables"
+          "title": "contains only the M2.1 organization tables beyond M1, and no person, candidacy, or posting table"
         },
         {
           "file": "tests/integration/audit/persistence.test.ts",
@@ -1754,7 +1850,7 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains no business-domain or job tables, and only the M1.6 audit tables"
+          "title": "contains only the M2.1 organization tables beyond M1, and no person, candidacy, or posting table"
         },
         {
           "file": "tests/guards/authorization-boundaries.test.ts",
@@ -1948,7 +2044,7 @@
       "tests": [
         {
           "file": "tests/integration/audit/event-coverage.test.ts",
-          "title": "records exactly one classified event for every catalog event exercised by the M1 suites"
+          "title": "records exactly one classified event for every catalog event exercised by the M1 and M2.1 suites"
         },
         {
           "file": "tests/integration/audit/event-coverage.test.ts",
@@ -2030,11 +2126,375 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains no business-domain or job tables, and only the M1.6 audit tables"
+          "title": "contains only the M2.1 organization tables beyond M1, and no person, candidacy, or posting table"
         },
         {
           "file": "tests/guards/authorization-boundaries.test.ts",
           "title": "adds no generic CRUD, GraphQL, or catch-all business endpoint"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.1-01",
+      "tests": [
+        {
+          "file": "tests/integration/organization/database.test.ts",
+          "title": "refuses duplicate normalized codes in the same parent"
+        },
+        {
+          "file": "tests/integration/organization/database.test.ts",
+          "title": "refuses reparenting and code changes after activation"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "records each hierarchy event exactly once"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "refuses activating a child under an inactive parent"
+        },
+        {
+          "file": "src/modules/organization/domain/values.test.ts",
+          "title": "normalizes case and whitespace"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.1-02",
+      "tests": [
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "assigns roles only to real ACTIVE hierarchy"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "removes a branch-scoped role's authority"
+        },
+        {
+          "file": "tests/integration/organization/database.test.ts",
+          "title": "resolves an old synthetic scope reference only if a real ACTIVE entity exists"
+        },
+        {
+          "file": "tests/security/production-configuration.test.ts",
+          "title": "fails scope resolution closed"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.1-03",
+      "tests": [
+        {
+          "file": "src/modules/organization/domain/values.test.ts",
+          "title": "knows only the three reviewed worker-path values"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "records position lifecycle events and never lets a retired position return"
+        },
+        {
+          "file": "src/modules/organization/presentation/public-position-view.test.ts",
+          "title": "describes contractor eligibility without classifying anyone"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "lets HR create and edit drafts"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.1-04",
+      "tests": [
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "allocates unique monotonic versions"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "serializes concurrent draft creation"
+        },
+        {
+          "file": "tests/integration/organization/database.test.ts",
+          "title": "refuses edits to a published description"
+        },
+        {
+          "file": "src/modules/organization/domain/values.test.ts",
+          "title": "rejects unsafe content"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.1-05",
+      "tests": [
+        {
+          "file": "tests/integration/organization/database.test.ts",
+          "title": "refuses cross-organization and cross-branch hiring cycles"
+        },
+        {
+          "file": "tests/integration/organization/database.test.ts",
+          "title": "refuses incoherent windows and malformed public references"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "refuses publish with a draft-only description"
+        },
+        {
+          "file": "src/modules/organization/domain/zoned-time.test.ts",
+          "title": "refuses the nonexistent spring-forward hour"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.1-06",
+      "tests": [
+        {
+          "file": "src/modules/organization/domain/lifecycle.test.ts",
+          "title": "never returns a closed, cancelled, or archived cycle"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "records every hiring-cycle event once and refuses reopening"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "lets exactly one of two competing transitions"
+        },
+        {
+          "file": "tests/integration/organization/database.test.ts",
+          "title": "refuses snapshot, window, reference, and backward-status changes"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.1-07",
+      "tests": [
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "keeps a published cycle's snapshot when the position and description change later"
+        },
+        {
+          "file": "tests/integration/organization/database.test.ts",
+          "title": "refuses snapshot, window, reference, and backward-status changes"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.1-08",
+      "tests": [
+        {
+          "file": "src/modules/organization/domain/lifecycle.test.ts",
+          "title": "stops accepting at exactly closes_at even though"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "stops accepting at exactly closes_at without any close command"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "opens only inside the window"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "rechecks parents inside the transaction"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.1-09",
+      "tests": [
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "lets HR create and edit drafts"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "denies recruiters, technical administrators, and managers of another organization"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "requires recent authentication for approval commands"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "lists positions in scope"
+        },
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "binds every protected entry to the application authorization boundary"
+        },
+        {
+          "file": "tests/e2e/positions.spec.ts",
+          "title": "a PSA manager publishes and opens a hiring cycle"
+        },
+        {
+          "file": "tests/e2e/positions.spec.ts",
+          "title": "HR prepares drafts but cannot publish"
+        },
+        {
+          "file": "tests/e2e/positions.spec.ts",
+          "title": "another organization's manager and unknown records get the same safe not-found"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.1-10",
+      "tests": [
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "lists and shows only the exact public projection"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "answers draft, cancelled, never-opened, malformed, and unknown references identically"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "bounds public filters"
+        },
+        {
+          "file": "src/proxy.test.ts",
+          "title": "makes public position page"
+        },
+        {
+          "file": "src/modules/organization/presentation/public-position-view.test.ts",
+          "title": "reduces a closed opening to one generic state"
+        },
+        {
+          "file": "tests/e2e/positions.spec.ts",
+          "title": "the public sees only the projection, and closing removes it"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.1-11",
+      "tests": [
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "issues a signed handoff only for an accepting opening and creates no business record"
+        },
+        {
+          "file": "src/modules/identity-access/infrastructure/application-handoff.test.ts",
+          "title": "refuses expired, tampered, foreign-secret, and malformed tokens"
+        },
+        {
+          "file": "src/modules/identity-access/infrastructure/application-handoff.test.ts",
+          "title": "keeps the handoff and registration-intent purposes apart"
+        },
+        {
+          "file": "tests/e2e/positions.spec.ts",
+          "title": "the start-application handoff continues through candidate sign-in"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.1-12",
+      "tests": [
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "returns the recorded result for a retried command key"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "rolls the configuration back when the audit append fails"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "invalidates public cache tags only after a committed"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "leaves every audit chain verifiable"
+        },
+        {
+          "file": "tests/integration/audit/event-coverage.test.ts",
+          "title": "records exactly one classified event"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.1-13",
+      "tests": [
+        {
+          "file": "tests/integration/organization/database.test.ts",
+          "title": "refuses DELETE and TRUNCATE on every organization table"
+        },
+        {
+          "file": "tests/integration/organization/database.test.ts",
+          "title": "applies 0005 over M1"
+        },
+        {
+          "file": "tests/integration/organization/database.test.ts",
+          "title": "keeps command receipts append-only"
+        },
+        {
+          "file": "tests/integration/database/foundation.test.ts",
+          "title": "contains only the M2.1 organization tables beyond M1"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.1-14",
+      "tests": [
+        {
+          "file": "src/modules/organization/ui/config-forms.test.tsx",
+          "title": "focuses the error summary"
+        },
+        {
+          "file": "src/modules/organization/ui/config-forms.test.tsx",
+          "title": "explains the record, result, and consequence"
+        },
+        {
+          "file": "src/modules/organization/ui/config-forms.test.tsx",
+          "title": "labels every field"
+        },
+        {
+          "file": "tests/accessibility/positions.a11y.spec.ts",
+          "title": "public list, detail, and start-application pages are accessible"
+        },
+        {
+          "file": "tests/accessibility/positions.a11y.spec.ts",
+          "title": "staff position screens and confirmation dialogs are accessible"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.1-15",
+      "tests": [
+        {
+          "file": "src/modules/organization/domain/values.test.ts",
+          "title": "rejects unsafe content"
+        },
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "never renders stored or request content as raw HTML"
+        },
+        {
+          "file": "tests/security/production-configuration.test.ts",
+          "title": "refuses the M2.1 bootstrap provisioning actor"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "never returns account or scope references"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.1-16",
+      "tests": [
+        {
+          "file": "tests/integration/database/foundation.test.ts",
+          "title": "contains only the M2.1 organization tables beyond M1"
+        },
+        {
+          "file": "tests/integration/organization/configuration.test.ts",
+          "title": "creates no business record"
+        },
+        {
+          "file": "tests/guards/authorization-boundaries.test.ts",
+          "title": "classifies every server entry point"
+        },
+        {
+          "file": "tests/guards/authorization-matrix.test.ts",
+          "title": "references only rows that exist in the matrix"
         }
       ]
     }

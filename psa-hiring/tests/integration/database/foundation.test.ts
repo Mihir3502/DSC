@@ -314,7 +314,7 @@ describe("runtime client (src/shared/database)", () => {
 });
 
 describe("scope", () => {
-  it("10. contains no business-domain or job tables, and only the M1.6 audit tables", async () => {
+  it("10. contains only the M2.1 organization tables beyond M1, and no person, candidacy, or posting table", async () => {
     const { rows } = await admin.query<{ t: string }>(`
       SELECT schemaname || '.' || tablename AS t FROM pg_tables
       WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY 1`);
@@ -322,10 +322,18 @@ describe("scope", () => {
     // two-factor table and staff identity tables (ADR-0004); M1.4 adds the
     // role/permission catalog, staff assignments, and the authorization
     // epoch (ADR-0005). M1.6 adds only the append-only audit tables and the
-    // chain head in the dedicated audit schema (ADR-0012). No organization,
-    // scope-entity, audit-assignment, or business table exists yet.
+    // chain head in the dedicated audit schema (ADR-0012). M2.1 adds the
+    // organization hierarchy, positions, description versions, hiring
+    // cycles, and command receipts (DATA_MODEL §5, ADR-0013).
     expect(rows.map((r) => r.t)).toEqual([
+      "app.branch",
+      "app.hiring_cycle",
+      "app.job_description_version",
+      "app.organization",
+      "app.organization_command_receipt",
+      "app.position",
       "app.system_metadata",
+      "app.team",
       "audit.audit_event",
       "audit.chain_head",
       "audit.security_event",
@@ -345,7 +353,7 @@ describe("scope", () => {
       "drizzle.__drizzle_migrations",
     ]);
     const forbidden =
-      /candida|account|person|screening|offer|onboard|readiness|assignment|timesheet|payroll|leave|audit|job|outbox/;
+      /candida|account|person|screening|offer|onboard|readiness|assignment|timesheet|payroll|leave|audit|outbox|posting|requisition|vacanc|campaign/;
     expect(
       rows.filter(
         (r) =>
@@ -354,11 +362,13 @@ describe("scope", () => {
           forbidden.test(r.t),
       ),
     ).toEqual([]);
-    // M1.4 resolves scopes through a port: no organization, branch, team,
-    // person, candidacy, or audit-assignment placeholder exists anywhere.
+    // M2.2+ entities (person, candidacy, application, audit assignment)
+    // and competing opening concepts do not exist in M2.1.
     expect(
       rows.filter((r) =>
-        /organization|branch|team|person|candidacy|audit_assignment/.test(r.t),
+        /person|candidacy|application|audit_assignment|job_posting|opening/.test(
+          r.t,
+        ),
       ),
     ).toEqual([]);
   });

@@ -93,6 +93,10 @@ const recentAccess: RecentAuthRequirement = {
   policy: "RECENT_STAFF_AUTH",
   purpose: "PRIVILEGED_ACCESS_CHANGE",
 };
+const recentConfiguration: RecentAuthRequirement = {
+  policy: "RECENT_STAFF_AUTH",
+  purpose: "CONFIGURATION_CHANGE",
+};
 
 function p(
   resource: string,
@@ -1445,6 +1449,151 @@ const configuration = [
   ),
 ];
 
+// ------------------------------- organization configuration (M2.1, §14)
+// Catalog version 2 (packet M2.1 §14, ADR-0005 note). Draft work, status
+// changes, and publication are distinct permissions; every status change
+// and publication needs recent staff authentication and a reason code.
+const approval = { recentAuth: recentConfiguration, reason: true } as const;
+const hierarchyRef = ["§14:Organization hierarchy"];
+const positionRef = ["§14:Positions and job descriptions"];
+const cycleRef = ["§14:Hiring cycles"];
+
+const hierarchy = (resource: "organization" | "branch" | "team") => [
+  p(
+    resource,
+    "read",
+    "READ",
+    INT,
+    S,
+    `Read ${resource} configuration`,
+    hierarchyRef,
+  ),
+  p(
+    resource,
+    "configure",
+    "CONFIGURE",
+    INT,
+    S,
+    `Create and edit ${resource} configuration`,
+    hierarchyRef,
+  ),
+  p(
+    resource,
+    "status_change",
+    "CONFIGURE",
+    INT,
+    S,
+    `Activate or inactivate a ${resource}`,
+    hierarchyRef,
+    approval,
+  ),
+];
+
+const organizationConfiguration = [
+  ...hierarchy("organization"),
+  ...hierarchy("branch"),
+  ...hierarchy("team"),
+  p(
+    "position",
+    "read",
+    "READ",
+    INT,
+    S,
+    "Read position configuration",
+    positionRef,
+  ),
+  p(
+    "position",
+    "create",
+    "CONFIGURE",
+    INT,
+    S,
+    "Create a draft position",
+    positionRef,
+  ),
+  p("position", "edit", "CONFIGURE", INT, S, "Edit a position", positionRef),
+  p(
+    "position",
+    "activate",
+    "CONFIGURE",
+    INT,
+    S,
+    "Activate or inactivate a position",
+    positionRef,
+    approval,
+  ),
+  p(
+    "position",
+    "retire",
+    "CONFIGURE",
+    INT,
+    S,
+    "Retire a position",
+    positionRef,
+    approval,
+  ),
+  p(
+    "job_description",
+    "read",
+    "READ",
+    INT,
+    S,
+    "Read job-description versions",
+    positionRef,
+  ),
+  p(
+    "job_description",
+    "edit",
+    "CONFIGURE",
+    INT,
+    S,
+    "Create and edit draft job-description versions",
+    positionRef,
+  ),
+  p(
+    "job_description",
+    "publish",
+    "CONFIGURE",
+    INT,
+    S,
+    "Publish a job-description version",
+    positionRef,
+    approval,
+  ),
+  p("hiring_cycle", "read", "READ", INT, S, "Read hiring cycles", cycleRef),
+  p(
+    "hiring_cycle",
+    "create",
+    "CONFIGURE",
+    INT,
+    S,
+    "Create a draft hiring cycle",
+    cycleRef,
+  ),
+  p(
+    "hiring_cycle",
+    "edit",
+    "CONFIGURE",
+    INT,
+    S,
+    "Edit a draft hiring cycle",
+    cycleRef,
+  ),
+  ...(["publish", "open", "close", "cancel", "archive"] as const).map(
+    (action) =>
+      p(
+        "hiring_cycle",
+        action,
+        "CONFIGURE",
+        INT,
+        S,
+        `${action[0]!.toUpperCase()}${action.slice(1)} a hiring cycle`,
+        cycleRef,
+        approval,
+      ),
+  ),
+];
+
 // ---------------------------------------- access and technical (ADM)
 const technical = [
   p(
@@ -1619,6 +1768,7 @@ export const permissionCatalog: readonly PermissionDefinition[] = Object.freeze(
     ...lifecycle,
     ...audit,
     ...configuration,
+    ...organizationConfiguration,
     ...technical,
   ],
 );

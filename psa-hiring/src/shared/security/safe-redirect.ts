@@ -54,6 +54,13 @@ export const registeredDestinations: readonly string[] = Object.freeze([
   ...withNotices("/staff/security", ["revoked", "others-revoked", "not-found"]),
   "/staff/security#password",
   "/staff/reauthenticate?purpose=CHANGE_PASSWORD",
+  // M2.1 position configuration and the start-application handoff.
+  "/staff/reauthenticate?purpose=CONFIGURATION_CHANGE",
+  ...withNotices("/staff/admin/positions", ["saved"]),
+  "/staff/admin/positions/hierarchy",
+  "/sign-in?next=APPLICATION_START",
+  "/candidate/applications/new",
+  "/positions",
 ]);
 
 const registered = new Set(registeredDestinations);

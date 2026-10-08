@@ -327,6 +327,8 @@ Break-glass access cannot approve classification, screening disposition, compete
 - Deny server-side requests to arbitrary URLs; provider destinations are configured allowlisted endpoints.
 - Recalculate authorization and business gates at command execution time.
 - Use idempotency keys for retried commands and provider operations.
+- Public business content (M2.1 positions) is bounded plain text rendered only as escaped text: no HTML, links, embeds, remote resources, or templates. Public projections contain only approved public snapshot fields.
+- Only the exact public position projection may be cached, with tag invalidation after commit and a short lifetime. Acceptance is always recomputed from the server clock (ADR-0013). Staff projections are never cached and keep `private, no-store`.
 
 ## 11. Document and Upload Security
 

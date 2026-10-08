@@ -96,6 +96,7 @@ flowchart TD
 | `/` | Public landing page | Start application, candidate sign in, staff sign in | Normal, service notice |
 | `/positions` | Open positions | Filter and open a position | Loading, no positions, error |
 | `/positions/[positionId]` | Position detail | Start application | Open, closed, no longer accepting |
+| `/apply/[positionId]` | Start-application handoff (M2.1) | Confirm and continue to candidate sign-in | Accepting, no longer accepting, not found |
 | `/apply/invite/[token]` | Invitation acceptance | Verify invitation, create/sign into account | Valid, expired, already used, revoked |
 | `/sign-in` | Candidate sign in | Sign in, recover access | Invalid credentials, locked, verification needed |
 | `/staff/sign-in` | Staff sign in | Sign in, complete MFA | Invitation required, MFA challenge, locked |
@@ -103,6 +104,11 @@ flowchart TD
 | `/recover` | Account recovery | Request secure recovery | Generic confirmation only |
 | `/reset-password/[token]` | Password reset | Create new password | Valid, expired, used |
 | `/access-denied` | Safe denial page | Return to dashboard, contact support | No record details |
+
+M2.1 notes:
+- **The `[positionId]` route parameter** is the nonsequential `public_reference` of a hiring cycle (one opening of a reusable position; `DATA_MODEL.md` §5.0). Draft, cancelled, archived, never-opened, malformed, and unknown references return one indistinguishable not-found page. A closed formerly public reference shows one generic "no longer accepting applications" page.
+- **The list** shows only currently accepting openings. Filters are limited to an allowlisted location and worker-path filter, page size is bounded, and ordering is fixed.
+- **Start application** links to `/apply/[positionId]`. That page re-checks availability without the cache and, on confirmation, sets a short-lived signed handoff cookie, then continues to candidate sign-in or `/candidate/applications/new`. M2.1 renders only an accurate placeholder there and creates no person, candidacy, or application; M2.2 replaces it.
 
 ### Authentication flow
 
@@ -701,7 +707,7 @@ Administration routes are permission-specific:
 |---|---|
 | `/staff/admin/users` | Invite, disable, unlock, and inspect staff account status |
 | `/staff/admin/roles` | Assign roles and scopes with approval history |
-| `/staff/admin/positions` | Manage positions and hiring cycles |
+| `/staff/admin/positions` | Manage positions and hiring cycles (M2.1; sub-routes below) |
 | `/staff/admin/requirements` | Version requirement definitions and applicability |
 | `/staff/admin/templates` | Version forms, notices, offers, messages, and signatures |
 | `/staff/admin/training` | Manage course and competency catalogs |
@@ -710,6 +716,18 @@ Administration routes are permission-specific:
 | `/staff/admin/audit-access` | Manage approved auditor assignments |
 
 System administrators do not receive routine access to candidate business records through these pages. Secret values are write-only or managed outside the UI.
+
+M2.1 position administration sub-routes:
+
+- `/staff/admin/positions`: positions in scope, with a link to the hierarchy.
+- `/staff/admin/positions/hierarchy`: organization, branch, and team panels.
+- `/staff/admin/positions/new`
+- `/staff/admin/positions/[positionId]`: the position, its description versions, and its hiring cycles.
+- `/staff/admin/positions/[positionId]/descriptions/[versionId]`
+- `/staff/admin/positions/[positionId]/cycles/new`
+- `/staff/admin/positions/[positionId]/cycles/[cycleId]`
+
+Every page re-authorizes on the server and shows only actions the current principal holds. Windows are shown as "opens (inclusive) / closes (exclusive)" in the display timezone.
 
 Publishing a new requirement or document template requires effective dating and an impact preview showing which in-progress candidacies will be affected.
 
@@ -767,6 +785,7 @@ The following actions require a confirmation dialog summarizing consequences:
 - Approve Ready for Assignment.
 - Export restricted data.
 - Change role/scope or disable an account.
+- Activate, inactivate, or retire organization configuration (organization, branch, team, position), publish a job description, or publish, open, close, cancel, or archive a hiring cycle (M2.1).
 
 High-risk dialogs include the record reference, exact command, resulting status, required reason, and authentication challenge when configured. A generic “Are you sure?” dialog is insufficient.
 

@@ -32,6 +32,8 @@ export const protectedPathPrefixes: readonly string[] = Object.freeze([
   "/candidate",
   "/staff",
   "/api",
+  // M2.1 start-application handoff (sets a short-lived handoff cookie).
+  "/apply",
 ]);
 
 export function isProtectedPath(pathname: string): boolean {

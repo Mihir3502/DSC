@@ -88,6 +88,18 @@ export function enforceAccessOutcome(
 }
 
 /**
+ * Terminal refusal for an M2.1 configuration page or action: a required
+ * step-up continues on the reauthentication page for the configuration
+ * purpose (ADR-0005 note); every other outcome is refuseAccess.
+ */
+export function refuseConfigurationAccess(kind: ApplicationResultKind): never {
+  if (kind === "REAUTHENTICATION_REQUIRED") {
+    safeRedirect("/staff/reauthenticate?purpose=CONFIGURATION_CHANGE");
+  }
+  return refuseAccess(kind, "STAFF");
+}
+
+/**
  * Terminal refusal for a page or Server Action: the application result is
  * mapped through the single outcome mapper and enforced; any outcome that
  * has no in-page state here falls back to the safe not-found.

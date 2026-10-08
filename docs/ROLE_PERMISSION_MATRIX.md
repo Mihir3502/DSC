@@ -379,8 +379,20 @@ Break-glass access does not allow business approval, evidence alteration, or aud
 | Candidate message templates | REC, HR | MGR | REC, HR, MGR, AUD |
 | Retention rules | COM, MGR | Designated authority | COM, MGR, AUD |
 | Roles and permissions | ADM implements approved change | MGR/security owner approves | MGR, ADM, AUD |
+| Organization hierarchy | MGR | MGR | HR, MGR, AUD |
+| Positions and job descriptions | HR, MGR | MGR | HR, MGR, AUD |
+| Hiring cycles | HR, MGR | MGR | HR, MGR, AUD |
 
 Publishing a configuration creates an immutable version and effective date. Historical records remain linked to the version that governed them.
+
+The last three rows were added by M2.1 (authorization catalog version 2, approved 2026-10-07). They use narrow codes: `organization|branch|team.{read,configure,status_change}`, `position.{read,create,edit,activate,retire}`, `job_description.{read,edit,publish}`, and `hiring_cycle.{read,create,edit,publish,open,close,cancel,archive}`.
+
+- **Hierarchy changes:** `PSA_MANAGER` only, authorized against an organization-wide scope.
+- **HR:** `HR_SPECIALIST` may create and edit draft positions, descriptions, and hiring cycles within scope, and read the hierarchy.
+- **Approval actions:** `PSA_MANAGER` alone activates, publishes, opens, closes, cancels, archives, and retires.
+- **Auditor:** `AUDITOR_READ_ONLY` reads only through an approved audit assignment.
+- **No grant:** Recruiter, Classification Reviewer, Compliance Reviewer, Trainer/Evaluator, and System Administrator receive nothing. Administrator technical authority never implies business publication.
+- **Public:** the public sees only the approved public projection of currently open hiring cycles.
 
 ### 14a. Account self-service (implemented in M1.5, ADR-0011)
 
@@ -409,6 +421,7 @@ Require password reentry, multifactor confirmation, or equivalent recent authent
 - Assigning or changing privileged roles.
 - Performing a restricted export.
 - Starting break-glass access.
+- Changing organization, branch, or team status; activating, inactivating, or retiring a position; publishing a job description; and publishing, opening, closing, cancelling, or archiving a hiring cycle (M2.1: `RECENT_STAFF_AUTH`, purpose `CONFIGURATION_CHANGE`, with a reason code).
 
 The exact reauthentication interval will be defined in the security specification.
 

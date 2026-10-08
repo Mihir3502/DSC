@@ -146,6 +146,12 @@ const targetTypes = new Set([
   "AUTHORIZATION_CATALOG",
   "PROTECTED_RESOURCE",
   "AUDIT_LOG",
+  "ORGANIZATION",
+  "BRANCH",
+  "TEAM",
+  "POSITION",
+  "JOB_DESCRIPTION_VERSION",
+  "HIRING_CYCLE",
 ]);
 const eventNames = new Set<string>(catalogEventNames);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;

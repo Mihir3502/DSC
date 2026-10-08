@@ -72,7 +72,13 @@ JSON must not replace core relational constraints, authorization fields, searcha
 ```mermaid
 erDiagram
     PERSON ||--o{ CANDIDACY : submits
-    POSITION ||--o{ CANDIDACY : receives
+    ORGANIZATION ||--o{ BRANCH : contains
+    BRANCH ||--o{ TEAM : contains
+    ORGANIZATION ||--o{ POSITION : defines
+    POSITION ||--o{ JOB_DESCRIPTION_VERSION : describes
+    POSITION ||--o{ HIRING_CYCLE : opens
+    BRANCH ||--o{ HIRING_CYCLE : hosts
+    HIRING_CYCLE ||--o{ CANDIDACY : receives
     CANDIDACY ||--o{ APPLICATION_VERSION : contains
     CANDIDACY ||--|| WORKER_CLASSIFICATION : follows
     CANDIDACY ||--o{ REQUIREMENT_INSTANCE : requires
@@ -251,71 +257,196 @@ Key fields:
 
 ## 5. Organization and Position Domain
 
+Implemented in M2.1 (`docs/tasks/M2.1_ORGANIZATION_BRANCH_POSITION_HIRING_CYCLE.md`) by the `organization` module, in the `app` schema (migration `0005_organization_hiring_cycle`).
+
+Conventions for every table in this section:
+
+- Primary keys are database-generated UUIDs (`pg_catalog.gen_random_uuid()`, ADR-0002). Sequential identifiers are never exposed.
+- Codes are normalized on input (trimmed and upper-cased) and stored normalized, so uniqueness is case-insensitive. A code matches `^[A-Z0-9][A-Z0-9_-]{1,31}$`.
+- Names, titles, and labels are bounded plain text. They are validated, not silently rewritten.
+- Timezones are IANA zone names validated by the application.
+- Mutable aggregates carry an integer `version` (≥ 1) used for optimistic concurrency, `created_at`, `updated_at`, `created_by_account_id`, and `updated_by_account_id`.
+- Foreign keys never cascade. Rows are never deleted: `DELETE` and `TRUNCATE` are refused by trigger and by runtime-role privileges.
+- Parent references (`organization_id`, `branch_id`) are immutable. Reparenting is not an ordinary edit (a trigger refuses it).
+- Codes are immutable once the record has been activated (or, for a hiring cycle, published).
+- Every change is a named command that appends its audit event in the same transaction (M1.6, ADR-0012).
+
+### 5.0 Position versus public opening
+
+- A `position` is reusable business configuration that describes a role the agency may fill. It is never shown to the public directly.
+- A `job_description_version` is immutable published wording for a position.
+- A `hiring_cycle` is one specific opening and application window for a position at one branch and optional team. Several cycles may exist for one position.
+- The public `/positions` list and `/positions/[positionId]` detail display a safe projection of **hiring cycles**. The route parameter is the cycle's nonsequential `public_reference`, even though the UI calls it a position.
+- No competing posting, requisition, vacancy, or campaign concept exists.
+
 ### 5.1 `organization`
 
-Release 1 may use a single organization row but retains an explicit entity for future separation.
+Release 1 may use a single organization row but retains an explicit entity for future separation. Nothing assumes a singleton or treats the first row as authoritative.
 
 Key fields:
 
 - `id`
-- `legal_name`
-- `display_name`
+- `code` (unique)
+- `legal_name`, `display_name`
 - `timezone`
-- `status`
+- `status`: `DRAFT`, `ACTIVE`, `INACTIVE`, `ARCHIVED`
+- `activated_at`, `inactivated_at`
+- `version`, common timestamps and actor references
+
+Rules:
+
+- Only an `ACTIVE` organization may contain a publicly open hiring cycle. Inactivation stops new and public openings and keeps history.
+- `ARCHIVED` is reserved. M2.1 has no archive command.
+- The first organization is provisioned through the nonproduction harness actor (local/test only). A production provisioning procedure is an open decision (§28).
 
 ### 5.2 `branch`
 
 Key fields:
 
-- `id`
-- `organization_id`
-- `code`
+- `id`, `organization_id`
+- `code` (unique within organization)
 - `name`
-- `timezone`
-- `status`
+- `public_location_label` (public)
+- `timezone` (explicitly entered; the form pre-fills the organization timezone)
+- `status`: `DRAFT`, `ACTIVE`, `INACTIVE`, `ARCHIVED`
+- `version`, common timestamps
+
+Activation requires an `ACTIVE` organization.
 
 ### 5.3 `team`
 
 Key fields:
 
-- `id`
-- `branch_id`
-- `code`
+- `id`, `organization_id`, `branch_id`
+- `code` (unique within branch)
 - `name`
-- `status`
+- `status`: `DRAFT`, `ACTIVE`, `INACTIVE`, `ARCHIVED`
+- `version`, common timestamps
+
+A composite foreign key `(organization_id, branch_id)` → `branch(organization_id, id)` guarantees the team's organization is its branch's organization. Activation requires an `ACTIVE` branch and organization.
 
 ### 5.4 `position`
 
-Represents a role being filled.
+Reusable configuration describing a role the agency may fill.
 
 Key fields:
 
-- `id`
-- `organization_id`
-- `position_code`
-- `title`
-- `description_version_id`
-- `worker_paths_allowed`: W-2, approved 1099, or both
-- `employment_type_options`
-- `default_requirement_matrix_version_id`
-- `default_training_matrix_version_id`
-- `default_competency_profile_version_id`
-- `status`
-- Common timestamps
+- `id`, `organization_id`
+- `code` (unique within organization)
+- `internal_title`, `public_title`
+- `worker_paths_allowed`: `W2_ONLY`, `CONTRACTOR_ELIGIBLE_ONLY`, `W2_AND_CONTRACTOR_ELIGIBLE`
+- `status`: `DRAFT`, `ACTIVE`, `INACTIVE`, `RETIRED`
+- `activated_at`, `retired_at`
+- `version`, common timestamps
+
+Rules:
+
+- "Contractor eligible" means only that the position may support a proposed 1099 path. It classifies nobody and guarantees no contractor treatment.
+- No configuration action approves an individual's classification. W-2 remains the default proposed path in later candidacy and classification work.
+- Changing `worker_paths_allowed` never changes a published hiring-cycle snapshot.
+- Only `ACTIVE` positions accept new hiring cycles. `RETIRED` is terminal; a new position is required when the meaning changes materially.
+- Deferred until their reference tables exist (no placeholder or dangling foreign keys): employment-type options, default requirement-matrix, training-matrix, and competency-profile references.
+- The current description is the position's single `PUBLISHED` `job_description_version`; there is no pointer column.
 
 ### 5.5 `job_description_version`
 
 Key fields:
 
-- `id`
-- `position_id`
-- `version_number`
-- `content`
-- `published_at`
-- `published_by_user_id`
-- `effective_from`
-- `effective_to`
-- `status`
+- `id`, `organization_id`, `position_id`
+- `version_number` (unique per position, monotonic; allocated under the position row lock)
+- `public_title`, `summary`, `body`
+- `content_format`: `PLAIN_TEXT_V1` (bounded plain text; no HTML, links, embeds, or templates)
+- `status`: `DRAFT`, `PUBLISHED`, `SUPERSEDED`, `RETIRED`
+- `published_at`, `published_by_account_id`, `superseded_at`
+- `version` (draft editing only), common timestamps
+
+Rules:
+
+- At most one `DRAFT` and at most one `PUBLISHED` version per position (partial unique indexes).
+- Published content is immutable. A trigger allows only the `PUBLISHED → SUPERSEDED` status change; content edits on any non-draft version are refused.
+- Editing published wording creates a new draft version.
+- Publishing a draft supersedes the prior published version in the same transaction. Published and superseded versions are never deleted.
+- Content is rejected if it contains control or bidirectional-override characters, markup-like tags, `javascript:`/`data:` schemes, or template syntax. It is rendered only as escaped text.
+- `RETIRED` is reserved; M2.1 has no retire-description command.
+
+### 5.6 `hiring_cycle`
+
+One opening and application window for a reusable position at one branch and optional team.
+
+Key fields:
+
+- `id` (internal)
+- `public_reference`: 12-character random Crockford base32, unique; used in public URLs
+- `organization_id`, `position_id`, `branch_id`, `team_id` (nullable)
+- `code` (unique within organization)
+- `internal_label`, `public_label` (nullable)
+- `status`: `DRAFT`, `PUBLISHED`, `OPEN`, `CLOSED`, `CANCELLED`, `ARCHIVED`
+- `opens_at` (inclusive)
+- `closes_at` (exclusive; null only when `open_ended` is explicitly true)
+- `open_ended`
+- Snapshot, frozen at publication:
+  - `job_description_version_id`
+  - `worker_paths_snapshot`
+  - `public_title_snapshot`
+  - `location_label_snapshot`
+  - `display_timezone`
+- Lifecycle:
+  - `published_at`/`published_by_account_id`
+  - `opened_at`/`opened_by_account_id`
+  - `closed_at`/`closed_by_account_id`
+  - `cancelled_at`/`cancelled_by_account_id`
+  - `archived_at`/`archived_by_account_id`
+  - `end_reason_code`
+- `version`, common timestamps
+
+Relational integrity (composite foreign keys):
+
+- `(organization_id, position_id)` → `position(organization_id, id)`
+- `(organization_id, branch_id)` → `branch(organization_id, id)`
+- `(branch_id, team_id)` → `team(branch_id, id)`; a null team is allowed
+- `(position_id, job_description_version_id)` → `job_description_version(position_id, id)`
+
+Lifecycle (named commands only):
+
+```text
+create_hiring_cycle:   none -> DRAFT
+update_hiring_cycle:   DRAFT -> DRAFT
+publish_hiring_cycle:  DRAFT -> PUBLISHED
+open_hiring_cycle:     PUBLISHED -> OPEN
+close_hiring_cycle:    OPEN/PUBLISHED -> CLOSED
+cancel_hiring_cycle:   DRAFT/PUBLISHED/OPEN -> CANCELLED
+archive_hiring_cycle:  CLOSED/CANCELLED -> ARCHIVED
+```
+
+- **Publish** requires:
+  - an `ACTIVE` organization, branch, optional team, and position;
+  - the position's `PUBLISHED` description;
+  - a coherent window;
+  - authorization, the expected version, and a reason code.
+- **Open** requires the same, and `opens_at ≤ now < closes_at`.
+- A trigger refuses changes to references, snapshot, window, or code after publication. It also refuses any return from `CLOSED`/`CANCELLED`/`ARCHIVED`.
+- Reopening requires a new cycle.
+
+Effective public availability is computed at request time from trusted stored state and the server clock. No background job is involved.
+
+| State | Public result |
+| --- | --- |
+| `OPEN`, every parent `ACTIVE`, and `opens_at ≤ now < closes_at` | Listed and accepting |
+| `OPEN` at or after `closes_at`, or with an inactive parent | Generic "no longer accepting" |
+| `CLOSED` after having been opened | Generic "no longer accepting" |
+| `DRAFT`, `PUBLISHED`, `CANCELLED`, `ARCHIVED`, never-opened `CLOSED`, unknown | Indistinguishable not-found |
+
+Upcoming (published but not yet open) display is not approved and is not implemented.
+
+Later edits to the organization, branch, team, position, or a newer description never alter a published cycle. The public detail renders only the snapshot and the immutable description version it references.
+
+### 5.7 Scope resolution
+
+The M1 `ScopeResourceResolver` port has a real adapter (`organization` module):
+
+- **`ORGANIZATION`, `BRANCH`, `TEAM`** scopes resolve from these tables. They are `ACTIVE` only when the entity and every ancestor are `ACTIVE`.
+- **Business records** (position, description version, hiring cycle, and the hierarchy rows themselves) resolve to their organization, branch, and team placement.
+- **`ASSIGNED_RECORDS` and `AUDIT_ASSIGNMENT`** still resolve as unavailable: their tables do not exist yet. No row is fabricated for an unresolved reference.
 
 ## 6. Person and Candidacy Domain
 
@@ -376,6 +507,8 @@ Access must be rare, recently authenticated, and audited.
 ### 6.4 `candidacy`
 
 Aggregate root for one person's application to one position.
+
+M2.2 will add `hiring_cycle_id` as the candidacy's reference to the selected opening. `position_id` and `branch_id` are taken from that cycle's published snapshot and must match it. M2.1 creates no candidacy.
 
 Key fields:
 
@@ -1641,7 +1774,9 @@ This retention hold is different from an operational `compliance_hold` on a cand
 ### 22.1 Uniqueness and Current-Record Constraints
 
 - Unique active `user_account.email_normalized` as required by identity design.
-- Unique `position.position_code` within organization.
+- Unique normalized `organization.code`; `branch.code` and `position.code` and `hiring_cycle.code` within organization; `team.code` within branch (M2.1).
+- Unique `hiring_cycle.public_reference`.
+- Unique `job_description_version.version_number` per position; at most one `DRAFT` and one `PUBLISHED` version per position.
 - Unique template version number within each template.
 - Unique current offer version per offer.
 - Unique current classification review per candidacy.
@@ -1673,6 +1808,10 @@ Initial indexes should support:
 - Holds by candidacy and active status.
 - Audit events by candidacy, target, actor, event, and occurred time.
 - Notifications and outbox records by status and availability time.
+- Publicly open hiring cycles: partial index on `status = 'OPEN'` by window and stable ordering; public-reference lookup (M2.1).
+- Staff configuration lists by organization/branch/team/status; positions by organization/status/code; description versions by position/version; hiring cycles by position/branch/status/window (M2.1).
+
+M2.1 adds no full-text index over description content.
 
 Indexes must not expose restricted values through unsafe search features.
 
@@ -1738,6 +1877,8 @@ Recommended projections:
 
 Each projection must apply authorization and field redaction. A materialized view or cached projection must be refreshed or invalidated after relevant events.
 
+`public_position_listing` and `public_position_detail` (M2.1) are the only publicly cached projections. They contain public snapshot fields only. They are tagged and invalidated after the commit of any publish, open, close, cancel, or archive, and of any parent status change; their lifetime is 60 seconds (ADR-0013). Whether a cycle is accepting is recomputed from the server clock on every request.
+
 ## 25. Local Development Data
 
 Seed data must be synthetic and clearly labeled.
@@ -1796,6 +1937,8 @@ Tests must prove:
 - Exact normalized-search fields used for duplicate detection.
 - Retention class and disposition schedule by record category.
 - Whether multi-organization support is enabled or dormant in Release 1.
+- The production provisioning procedure for the first organization (M2.1 provisions it only through the nonproduction harness actor).
+- Approved product copy for optional description sections (duties, qualifications, schedule, instructions) and for employment-type options.
 - Final dual-approval configuration for classification and readiness.
 - Reporting strategy for audit-sized event volumes.
 

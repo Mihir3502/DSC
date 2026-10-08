@@ -37,6 +37,15 @@ Candidates need controlled self-registration, verified email before any session,
 - Invitations are issued only server-side. For now the only callers are tests and the local/test-only `pnpm auth:intent:local`, which allows reserved domains only.
 - Staff-facing issuance waits for M1.4/M1.5 authorization.
 
+**M2.1 start-application handoff.** This reuses the same HMAC-SHA256 construction and secret under a distinct purpose, `application-handoff.v1`. The payload is `{v, purpose, ref, iat, exp, n}`. `ref` is the hiring cycle's public reference, never an internal ID; the lifetime is 30 minutes.
+
+- **Carrier:** an `HttpOnly`, `SameSite=Lax` cookie (`__Secure-` when cookies are secure). It never appears in a URL.
+- **No business record:** it creates no person, candidacy, or application.
+- **Not single-use:** like the public intent, it grants nothing.
+- **Revalidation:** the cycle's availability is checked again at issue time, after authentication, and again by M2.2 when it creates the candidacy.
+- **Continuation:** the new continuation key `APPLICATION_START` resolves to `/candidate/applications/new`.
+- **Failure:** a tampered, expired, wrong-purpose, or closed handoff fails with one generic result.
+
 ### Email verification: Better Auth email-OTP plugin
 
 Decided by the project owner on 2026-10-06, replacing the stateless verification links.

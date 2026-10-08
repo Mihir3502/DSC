@@ -1,7 +1,7 @@
 {
-  "$comment": "Reviewed snapshot of the accepted M1.4 grant catalog (packet M1.7 §7). Changing a grant requires an approved catalog change AND an updated snapshot; tests/authorization/m1-matrix-coverage.test.ts fails on any difference.",
-  "catalogVersion": 1,
-  "catalogDigest": "371ccf74985ea29b5b7e482657c93f526e13c59b20b899460f2f22ffd5776c5d",
+  "$comment": "Reviewed snapshot of the accepted grant catalog (packet M1.7 §7; version 2 adds the M2.1 organization-configuration grants). Changing a grant requires an approved catalog change AND an updated snapshot; tests/authorization/m1-matrix-coverage.test.ts fails on any difference.",
+  "catalogVersion": 2,
+  "catalogDigest": "dee3eb0410f665f5e3e9363865033fb8054422ed40f5dbee52029ab6b1918d03",
   "grants": [
     {
       "role": "AUDITOR_READ_ONLY",
@@ -36,6 +36,12 @@
     {
       "role": "AUDITOR_READ_ONLY",
       "permission": "audit.restricted.read.assigned",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "branch.read",
       "condition": null,
       "status": "ACTIVE"
     },
@@ -173,6 +179,12 @@
     },
     {
       "role": "AUDITOR_READ_ONLY",
+      "permission": "hiring_cycle.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
       "permission": "identity_document.read_restricted",
       "condition": null,
       "status": "ACTIVE"
@@ -191,6 +203,12 @@
     },
     {
       "role": "AUDITOR_READ_ONLY",
+      "permission": "job_description.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
       "permission": "medical_document.read_restricted",
       "condition": null,
       "status": "ACTIVE"
@@ -204,6 +222,18 @@
     {
       "role": "AUDITOR_READ_ONLY",
       "permission": "onboarding.form.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "organization.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "position.read",
       "condition": null,
       "status": "ACTIVE"
     },
@@ -252,6 +282,12 @@
     {
       "role": "AUDITOR_READ_ONLY",
       "permission": "tax_banking_document.read_restricted",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "team.read",
       "condition": null,
       "status": "ACTIVE"
     },
@@ -915,6 +951,12 @@
     },
     {
       "role": "HR_SPECIALIST",
+      "permission": "branch.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
       "permission": "candidate.profile.edit",
       "condition": null,
       "status": "ACTIVE"
@@ -1097,6 +1139,24 @@
     },
     {
       "role": "HR_SPECIALIST",
+      "permission": "hiring_cycle.create",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "hiring_cycle.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "hiring_cycle.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
       "permission": "identity_document.download",
       "condition": {
         "v": 1,
@@ -1161,6 +1221,18 @@
         "kind": "PARTICIPANT",
         "relationship": "INTERVIEWER"
       },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "job_description.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "job_description.read",
+      "condition": null,
       "status": "ACTIVE"
     },
     {
@@ -1230,6 +1302,30 @@
     {
       "role": "HR_SPECIALIST",
       "permission": "onboarding.item.review",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "organization.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "position.create",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "position.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "position.read",
       "condition": null,
       "status": "ACTIVE"
     },
@@ -1337,6 +1433,12 @@
     },
     {
       "role": "HR_SPECIALIST",
+      "permission": "team.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
       "permission": "training.assignment.manage",
       "condition": null,
       "status": "ACTIVE"
@@ -1367,6 +1469,24 @@
         "kind": "DESIGNATION",
         "designation": "RESTRICTED_AUDIT_REVIEWER"
       },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "branch.configure",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "branch.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "branch.status_change",
+      "condition": null,
       "status": "ACTIVE"
     },
     {
@@ -1673,6 +1793,54 @@
     },
     {
       "role": "PSA_MANAGER",
+      "permission": "hiring_cycle.archive",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "hiring_cycle.cancel",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "hiring_cycle.close",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "hiring_cycle.create",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "hiring_cycle.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "hiring_cycle.open",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "hiring_cycle.publish",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "hiring_cycle.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
       "permission": "interview.schedule.read",
       "condition": null,
       "status": "ACTIVE"
@@ -1691,6 +1859,24 @@
         "kind": "PARTICIPANT",
         "relationship": "INTERVIEWER"
       },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "job_description.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "job_description.publish",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "job_description.read",
+      "condition": null,
       "status": "ACTIVE"
     },
     {
@@ -1732,6 +1918,54 @@
     {
       "role": "PSA_MANAGER",
       "permission": "onboarding.status.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "organization.configure",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "organization.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "organization.status_change",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "position.activate",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "position.create",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "position.edit",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "position.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "position.retire",
       "condition": null,
       "status": "ACTIVE"
     },
@@ -1818,6 +2052,24 @@
     {
       "role": "PSA_MANAGER",
       "permission": "selection.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "team.configure",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "team.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "team.status_change",
       "condition": null,
       "status": "ACTIVE"
     },

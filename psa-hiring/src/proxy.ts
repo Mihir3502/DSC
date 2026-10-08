@@ -39,7 +39,43 @@ const knownRoutes = new Set([
   "/staff/recover",
   "/staff/security",
   "/staff/reauthenticate",
+  // M2.1 (dynamic segments are labelled by template, never raw).
+  "/positions",
+  "/staff/admin/positions",
+  "/staff/admin/positions/new",
+  "/staff/admin/positions/hierarchy",
+  "/candidate/applications/new",
 ]);
+
+/** Dynamic M2.1 routes: label by template so no reference is logged. */
+const templateRoutes: readonly (readonly [RegExp, string])[] = [
+  [/^\/positions\/[^/]+$/, "/positions/[positionId]"],
+  [/^\/apply\/[^/]+$/, "/apply/[positionId]"],
+  [
+    /^\/staff\/admin\/positions\/[^/]+\/descriptions\/[^/]+$/,
+    "/staff/admin/positions/[positionId]/descriptions/[versionId]",
+  ],
+  [
+    /^\/staff\/admin\/positions\/[^/]+\/cycles\/new$/,
+    "/staff/admin/positions/[positionId]/cycles/new",
+  ],
+  [
+    /^\/staff\/admin\/positions\/[^/]+\/cycles\/[^/]+$/,
+    "/staff/admin/positions/[positionId]/cycles/[cycleId]",
+  ],
+  [/^\/staff\/admin\/positions\/[^/]+$/, "/staff/admin/positions/[positionId]"],
+];
+
+/**
+ * Public position pages (ADR-0013): only the public projection is cached
+ * on the server; browsers and shared caches must revalidate every time.
+ */
+export const PUBLIC_POSITIONS_CACHE_CONTROL =
+  "public, max-age=0, must-revalidate";
+
+export function isPublicPositionsPath(pathname: string): boolean {
+  return pathname === "/positions" || /^\/positions\/[^/]+$/.test(pathname);
+}
 
 /**
  * Personal or capability-bearing pages are never cached (packet M1.2
@@ -52,6 +88,9 @@ export function isNoStorePath(pathname: string): boolean {
 
 export function routeLabel(pathname: string): string {
   if (knownRoutes.has(pathname)) return pathname;
+  for (const [pattern, template] of templateRoutes) {
+    if (pattern.test(pathname)) return template;
+  }
   if (pathname.startsWith("/api/")) return "/api/(other)";
   return "/(other)";
 }
@@ -69,6 +108,8 @@ export function createProxy(logger: () => AppLogger) {
     response.headers.set("Referrer-Policy", "no-referrer");
     if (isNoStorePath(request.nextUrl.pathname)) {
       applyProtectedHeaders(response.headers);
+    } else if (isPublicPositionsPath(request.nextUrl.pathname)) {
+      response.headers.set("Cache-Control", PUBLIC_POSITIONS_CACHE_CONTROL);
     }
 
     logger().info("request.received", {

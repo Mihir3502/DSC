@@ -50,6 +50,9 @@ export const criticalScope = [
   "src/modules/identity-access/**/*.test.ts",
   "src/modules/identity-access/**/*.test.tsx",
   "src/modules/audit/**/*.test.ts",
+  // M2.1 organization configuration.
+  "src/modules/organization/**/*.test.ts",
+  "src/modules/organization/**/*.test.tsx",
 ];
 
 function main() {

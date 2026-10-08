@@ -8,8 +8,11 @@ import { promisify } from "node:util";
 // official image pinned by immutable digest. No network, read-only mount,
 // redacted output, and only rule/file/line/commit are printed. It scans the
 // history reachable from the checked-out commit and fails unless Gitleaks
-// reports scanning every one of those commits, so a git ownership or
-// checkout problem can never pass as "no leaks found".
+// reports scanning every one of those commits that carries a text patch, so
+// a git ownership or checkout problem can never pass as "no leaks found".
+// Gitleaks scans `git log -p` patches, so a commit whose only changes are
+// binary files (no text patch) is never counted by it; it is excluded from
+// the expected count too, and is still covered because no text exists in it.
 
 export const GITLEAKS_IMAGE =
   "zricethezav/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f"; // v8.30.1
@@ -25,6 +28,19 @@ export type Finding = {
 export function scannedCommits(log: string): number | undefined {
   const match = log.match(/(\d+) commits? scanned/);
   return match ? Number(match[1]) : undefined;
+}
+
+/**
+ * Counts commits with at least one text (non-binary) change, from
+ * `git log --format=@@%H --numstat` output. Binary files show as "-\t-".
+ */
+export function textCommitCount(numstatLog: string): number {
+  let count = 0;
+  for (const block of numstatLog.split(/^@@[0-9a-f]{40}$/m).slice(1)) {
+    const text = block.split("\n").some((line) => /^\d+\t\d+\t/.test(line));
+    if (text) count += 1;
+  }
+  return count;
 }
 
 /** Summarizes findings without any secret material. */
@@ -108,11 +124,12 @@ async function main() {
       `.gitleaks.toml violates the allowlist policy: ${configProblems.join("; ")}`,
     );
   }
-  const expected = Number(
-    execFileSync("git", ["rev-list", "--count", "HEAD"], {
-      cwd: repoRoot,
-      encoding: "utf8",
-    }).trim(),
+  const expected = textCommitCount(
+    execFileSync(
+      "git",
+      ["log", "--format=@@%H", "--numstat", "--no-renames", "HEAD"],
+      { cwd: repoRoot, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 },
+    ),
   );
   const { uid, gid } = os.userInfo();
   const args = [
@@ -170,7 +187,7 @@ async function main() {
   const scanned = scannedCommits(stderr);
   if (scanned === undefined || scanned !== expected) {
     throw new Error(
-      `gitleaks scanned ${scanned ?? "an unknown number of"} commit(s) but the repository has ${expected}; refusing to pass`,
+      `gitleaks scanned ${scanned ?? "an unknown number of"} commit(s) but the repository has ${expected} with text changes; refusing to pass`,
     );
   }
 

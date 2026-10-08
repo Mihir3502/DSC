@@ -51,8 +51,11 @@ export {
   type SessionCommandResult,
 } from "./application/manage-candidate-sessions";
 export {
+  applicationHandoffCookie,
+  issueApplicationHandoff,
   issueCandidateInvitation,
   issuePublicRegistrationIntent,
+  verifyApplicationHandoff,
 } from "./application/registration-intents";
 // M1.3 staff invitation, activation, MFA, security, recent authentication,
 // and recovery. Invitation issuance/revocation and recovery-case steps are
@@ -116,15 +119,31 @@ export {
 export {
   authorize,
   authorizeInTransaction,
+  authorizeQueryScope,
   type AuthorizationDependencies,
+  type QueryConstraint,
 } from "./application/authorize";
 export { authorizationDependencies } from "./application/authorization-support";
 // M1.5 route/object/field authorization (ADR-0011).
 export {
   authorizeAccountSelfService,
+  correlationOf,
   refusalOf,
   type SelfServiceRefusal,
 } from "./application/authorize-self-service";
+// M2.1: scoped lists and exact projections for organization staff views.
+export {
+  authorizeScopedList,
+  type ListQuery,
+  type ListQuerySpec,
+  type ScopedListSource,
+} from "./application/authorize-query";
+export {
+  defineProjection,
+  project,
+  type ProjectionContract,
+} from "./presentation/authorized-projector";
+export type { FieldRule } from "./presentation/field-policy";
 export { navigationHint } from "./application/navigation-guard";
 export {
   selfServicePolicies,

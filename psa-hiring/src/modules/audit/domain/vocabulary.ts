@@ -53,6 +53,13 @@ export const targetTypes = [
   "AUTHORIZATION_CATALOG",
   "PROTECTED_RESOURCE",
   "AUDIT_LOG",
+  // M2.1 organization configuration (packet M2.1 §20).
+  "ORGANIZATION",
+  "BRANCH",
+  "TEAM",
+  "POSITION",
+  "JOB_DESCRIPTION_VERSION",
+  "HIRING_CYCLE",
 ] as const;
 export type TargetType = (typeof targetTypes)[number];
 

@@ -1,0 +1,4664 @@
+{
+  "id": "ff94124b-f32f-48d5-96ed-196b33e966a3",
+  "prevId": "757c62cf-1451-450a-ade8-729973d445c9",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "app.system_metadata": {
+      "name": "system_metadata",
+      "schema": "app",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "varchar(100)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "audit.audit_event": {
+      "name": "audit_event",
+      "schema": "audit",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "schema_version": {
+          "name": "schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_name": {
+          "name": "event_name",
+          "type": "varchar(96)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_version": {
+          "name": "event_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "category": {
+          "name": "category",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "candidacy_id": {
+          "name": "candidacy_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actor_type": {
+          "name": "actor_type",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_user_id": {
+          "name": "actor_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "effective_role_code": {
+          "name": "effective_role_code",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "effective_assignment_id": {
+          "name": "effective_assignment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "effective_scope_type": {
+          "name": "effective_scope_type",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "effective_scope_reference_id": {
+          "name": "effective_scope_reference_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "permission_code": {
+          "name": "permission_code",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_type": {
+          "name": "target_type",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source": {
+          "name": "source",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason_code": {
+          "name": "reason_code",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "correlation_id": {
+          "name": "correlation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recorded_at": {
+          "name": "recorded_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "metadata_json": {
+          "name": "metadata_json",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "previous_record_version": {
+          "name": "previous_record_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "new_record_version": {
+          "name": "new_record_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "retention_class_code": {
+          "name": "retention_class_code",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chain_partition": {
+          "name": "chain_partition",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chain_sequence": {
+          "name": "chain_sequence",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "previous_hash": {
+          "name": "previous_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "integrity_hash": {
+          "name": "integrity_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "integrity_key_version": {
+          "name": "integrity_key_version",
+          "type": "varchar(8)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "canonicalization_version": {
+          "name": "canonicalization_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "audit_event_idempotency_unique": {
+          "name": "audit_event_idempotency_unique",
+          "columns": [
+            {
+              "expression": "event_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "idempotency_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"audit\".\"audit_event\".\"idempotency_key\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_event_occurred_idx": {
+          "name": "audit_event_occurred_idx",
+          "columns": [
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_event_target_idx": {
+          "name": "audit_event_target_idx",
+          "columns": [
+            {
+              "expression": "target_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "target_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_event_actor_idx": {
+          "name": "audit_event_actor_idx",
+          "columns": [
+            {
+              "expression": "actor_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_event_organization_idx": {
+          "name": "audit_event_organization_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"audit\".\"audit_event\".\"organization_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_event_candidacy_idx": {
+          "name": "audit_event_candidacy_idx",
+          "columns": [
+            {
+              "expression": "candidacy_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"audit\".\"audit_event\".\"candidacy_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_event_category_idx": {
+          "name": "audit_event_category_idx",
+          "columns": [
+            {
+              "expression": "category",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_event_correlation_idx": {
+          "name": "audit_event_correlation_idx",
+          "columns": [
+            {
+              "expression": "correlation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "audit_event_actor_user_fk": {
+          "name": "audit_event_actor_user_fk",
+          "tableFrom": "audit_event",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "actor_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "audit_event_chain_unique": {
+          "name": "audit_event_chain_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "chain_partition",
+            "chain_sequence"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "audit_event_partition_check": {
+          "name": "audit_event_partition_check",
+          "value": "chain_partition ~ '^((IDENTITY|SECURITY):[0-9a-f]{2}|ORG:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$'"
+        },
+        "audit_event_sequence_check": {
+          "name": "audit_event_sequence_check",
+          "value": "chain_sequence >= 1"
+        },
+        "audit_event_hash_check": {
+          "name": "audit_event_hash_check",
+          "value": "octet_length(previous_hash) = 32 AND octet_length(integrity_hash) = 32"
+        },
+        "audit_event_key_version_check": {
+          "name": "audit_event_key_version_check",
+          "value": "integrity_key_version ~ '^[tv][0-9]{1,4}$'"
+        },
+        "audit_event_canonicalization_check": {
+          "name": "audit_event_canonicalization_check",
+          "value": "canonicalization_version = 1"
+        },
+        "audit_event_schema_version_check": {
+          "name": "audit_event_schema_version_check",
+          "value": "schema_version = 1"
+        },
+        "audit_event_event_version_check": {
+          "name": "audit_event_event_version_check",
+          "value": "event_version >= 1"
+        },
+        "audit_event_event_name_check": {
+          "name": "audit_event_event_name_check",
+          "value": "event_name ~ '^[a-z][a-z0-9_]{0,31}\\.[a-z][a-z0-9_]{0,62}$'"
+        },
+        "audit_event_metadata_check": {
+          "name": "audit_event_metadata_check",
+          "value": "jsonb_typeof(metadata_json) = 'object' AND pg_column_size(metadata_json) <= 2048"
+        },
+        "audit_event_time_check": {
+          "name": "audit_event_time_check",
+          "value": "occurred_at <= recorded_at + interval '5 seconds' AND occurred_at >= recorded_at - interval '10 minutes'"
+        },
+        "audit_event_source_check": {
+          "name": "audit_event_source_check",
+          "value": "source IN ('WEB', 'API', 'JOB', 'PROVIDER', 'SYSTEM', 'LOCAL_TEST')"
+        },
+        "audit_event_outcome_check": {
+          "name": "audit_event_outcome_check",
+          "value": "outcome IN ('SUCCEEDED', 'DENIED', 'FAILED')"
+        },
+        "audit_event_reference_check": {
+          "name": "audit_event_reference_check",
+          "value": "correlation_id IS NOT NULL AND request_id IS NOT NULL"
+        },
+        "audit_event_category_check": {
+          "name": "audit_event_category_check",
+          "value": "category IN ('IDENTITY', 'ACCESS_CONTROL', 'SECURITY', 'RESTRICTED_ACCESS', 'CONFIGURATION', 'AUDIT_ACCESS')"
+        },
+        "audit_event_actor_check": {
+          "name": "audit_event_actor_check",
+          "value": "(actor_type = 'USER' AND actor_user_id IS NOT NULL) OR (actor_type IN ('SERVICE', 'SYSTEM', 'ANONYMOUS') AND actor_user_id IS NULL)"
+        },
+        "audit_event_scope_check": {
+          "name": "audit_event_scope_check",
+          "value": "(effective_scope_type IS NULL) = (effective_scope_reference_id IS NULL) AND (effective_scope_type IS NULL OR effective_scope_type IN ('ASSIGNED_RECORDS', 'TEAM', 'BRANCH', 'ORGANIZATION', 'AUDIT_ASSIGNMENT')) AND (effective_role_code IS NOT NULL OR (effective_scope_type IS NULL AND effective_assignment_id IS NULL)) AND (effective_role_code IS NULL OR actor_type = 'USER')"
+        },
+        "audit_event_target_check": {
+          "name": "audit_event_target_check",
+          "value": "(target_type IS NOT NULL OR target_id IS NULL) AND (target_type IS NULL OR target_type IN ('USER_ACCOUNT', 'STAFF_INVITATION', 'STAFF_RECOVERY_CASE', 'ROLE_ASSIGNMENT', 'AUTHORIZATION_CATALOG', 'PROTECTED_RESOURCE', 'AUDIT_LOG', 'ORGANIZATION', 'BRANCH', 'TEAM', 'POSITION', 'JOB_DESCRIPTION_VERSION', 'HIRING_CYCLE')) AND (target_id IS NOT NULL OR target_type IS NULL OR target_type IN ('AUTHORIZATION_CATALOG', 'AUDIT_LOG'))"
+        },
+        "audit_event_version_check": {
+          "name": "audit_event_version_check",
+          "value": "(previous_record_version IS NULL OR previous_record_version >= 0) AND (new_record_version IS NULL OR new_record_version >= 1) AND (previous_record_version IS NULL OR new_record_version = previous_record_version + 1)"
+        },
+        "audit_event_code_check": {
+          "name": "audit_event_code_check",
+          "value": "action ~ '^[A-Z][A-Z0-9_]{0,63}$' AND (reason_code IS NULL OR reason_code ~ '^[A-Z][A-Z0-9_]{0,63}$') AND (effective_role_code IS NULL OR effective_role_code ~ '^[A-Z][A-Z0-9_]{0,63}$') AND (permission_code IS NULL OR permission_code ~ '^[a-z][a-z0-9_.]{0,99}$') AND (idempotency_key IS NULL OR idempotency_key ~ '^[0-9a-f-]{36}:[0-9]{1,19}$')"
+        },
+        "audit_event_retention_check": {
+          "name": "audit_event_retention_check",
+          "value": "retention_class_code = 'AUDIT_STANDARD_UNSET'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "audit.chain_head": {
+      "name": "chain_head",
+      "schema": "audit",
+      "columns": {
+        "chain_partition": {
+          "name": "chain_partition",
+          "type": "varchar(48)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "last_sequence": {
+          "name": "last_sequence",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_hash": {
+          "name": "last_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "chain_head_sequence_check": {
+          "name": "chain_head_sequence_check",
+          "value": "last_sequence >= 0"
+        },
+        "chain_head_hash_check": {
+          "name": "chain_head_hash_check",
+          "value": "octet_length(last_hash) = 32"
+        },
+        "chain_head_partition_check": {
+          "name": "chain_head_partition_check",
+          "value": "chain_partition ~ '^((IDENTITY|SECURITY):[0-9a-f]{2}|ORG:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "audit.security_event": {
+      "name": "security_event",
+      "schema": "audit",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "schema_version": {
+          "name": "schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_name": {
+          "name": "event_name",
+          "type": "varchar(96)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_version": {
+          "name": "event_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "risk_code": {
+          "name": "risk_code",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source": {
+          "name": "source",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "correlation_id": {
+          "name": "correlation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recorded_at": {
+          "name": "recorded_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "metadata_json": {
+          "name": "metadata_json",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "retention_class_code": {
+          "name": "retention_class_code",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chain_partition": {
+          "name": "chain_partition",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chain_sequence": {
+          "name": "chain_sequence",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "previous_hash": {
+          "name": "previous_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "integrity_hash": {
+          "name": "integrity_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "integrity_key_version": {
+          "name": "integrity_key_version",
+          "type": "varchar(8)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "canonicalization_version": {
+          "name": "canonicalization_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "security_event_occurred_idx": {
+          "name": "security_event_occurred_idx",
+          "columns": [
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "security_event_account_idx": {
+          "name": "security_event_account_idx",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "security_event_name_idx": {
+          "name": "security_event_name_idx",
+          "columns": [
+            {
+              "expression": "event_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "security_event_account_fk": {
+          "name": "security_event_account_fk",
+          "tableFrom": "security_event",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "security_event_chain_unique": {
+          "name": "security_event_chain_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "chain_partition",
+            "chain_sequence"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "security_event_partition_check": {
+          "name": "security_event_partition_check",
+          "value": "chain_partition ~ '^((IDENTITY|SECURITY):[0-9a-f]{2}|ORG:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$'"
+        },
+        "security_event_sequence_check": {
+          "name": "security_event_sequence_check",
+          "value": "chain_sequence >= 1"
+        },
+        "security_event_hash_check": {
+          "name": "security_event_hash_check",
+          "value": "octet_length(previous_hash) = 32 AND octet_length(integrity_hash) = 32"
+        },
+        "security_event_key_version_check": {
+          "name": "security_event_key_version_check",
+          "value": "integrity_key_version ~ '^[tv][0-9]{1,4}$'"
+        },
+        "security_event_canonicalization_check": {
+          "name": "security_event_canonicalization_check",
+          "value": "canonicalization_version = 1"
+        },
+        "security_event_schema_version_check": {
+          "name": "security_event_schema_version_check",
+          "value": "schema_version = 1"
+        },
+        "security_event_event_version_check": {
+          "name": "security_event_event_version_check",
+          "value": "event_version >= 1"
+        },
+        "security_event_event_name_check": {
+          "name": "security_event_event_name_check",
+          "value": "event_name ~ '^[a-z][a-z0-9_]{0,31}\\.[a-z][a-z0-9_]{0,62}$'"
+        },
+        "security_event_metadata_check": {
+          "name": "security_event_metadata_check",
+          "value": "jsonb_typeof(metadata_json) = 'object' AND pg_column_size(metadata_json) <= 2048"
+        },
+        "security_event_time_check": {
+          "name": "security_event_time_check",
+          "value": "occurred_at <= recorded_at + interval '5 seconds' AND occurred_at >= recorded_at - interval '10 minutes'"
+        },
+        "security_event_source_check": {
+          "name": "security_event_source_check",
+          "value": "source IN ('WEB', 'API', 'JOB', 'PROVIDER', 'SYSTEM', 'LOCAL_TEST')"
+        },
+        "security_event_outcome_check": {
+          "name": "security_event_outcome_check",
+          "value": "outcome IN ('SUCCEEDED', 'DENIED', 'FAILED')"
+        },
+        "security_event_reference_check": {
+          "name": "security_event_reference_check",
+          "value": "correlation_id IS NOT NULL AND request_id IS NOT NULL"
+        },
+        "security_event_code_check": {
+          "name": "security_event_code_check",
+          "value": "risk_code IS NULL OR risk_code ~ '^[A-Z][A-Z0-9_]{0,63}$'"
+        },
+        "security_event_retention_check": {
+          "name": "security_event_retention_check",
+          "value": "retention_class_code = 'SECURITY_STANDARD_UNSET'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "auth.account": {
+      "name": "account",
+      "schema": "auth",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "access_token": {
+          "name": "access_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refresh_token": {
+          "name": "refresh_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_token": {
+          "name": "id_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "access_token_expires_at": {
+          "name": "access_token_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refresh_token_expires_at": {
+          "name": "refresh_token_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "account_userId_idx": {
+          "name": "account_userId_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "account_user_id_user_id_fk": {
+          "name": "account_user_id_user_id_fk",
+          "tableFrom": "account",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "auth.session": {
+      "name": "session",
+      "schema": "auth",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ip_address": {
+          "name": "ip_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "auth_purpose": {
+          "name": "auth_purpose",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "auth_method": {
+          "name": "auth_method",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "primary_authenticated_at": {
+          "name": "primary_authenticated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mfa_authenticated_at": {
+          "name": "mfa_authenticated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "account_version": {
+          "name": "account_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reauthenticated_at": {
+          "name": "reauthenticated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reauthentication_method": {
+          "name": "reauthentication_method",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reauthentication_purpose": {
+          "name": "reauthentication_purpose",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "session_userId_idx": {
+          "name": "session_userId_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "session_user_id_user_id_fk": {
+          "name": "session_user_id_user_id_fk",
+          "tableFrom": "session",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "session_token_unique": {
+          "name": "session_token_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "session_auth_purpose_check": {
+          "name": "session_auth_purpose_check",
+          "value": "\"auth\".\"session\".\"auth_purpose\" IS NULL OR \"auth\".\"session\".\"auth_purpose\" IN ('STANDARD', 'STAFF_FIRST_FACTOR', 'STAFF_ACTIVATION', 'STAFF')"
+        },
+        "session_auth_method_check": {
+          "name": "session_auth_method_check",
+          "value": "\"auth\".\"session\".\"auth_method\" IS NULL OR \"auth\".\"session\".\"auth_method\" IN ('PASSWORD', 'PASSWORD_TOTP', 'PASSWORD_BACKUP_CODE')"
+        },
+        "session_staff_assurance_check": {
+          "name": "session_staff_assurance_check",
+          "value": "\"auth\".\"session\".\"auth_purpose\" IS DISTINCT FROM 'STAFF' OR (\"auth\".\"session\".\"auth_method\" IN ('PASSWORD_TOTP', 'PASSWORD_BACKUP_CODE') AND \"auth\".\"session\".\"primary_authenticated_at\" IS NOT NULL AND \"auth\".\"session\".\"mfa_authenticated_at\" IS NOT NULL AND \"auth\".\"session\".\"account_version\" IS NOT NULL)"
+        },
+        "session_reauthentication_check": {
+          "name": "session_reauthentication_check",
+          "value": "(\"auth\".\"session\".\"reauthenticated_at\" IS NULL AND \"auth\".\"session\".\"reauthentication_method\" IS NULL AND \"auth\".\"session\".\"reauthentication_purpose\" IS NULL) OR (\"auth\".\"session\".\"reauthenticated_at\" IS NOT NULL AND \"auth\".\"session\".\"reauthentication_method\" = 'PASSWORD_TOTP' AND \"auth\".\"session\".\"reauthentication_purpose\" ~ '^[A-Z_]{1,64}$')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "auth.two_factor": {
+      "name": "two_factor",
+      "schema": "auth",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "secret": {
+          "name": "secret",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "backup_codes": {
+          "name": "backup_codes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verified": {
+          "name": "verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "failed_verification_count": {
+          "name": "failed_verification_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "locked_until": {
+          "name": "locked_until",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "twoFactor_secret_idx": {
+          "name": "twoFactor_secret_idx",
+          "columns": [
+            {
+              "expression": "secret",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "twoFactor_userId_idx": {
+          "name": "twoFactor_userId_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "two_factor_user_id_user_id_fk": {
+          "name": "two_factor_user_id_user_id_fk",
+          "tableFrom": "two_factor",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "two_factor_user_id_unique": {
+          "name": "two_factor_user_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "two_factor_failed_count_check": {
+          "name": "two_factor_failed_count_check",
+          "value": "\"auth\".\"two_factor\".\"failed_verification_count\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "auth.user": {
+      "name": "user",
+      "schema": "auth",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email_verified": {
+          "name": "email_verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "image": {
+          "name": "image",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "email_display": {
+          "name": "email_display",
+          "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "account_type": {
+          "name": "account_type",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_authenticated_at": {
+          "name": "last_authenticated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "disabled_at": {
+          "name": "disabled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "disabled_reason_code": {
+          "name": "disabled_reason_code",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "two_factor_enabled": {
+          "name": "two_factor_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "user_email_unique": {
+          "name": "user_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "user_account_type_check": {
+          "name": "user_account_type_check",
+          "value": "\"auth\".\"user\".\"account_type\" IN ('CANDIDATE', 'STAFF', 'SERVICE')"
+        },
+        "user_status_check": {
+          "name": "user_status_check",
+          "value": "\"auth\".\"user\".\"status\" IN ('INVITED', 'ACTIVE', 'LOCKED', 'DISABLED', 'CLOSED')"
+        },
+        "user_disabled_reason_code_check": {
+          "name": "user_disabled_reason_code_check",
+          "value": "\"auth\".\"user\".\"disabled_reason_code\" IS NULL OR \"auth\".\"user\".\"disabled_reason_code\" IN ('SECURITY_LOCK', 'ADMINISTRATIVE_DISABLE', 'ACCOUNT_CLOSED')"
+        },
+        "user_restriction_metadata_check": {
+          "name": "user_restriction_metadata_check",
+          "value": "(\"auth\".\"user\".\"status\" IN ('LOCKED', 'DISABLED', 'CLOSED')) = (\"auth\".\"user\".\"disabled_at\" IS NOT NULL AND \"auth\".\"user\".\"disabled_reason_code\" IS NOT NULL)"
+        },
+        "user_email_normalized_check": {
+          "name": "user_email_normalized_check",
+          "value": "\"auth\".\"user\".\"email\" = lower(\"auth\".\"user\".\"email\") AND \"auth\".\"user\".\"email\" = btrim(\"auth\".\"user\".\"email\") AND char_length(\"auth\".\"user\".\"email\") BETWEEN 3 AND 254"
+        },
+        "user_name_length_check": {
+          "name": "user_name_length_check",
+          "value": "char_length(\"auth\".\"user\".\"name\") BETWEEN 1 AND 200"
+        },
+        "user_version_check": {
+          "name": "user_version_check",
+          "value": "\"auth\".\"user\".\"version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "auth.verification": {
+      "name": "verification",
+      "schema": "auth",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "identifier": {
+          "name": "identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "verification_identifier_idx": {
+          "name": "verification_identifier_idx",
+          "columns": [
+            {
+              "expression": "identifier",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "auth.authorization_subject": {
+      "name": "authorization_subject",
+      "schema": "auth",
+      "columns": {
+        "user_account_id": {
+          "name": "user_account_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "authorization_version": {
+          "name": "authorization_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version_changed_at": {
+          "name": "version_changed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "authorization_subject_user_account_id_user_id_fk": {
+          "name": "authorization_subject_user_account_id_user_id_fk",
+          "tableFrom": "authorization_subject",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "user_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "authorization_subject_version_check": {
+          "name": "authorization_subject_version_check",
+          "value": "\"auth\".\"authorization_subject\".\"authorization_version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "auth.permission": {
+      "name": "permission",
+      "schema": "auth",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resource": {
+          "name": "resource",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "operation": {
+          "name": "operation",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_sensitivity": {
+          "name": "max_sensitivity",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "permission_domain": {
+          "name": "permission_domain",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requires_scope": {
+          "name": "requires_scope",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "workflow_policy_code": {
+          "name": "workflow_policy_code",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "recent_auth_policy": {
+          "name": "recent_auth_policy",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "recent_auth_purpose": {
+          "name": "recent_auth_purpose",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "separation_policy_code": {
+          "name": "separation_policy_code",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dual_control_hook": {
+          "name": "dual_control_hook",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "requires_reason": {
+          "name": "requires_reason",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "restricted_data": {
+          "name": "restricted_data",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_export": {
+          "name": "is_export",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "high_risk": {
+          "name": "high_risk",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "catalog_version": {
+          "name": "catalog_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "permission_code_unique": {
+          "name": "permission_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "permission_code_check": {
+          "name": "permission_code_check",
+          "value": "\"auth\".\"permission\".\"code\" ~ '^[a-z][a-z_]*(\\.[a-z][a-z_]*){1,3}$' AND \"auth\".\"permission\".\"code\" = \"auth\".\"permission\".\"resource\" || '.' || \"auth\".\"permission\".\"action\""
+        },
+        "permission_operation_check": {
+          "name": "permission_operation_check",
+          "value": "\"auth\".\"permission\".\"operation\" IN ('READ', 'CREATE', 'EDIT', 'REVIEW', 'APPROVE', 'DOWNLOAD', 'EXPORT', 'CONFIGURE', 'ADMINISTER')"
+        },
+        "permission_max_sensitivity_check": {
+          "name": "permission_max_sensitivity_check",
+          "value": "\"auth\".\"permission\".\"max_sensitivity\" IN ('PUBLIC', 'INTERNAL', 'CONFIDENTIAL_PERSONNEL', 'RESTRICTED_IDENTITY_FINANCIAL', 'RESTRICTED_SCREENING_MEDICAL', 'SECURITY_AUDIT_RESTRICTED')"
+        },
+        "permission_domain_check": {
+          "name": "permission_domain_check",
+          "value": "\"auth\".\"permission\".\"permission_domain\" IN ('BUSINESS', 'TECHNICAL', 'CANDIDATE_SELF')"
+        },
+        "permission_status_check": {
+          "name": "permission_status_check",
+          "value": "\"auth\".\"permission\".\"status\" IN ('ACTIVE', 'RETIRED')"
+        },
+        "permission_workflow_policy_check": {
+          "name": "permission_workflow_policy_check",
+          "value": "\"auth\".\"permission\".\"workflow_policy_code\" IS NULL OR \"auth\".\"permission\".\"workflow_policy_code\" IN ('CANDIDACY_WORKFLOW')"
+        },
+        "permission_recent_auth_check": {
+          "name": "permission_recent_auth_check",
+          "value": "(\"auth\".\"permission\".\"recent_auth_policy\" IS NULL) = (\"auth\".\"permission\".\"recent_auth_purpose\" IS NULL) AND (\"auth\".\"permission\".\"recent_auth_policy\" IS NULL OR \"auth\".\"permission\".\"recent_auth_policy\" IN ('RECENT_STAFF_AUTH', 'RECENT_STRONG_AUTH')) AND (\"auth\".\"permission\".\"recent_auth_purpose\" IS NULL OR \"auth\".\"permission\".\"recent_auth_purpose\" ~ '^[A-Z_]{1,64}$')"
+        },
+        "permission_separation_policy_check": {
+          "name": "permission_separation_policy_check",
+          "value": "\"auth\".\"permission\".\"separation_policy_code\" IS NULL OR \"auth\".\"permission\".\"separation_policy_code\" IN ('CLASSIFICATION_SELF_APPROVAL', 'CANDIDATE_SELF_VERIFICATION', 'RESTRICTED_RESULT_ENTRANT', 'SIGNED_EVALUATION_IMMUTABLE', 'OFFER_SELF_APPROVAL', 'READINESS_APPROVAL', 'AUDIT_SELF_MODIFICATION', 'EXPORT_APPROVAL')"
+        },
+        "permission_dual_control_check": {
+          "name": "permission_dual_control_check",
+          "value": "\"auth\".\"permission\".\"dual_control_hook\" IS NULL OR \"auth\".\"permission\".\"dual_control_hook\" IN ('CLASSIFICATION_DECISION', 'HIGH_RISK_SCREENING_DISPOSITION', 'OFFER_COMPENSATION_THRESHOLD', 'MANUAL_COMPLIANCE_WAIVER', 'FINAL_READINESS', 'RESTRICTED_EXPORT', 'RETENTION_LEGAL_HOLD')"
+        },
+        "permission_export_check": {
+          "name": "permission_export_check",
+          "value": "\"auth\".\"permission\".\"is_export\" = (\"auth\".\"permission\".\"operation\" = 'EXPORT')"
+        },
+        "permission_restricted_check": {
+          "name": "permission_restricted_check",
+          "value": "\"auth\".\"permission\".\"restricted_data\" = (\"auth\".\"permission\".\"max_sensitivity\" IN ('RESTRICTED_IDENTITY_FINANCIAL', 'RESTRICTED_SCREENING_MEDICAL', 'SECURITY_AUDIT_RESTRICTED'))"
+        },
+        "permission_catalog_version_check": {
+          "name": "permission_catalog_version_check",
+          "value": "\"auth\".\"permission\".\"catalog_version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "auth.role": {
+      "name": "role",
+      "schema": "auth",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "principal_type": {
+          "name": "principal_type",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_system_role": {
+          "name": "is_system_role",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "catalog_version": {
+          "name": "catalog_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "role_code_unique": {
+          "name": "role_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "code"
+          ]
+        },
+        "role_id_principal_type_unique": {
+          "name": "role_id_principal_type_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "principal_type"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "role_code_check": {
+          "name": "role_code_check",
+          "value": "\"auth\".\"role\".\"code\" ~ '^[A-Z][A-Z_]{1,63}$'"
+        },
+        "role_principal_type_check": {
+          "name": "role_principal_type_check",
+          "value": "\"auth\".\"role\".\"principal_type\" IN ('CANDIDATE', 'STAFF')"
+        },
+        "role_status_check": {
+          "name": "role_status_check",
+          "value": "\"auth\".\"role\".\"status\" IN ('ACTIVE', 'RETIRED')"
+        },
+        "role_catalog_version_check": {
+          "name": "role_catalog_version_check",
+          "value": "\"auth\".\"role\".\"catalog_version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "auth.role_permission": {
+      "name": "role_permission",
+      "schema": "auth",
+      "columns": {
+        "role_id": {
+          "name": "role_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "permission_id": {
+          "name": "permission_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "condition": {
+          "name": "condition",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "catalog_version": {
+          "name": "catalog_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "role_permission_permission_idx": {
+          "name": "role_permission_permission_idx",
+          "columns": [
+            {
+              "expression": "permission_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "role_permission_role_id_role_id_fk": {
+          "name": "role_permission_role_id_role_id_fk",
+          "tableFrom": "role_permission",
+          "tableTo": "role",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "role_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "role_permission_permission_id_permission_id_fk": {
+          "name": "role_permission_permission_id_permission_id_fk",
+          "tableFrom": "role_permission",
+          "tableTo": "permission",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "permission_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "role_permission_pk": {
+          "name": "role_permission_pk",
+          "columns": [
+            "role_id",
+            "permission_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "role_permission_status_check": {
+          "name": "role_permission_status_check",
+          "value": "\"auth\".\"role_permission\".\"status\" IN ('ACTIVE', 'RETIRED')"
+        },
+        "role_permission_condition_check": {
+          "name": "role_permission_condition_check",
+          "value": "\"auth\".\"role_permission\".\"condition\" IS NULL OR (jsonb_typeof(\"auth\".\"role_permission\".\"condition\") = 'object' AND \"auth\".\"role_permission\".\"condition\" ->> 'v' = '1' AND \"auth\".\"role_permission\".\"condition\" ->> 'kind' IN ('CANDIDATE_OWNERSHIP', 'DESIGNATION', 'PARTICIPANT', 'HOLD_CATEGORY'))"
+        },
+        "role_permission_catalog_version_check": {
+          "name": "role_permission_catalog_version_check",
+          "value": "\"auth\".\"role_permission\".\"catalog_version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "auth.user_role_assignment": {
+      "name": "user_role_assignment",
+      "schema": "auth",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "user_account_id": {
+          "name": "user_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role_id": {
+          "name": "role_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "principal_type": {
+          "name": "principal_type",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'STAFF'"
+        },
+        "scope_type": {
+          "name": "scope_type",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope_reference_id": {
+          "name": "scope_reference_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_to": {
+          "name": "effective_to",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason_code": {
+          "name": "reason_code",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason_reference": {
+          "name": "reason_reference",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "approved_by_user_id": {
+          "name": "approved_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approved_at": {
+          "name": "approved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoked_by_user_id": {
+          "name": "revoked_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revocation_reason_code": {
+          "name": "revocation_reason_code",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "replaces_assignment_id": {
+          "name": "replaces_assignment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "superseded_by_assignment_id": {
+          "name": "superseded_by_assignment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "user_role_assignment_subject_idx": {
+          "name": "user_role_assignment_subject_idx",
+          "columns": [
+            {
+              "expression": "user_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "user_role_assignment_role_idx": {
+          "name": "user_role_assignment_role_idx",
+          "columns": [
+            {
+              "expression": "role_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "user_role_assignment_user_account_id_user_id_fk": {
+          "name": "user_role_assignment_user_account_id_user_id_fk",
+          "tableFrom": "user_role_assignment",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "user_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "user_role_assignment_created_by_user_id_user_id_fk": {
+          "name": "user_role_assignment_created_by_user_id_user_id_fk",
+          "tableFrom": "user_role_assignment",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "created_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "user_role_assignment_approved_by_user_id_user_id_fk": {
+          "name": "user_role_assignment_approved_by_user_id_user_id_fk",
+          "tableFrom": "user_role_assignment",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "approved_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "user_role_assignment_revoked_by_user_id_user_id_fk": {
+          "name": "user_role_assignment_revoked_by_user_id_user_id_fk",
+          "tableFrom": "user_role_assignment",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "revoked_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "user_role_assignment_role_principal_fk": {
+          "name": "user_role_assignment_role_principal_fk",
+          "tableFrom": "user_role_assignment",
+          "tableTo": "role",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "role_id",
+            "principal_type"
+          ],
+          "columnsTo": [
+            "id",
+            "principal_type"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "user_role_assignment_replaces_fk": {
+          "name": "user_role_assignment_replaces_fk",
+          "tableFrom": "user_role_assignment",
+          "tableTo": "user_role_assignment",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "replaces_assignment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "user_role_assignment_superseded_by_fk": {
+          "name": "user_role_assignment_superseded_by_fk",
+          "tableFrom": "user_role_assignment",
+          "tableTo": "user_role_assignment",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "superseded_by_assignment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "user_role_assignment_principal_type_check": {
+          "name": "user_role_assignment_principal_type_check",
+          "value": "\"auth\".\"user_role_assignment\".\"principal_type\" = 'STAFF'"
+        },
+        "user_role_assignment_scope_type_check": {
+          "name": "user_role_assignment_scope_type_check",
+          "value": "\"auth\".\"user_role_assignment\".\"scope_type\" IN ('ASSIGNED_RECORDS', 'TEAM', 'BRANCH', 'ORGANIZATION', 'AUDIT_ASSIGNMENT')"
+        },
+        "user_role_assignment_status_check": {
+          "name": "user_role_assignment_status_check",
+          "value": "\"auth\".\"user_role_assignment\".\"status\" IN ('PROPOSED', 'ACTIVE', 'REJECTED', 'REVOKED', 'SUPERSEDED')"
+        },
+        "user_role_assignment_effective_check": {
+          "name": "user_role_assignment_effective_check",
+          "value": "\"auth\".\"user_role_assignment\".\"effective_to\" IS NULL OR \"auth\".\"user_role_assignment\".\"effective_to\" > \"auth\".\"user_role_assignment\".\"effective_from\""
+        },
+        "user_role_assignment_reason_check": {
+          "name": "user_role_assignment_reason_check",
+          "value": "\"auth\".\"user_role_assignment\".\"reason_code\" IN ('NEW_ACCESS', 'ROLE_CHANGE', 'SCOPE_CHANGE', 'EFFECTIVE_DATE_CHANGE', 'TEMPORARY_COVERAGE', 'AUDIT_ENGAGEMENT', 'ACCESS_REVIEW', 'CORRECTION')"
+        },
+        "user_role_assignment_reason_reference_check": {
+          "name": "user_role_assignment_reason_reference_check",
+          "value": "\"auth\".\"user_role_assignment\".\"reason_reference\" IS NULL OR \"auth\".\"user_role_assignment\".\"reason_reference\" ~ '^[A-Za-z0-9._-]{1,64}$'"
+        },
+        "user_role_assignment_approval_check": {
+          "name": "user_role_assignment_approval_check",
+          "value": "((\"auth\".\"user_role_assignment\".\"status\" IN ('ACTIVE', 'REVOKED', 'SUPERSEDED')) = (\"auth\".\"user_role_assignment\".\"approved_by_user_id\" IS NOT NULL AND \"auth\".\"user_role_assignment\".\"approved_at\" IS NOT NULL)) AND (\"auth\".\"user_role_assignment\".\"approved_by_user_id\" IS NULL OR (\"auth\".\"user_role_assignment\".\"approved_by_user_id\" <> \"auth\".\"user_role_assignment\".\"user_account_id\" AND \"auth\".\"user_role_assignment\".\"approved_by_user_id\" <> \"auth\".\"user_role_assignment\".\"created_by_user_id\"))"
+        },
+        "user_role_assignment_separation_check": {
+          "name": "user_role_assignment_separation_check",
+          "value": "\"auth\".\"user_role_assignment\".\"created_by_user_id\" <> \"auth\".\"user_role_assignment\".\"user_account_id\" AND (\"auth\".\"user_role_assignment\".\"revoked_by_user_id\" IS NULL OR \"auth\".\"user_role_assignment\".\"revoked_by_user_id\" <> \"auth\".\"user_role_assignment\".\"user_account_id\")"
+        },
+        "user_role_assignment_revoked_check": {
+          "name": "user_role_assignment_revoked_check",
+          "value": "CASE WHEN \"auth\".\"user_role_assignment\".\"status\" IN ('REVOKED', 'REJECTED') THEN \"auth\".\"user_role_assignment\".\"revoked_at\" IS NOT NULL AND \"auth\".\"user_role_assignment\".\"revoked_by_user_id\" IS NOT NULL AND \"auth\".\"user_role_assignment\".\"revocation_reason_code\" IS NOT NULL AND \"auth\".\"user_role_assignment\".\"revocation_reason_code\" <> 'SUPERSEDED' WHEN \"auth\".\"user_role_assignment\".\"status\" = 'SUPERSEDED' THEN \"auth\".\"user_role_assignment\".\"revoked_at\" IS NOT NULL AND \"auth\".\"user_role_assignment\".\"revoked_by_user_id\" IS NOT NULL AND \"auth\".\"user_role_assignment\".\"revocation_reason_code\" = 'SUPERSEDED' ELSE \"auth\".\"user_role_assignment\".\"revoked_at\" IS NULL AND \"auth\".\"user_role_assignment\".\"revoked_by_user_id\" IS NULL AND \"auth\".\"user_role_assignment\".\"revocation_reason_code\" IS NULL END"
+        },
+        "user_role_assignment_revocation_reason_check": {
+          "name": "user_role_assignment_revocation_reason_check",
+          "value": "\"auth\".\"user_role_assignment\".\"revocation_reason_code\" IS NULL OR \"auth\".\"user_role_assignment\".\"revocation_reason_code\" IN ('ACCESS_REVIEW', 'ROLE_CHANGE', 'SEPARATION', 'SECURITY_INCIDENT', 'PROPOSAL_REJECTED', 'CORRECTION', 'SUPERSEDED')"
+        },
+        "user_role_assignment_superseded_check": {
+          "name": "user_role_assignment_superseded_check",
+          "value": "(\"auth\".\"user_role_assignment\".\"status\" = 'SUPERSEDED') = (\"auth\".\"user_role_assignment\".\"superseded_by_assignment_id\" IS NOT NULL)"
+        },
+        "user_role_assignment_version_check": {
+          "name": "user_role_assignment_version_check",
+          "value": "\"auth\".\"user_role_assignment\".\"version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "auth.staff_invitation": {
+      "name": "staff_invitation",
+      "schema": "auth",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email_display": {
+          "name": "email_display",
+          "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_digest": {
+          "name": "token_digest",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sequence": {
+          "name": "sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "issuer_account_id": {
+          "name": "issuer_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "issuer_reason_code": {
+          "name": "issuer_reason_code",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recovery_case_id": {
+          "name": "recovery_case_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "issued_at": {
+          "name": "issued_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accepted_at": {
+          "name": "accepted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "superseded_at": {
+          "name": "superseded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expired_at": {
+          "name": "expired_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "superseded_by_id": {
+          "name": "superseded_by_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "staff_invitation_one_pending_per_email": {
+          "name": "staff_invitation_one_pending_per_email",
+          "columns": [
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"auth\".\"staff_invitation\".\"status\" = 'PENDING'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "staff_invitation_account_idx": {
+          "name": "staff_invitation_account_idx",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "staff_invitation_account_id_user_id_fk": {
+          "name": "staff_invitation_account_id_user_id_fk",
+          "tableFrom": "staff_invitation",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "staff_invitation_issuer_account_id_user_id_fk": {
+          "name": "staff_invitation_issuer_account_id_user_id_fk",
+          "tableFrom": "staff_invitation",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "issuer_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "staff_invitation_recovery_case_id_staff_recovery_case_id_fk": {
+          "name": "staff_invitation_recovery_case_id_staff_recovery_case_id_fk",
+          "tableFrom": "staff_invitation",
+          "tableTo": "staff_recovery_case",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "recovery_case_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "staff_invitation_superseded_by_id_staff_invitation_id_fk": {
+          "name": "staff_invitation_superseded_by_id_staff_invitation_id_fk",
+          "tableFrom": "staff_invitation",
+          "tableTo": "staff_invitation",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "superseded_by_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "staff_invitation_token_digest_unique": {
+          "name": "staff_invitation_token_digest_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token_digest"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "staff_invitation_status_check": {
+          "name": "staff_invitation_status_check",
+          "value": "\"auth\".\"staff_invitation\".\"status\" IN ('PENDING', 'ACCEPTED', 'REVOKED', 'EXPIRED', 'SUPERSEDED')"
+        },
+        "staff_invitation_purpose_check": {
+          "name": "staff_invitation_purpose_check",
+          "value": "\"auth\".\"staff_invitation\".\"purpose\" IN ('STAFF_ACTIVATION', 'STAFF_REENROLLMENT')"
+        },
+        "staff_invitation_issuer_reason_check": {
+          "name": "staff_invitation_issuer_reason_check",
+          "value": "\"auth\".\"staff_invitation\".\"issuer_reason_code\" IN ('LOCAL_BOOTSTRAP', 'TEST_HARNESS', 'RECOVERY_REENROLLMENT')"
+        },
+        "staff_invitation_email_normalized_check": {
+          "name": "staff_invitation_email_normalized_check",
+          "value": "\"auth\".\"staff_invitation\".\"email\" = lower(\"auth\".\"staff_invitation\".\"email\") AND \"auth\".\"staff_invitation\".\"email\" = btrim(\"auth\".\"staff_invitation\".\"email\") AND char_length(\"auth\".\"staff_invitation\".\"email\") BETWEEN 3 AND 254"
+        },
+        "staff_invitation_token_digest_check": {
+          "name": "staff_invitation_token_digest_check",
+          "value": "\"auth\".\"staff_invitation\".\"token_digest\" ~ '^[A-Za-z0-9_-]{43}$'"
+        },
+        "staff_invitation_sequence_check": {
+          "name": "staff_invitation_sequence_check",
+          "value": "\"auth\".\"staff_invitation\".\"sequence\" >= 1"
+        },
+        "staff_invitation_version_check": {
+          "name": "staff_invitation_version_check",
+          "value": "\"auth\".\"staff_invitation\".\"version\" >= 1"
+        },
+        "staff_invitation_expiry_check": {
+          "name": "staff_invitation_expiry_check",
+          "value": "\"auth\".\"staff_invitation\".\"expires_at\" > \"auth\".\"staff_invitation\".\"issued_at\""
+        },
+        "staff_invitation_accepted_check": {
+          "name": "staff_invitation_accepted_check",
+          "value": "(\"auth\".\"staff_invitation\".\"status\" = 'ACCEPTED') = (\"auth\".\"staff_invitation\".\"accepted_at\" IS NOT NULL) AND (\"auth\".\"staff_invitation\".\"status\" <> 'ACCEPTED' OR (\"auth\".\"staff_invitation\".\"account_id\" IS NOT NULL AND \"auth\".\"staff_invitation\".\"accepted_at\" <= \"auth\".\"staff_invitation\".\"expires_at\"))"
+        },
+        "staff_invitation_revoked_check": {
+          "name": "staff_invitation_revoked_check",
+          "value": "(\"auth\".\"staff_invitation\".\"status\" = 'REVOKED') = (\"auth\".\"staff_invitation\".\"revoked_at\" IS NOT NULL)"
+        },
+        "staff_invitation_superseded_check": {
+          "name": "staff_invitation_superseded_check",
+          "value": "(\"auth\".\"staff_invitation\".\"status\" = 'SUPERSEDED') = (\"auth\".\"staff_invitation\".\"superseded_at\" IS NOT NULL)"
+        },
+        "staff_invitation_expired_check": {
+          "name": "staff_invitation_expired_check",
+          "value": "(\"auth\".\"staff_invitation\".\"status\" = 'EXPIRED') = (\"auth\".\"staff_invitation\".\"expired_at\" IS NOT NULL)"
+        },
+        "staff_invitation_reenrollment_check": {
+          "name": "staff_invitation_reenrollment_check",
+          "value": "\"auth\".\"staff_invitation\".\"purpose\" <> 'STAFF_REENROLLMENT' OR (\"auth\".\"staff_invitation\".\"account_id\" IS NOT NULL AND \"auth\".\"staff_invitation\".\"recovery_case_id\" IS NOT NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "auth.staff_recovery_case": {
+      "name": "staff_recovery_case",
+      "schema": "auth",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason_code": {
+          "name": "reason_code",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolution_code": {
+          "name": "resolution_code",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "requested_at": {
+          "name": "requested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verification_started_at": {
+          "name": "verification_started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "identity_verified_at": {
+          "name": "identity_verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approved_at": {
+          "name": "approved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approval_expires_at": {
+          "name": "approval_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resolved_at": {
+          "name": "resolved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "verifier_account_id": {
+          "name": "verifier_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approver_account_id": {
+          "name": "approver_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "completed_by_account_id": {
+          "name": "completed_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "staff_recovery_case_one_open_per_account": {
+          "name": "staff_recovery_case_one_open_per_account",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"auth\".\"staff_recovery_case\".\"status\" IN ('REQUESTED', 'IDENTITY_VERIFICATION_PENDING', 'APPROVAL_PENDING', 'APPROVED')",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "staff_recovery_case_account_id_user_id_fk": {
+          "name": "staff_recovery_case_account_id_user_id_fk",
+          "tableFrom": "staff_recovery_case",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "staff_recovery_case_verifier_account_id_user_id_fk": {
+          "name": "staff_recovery_case_verifier_account_id_user_id_fk",
+          "tableFrom": "staff_recovery_case",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "verifier_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "staff_recovery_case_approver_account_id_user_id_fk": {
+          "name": "staff_recovery_case_approver_account_id_user_id_fk",
+          "tableFrom": "staff_recovery_case",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "approver_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "staff_recovery_case_completed_by_account_id_user_id_fk": {
+          "name": "staff_recovery_case_completed_by_account_id_user_id_fk",
+          "tableFrom": "staff_recovery_case",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "completed_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "staff_recovery_case_status_check": {
+          "name": "staff_recovery_case_status_check",
+          "value": "\"auth\".\"staff_recovery_case\".\"status\" IN ('REQUESTED', 'IDENTITY_VERIFICATION_PENDING', 'APPROVAL_PENDING', 'APPROVED', 'COMPLETED', 'REJECTED', 'EXPIRED', 'CANCELLED')"
+        },
+        "staff_recovery_case_reason_check": {
+          "name": "staff_recovery_case_reason_check",
+          "value": "\"auth\".\"staff_recovery_case\".\"reason_code\" IN ('LOST_AUTHENTICATOR', 'FORGOTTEN_PASSWORD', 'SUSPECTED_COMPROMISE', 'UNSPECIFIED')"
+        },
+        "staff_recovery_case_resolution_check": {
+          "name": "staff_recovery_case_resolution_check",
+          "value": "(\"auth\".\"staff_recovery_case\".\"status\" IN ('COMPLETED', 'REJECTED', 'EXPIRED', 'CANCELLED')) = (\"auth\".\"staff_recovery_case\".\"resolved_at\" IS NOT NULL AND \"auth\".\"staff_recovery_case\".\"resolution_code\" IS NOT NULL)"
+        },
+        "staff_recovery_case_resolution_code_check": {
+          "name": "staff_recovery_case_resolution_code_check",
+          "value": "\"auth\".\"staff_recovery_case\".\"resolution_code\" IS NULL OR \"auth\".\"staff_recovery_case\".\"resolution_code\" IN ('RESET_COMPLETED', 'IDENTITY_NOT_VERIFIED', 'APPROVAL_DENIED', 'REQUEST_CANCELLED', 'REQUEST_EXPIRED', 'APPROVAL_EXPIRED')"
+        },
+        "staff_recovery_case_expiry_check": {
+          "name": "staff_recovery_case_expiry_check",
+          "value": "\"auth\".\"staff_recovery_case\".\"expires_at\" > \"auth\".\"staff_recovery_case\".\"requested_at\""
+        },
+        "staff_recovery_case_separation_check": {
+          "name": "staff_recovery_case_separation_check",
+          "value": "(\"auth\".\"staff_recovery_case\".\"verifier_account_id\" IS NULL OR \"auth\".\"staff_recovery_case\".\"verifier_account_id\" <> \"auth\".\"staff_recovery_case\".\"account_id\") AND (\"auth\".\"staff_recovery_case\".\"approver_account_id\" IS NULL OR (\"auth\".\"staff_recovery_case\".\"approver_account_id\" <> \"auth\".\"staff_recovery_case\".\"account_id\" AND \"auth\".\"staff_recovery_case\".\"approver_account_id\" IS DISTINCT FROM \"auth\".\"staff_recovery_case\".\"verifier_account_id\"))"
+        },
+        "staff_recovery_case_approval_check": {
+          "name": "staff_recovery_case_approval_check",
+          "value": "(\"auth\".\"staff_recovery_case\".\"approved_at\" IS NULL) = (\"auth\".\"staff_recovery_case\".\"approver_account_id\" IS NULL) AND (\"auth\".\"staff_recovery_case\".\"approved_at\" IS NULL) = (\"auth\".\"staff_recovery_case\".\"approval_expires_at\" IS NULL)"
+        },
+        "staff_recovery_case_version_check": {
+          "name": "staff_recovery_case_version_check",
+          "value": "\"auth\".\"staff_recovery_case\".\"version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "auth.totp_replay_guard": {
+      "name": "totp_replay_guard",
+      "schema": "auth",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code_digest": {
+          "name": "code_digest",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "totp_replay_guard_expires_idx": {
+          "name": "totp_replay_guard_expires_idx",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "totp_replay_guard_user_id_user_id_fk": {
+          "name": "totp_replay_guard_user_id_user_id_fk",
+          "tableFrom": "totp_replay_guard",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "totp_replay_guard_pk": {
+          "name": "totp_replay_guard_pk",
+          "columns": [
+            "user_id",
+            "code_digest"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "app.branch": {
+      "name": "branch",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "public_location_label": {
+          "name": "public_location_label",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'DRAFT'"
+        },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "inactivated_at": {
+          "name": "inactivated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_account_id": {
+          "name": "created_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_account_id": {
+          "name": "updated_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "branch_scope_idx": {
+          "name": "branch_scope_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "branch_organization_fk": {
+          "name": "branch_organization_fk",
+          "tableFrom": "branch",
+          "tableTo": "organization",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "branch_created_by_fk": {
+          "name": "branch_created_by_fk",
+          "tableFrom": "branch",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "created_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "branch_updated_by_fk": {
+          "name": "branch_updated_by_fk",
+          "tableFrom": "branch",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "updated_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "branch_organization_id_unique": {
+          "name": "branch_organization_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "organization_id",
+            "id"
+          ]
+        },
+        "branch_code_unique": {
+          "name": "branch_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "organization_id",
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "branch_code_check": {
+          "name": "branch_code_check",
+          "value": "\"app\".\"branch\".\"code\" ~ '^[A-Z0-9][A-Z0-9_-]{1,31}$'"
+        },
+        "branch_name_check": {
+          "name": "branch_name_check",
+          "value": "char_length(\"app\".\"branch\".\"name\") BETWEEN 1 AND 120"
+        },
+        "branch_public_location_label_check": {
+          "name": "branch_public_location_label_check",
+          "value": "char_length(\"app\".\"branch\".\"public_location_label\") BETWEEN 1 AND 120"
+        },
+        "branch_timezone_check": {
+          "name": "branch_timezone_check",
+          "value": "char_length(\"app\".\"branch\".\"timezone\") BETWEEN 1 AND 64"
+        },
+        "branch_status_check": {
+          "name": "branch_status_check",
+          "value": "\"app\".\"branch\".\"status\" IN ('DRAFT', 'ACTIVE', 'INACTIVE', 'ARCHIVED')"
+        },
+        "branch_lifecycle_check": {
+          "name": "branch_lifecycle_check",
+          "value": "(\"app\".\"branch\".\"status\" = 'DRAFT') = (\"app\".\"branch\".\"activated_at\" IS NULL)"
+        },
+        "branch_version_check": {
+          "name": "branch_version_check",
+          "value": "\"app\".\"branch\".\"version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.hiring_cycle": {
+      "name": "hiring_cycle",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "public_reference": {
+          "name": "public_reference",
+          "type": "varchar(12)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position_id": {
+          "name": "position_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "branch_id": {
+          "name": "branch_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "internal_label": {
+          "name": "internal_label",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "public_label": {
+          "name": "public_label",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'DRAFT'"
+        },
+        "opens_at": {
+          "name": "opens_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "closes_at": {
+          "name": "closes_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "open_ended": {
+          "name": "open_ended",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "display_timezone": {
+          "name": "display_timezone",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "job_description_version_id": {
+          "name": "job_description_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "worker_paths_snapshot": {
+          "name": "worker_paths_snapshot",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "public_title_snapshot": {
+          "name": "public_title_snapshot",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "location_label_snapshot": {
+          "name": "location_label_snapshot",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "published_by_account_id": {
+          "name": "published_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "opened_at": {
+          "name": "opened_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "opened_by_account_id": {
+          "name": "opened_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "closed_at": {
+          "name": "closed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "closed_by_account_id": {
+          "name": "closed_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_by_account_id": {
+          "name": "cancelled_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "archived_by_account_id": {
+          "name": "archived_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "end_reason_code": {
+          "name": "end_reason_code",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_account_id": {
+          "name": "created_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_account_id": {
+          "name": "updated_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "hiring_cycle_public_open_idx": {
+          "name": "hiring_cycle_public_open_idx",
+          "columns": [
+            {
+              "expression": "opens_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "closes_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"app\".\"hiring_cycle\".\"status\" = 'OPEN'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "hiring_cycle_scope_idx": {
+          "name": "hiring_cycle_scope_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "branch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "team_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "hiring_cycle_position_idx": {
+          "name": "hiring_cycle_position_idx",
+          "columns": [
+            {
+              "expression": "position_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "branch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "opens_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "hiring_cycle_position_fk": {
+          "name": "hiring_cycle_position_fk",
+          "tableFrom": "hiring_cycle",
+          "tableTo": "position",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "organization_id",
+            "position_id"
+          ],
+          "columnsTo": [
+            "organization_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "hiring_cycle_branch_fk": {
+          "name": "hiring_cycle_branch_fk",
+          "tableFrom": "hiring_cycle",
+          "tableTo": "branch",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "organization_id",
+            "branch_id"
+          ],
+          "columnsTo": [
+            "organization_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "hiring_cycle_team_fk": {
+          "name": "hiring_cycle_team_fk",
+          "tableFrom": "hiring_cycle",
+          "tableTo": "team",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "branch_id",
+            "team_id"
+          ],
+          "columnsTo": [
+            "branch_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "hiring_cycle_description_fk": {
+          "name": "hiring_cycle_description_fk",
+          "tableFrom": "hiring_cycle",
+          "tableTo": "job_description_version",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "position_id",
+            "job_description_version_id"
+          ],
+          "columnsTo": [
+            "position_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "hiring_cycle_published_by_fk": {
+          "name": "hiring_cycle_published_by_fk",
+          "tableFrom": "hiring_cycle",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "published_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "hiring_cycle_opened_by_fk": {
+          "name": "hiring_cycle_opened_by_fk",
+          "tableFrom": "hiring_cycle",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "opened_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "hiring_cycle_closed_by_fk": {
+          "name": "hiring_cycle_closed_by_fk",
+          "tableFrom": "hiring_cycle",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "closed_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "hiring_cycle_cancelled_by_fk": {
+          "name": "hiring_cycle_cancelled_by_fk",
+          "tableFrom": "hiring_cycle",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "cancelled_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "hiring_cycle_archived_by_fk": {
+          "name": "hiring_cycle_archived_by_fk",
+          "tableFrom": "hiring_cycle",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "archived_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "hiring_cycle_created_by_fk": {
+          "name": "hiring_cycle_created_by_fk",
+          "tableFrom": "hiring_cycle",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "created_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "hiring_cycle_updated_by_fk": {
+          "name": "hiring_cycle_updated_by_fk",
+          "tableFrom": "hiring_cycle",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "updated_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "hiring_cycle_public_reference_unique": {
+          "name": "hiring_cycle_public_reference_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "public_reference"
+          ]
+        },
+        "hiring_cycle_code_unique": {
+          "name": "hiring_cycle_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "organization_id",
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "hiring_cycle_public_reference_check": {
+          "name": "hiring_cycle_public_reference_check",
+          "value": "\"app\".\"hiring_cycle\".\"public_reference\" ~ '^[0-9a-hjkmnp-tv-z]{12}$'"
+        },
+        "hiring_cycle_code_check": {
+          "name": "hiring_cycle_code_check",
+          "value": "\"app\".\"hiring_cycle\".\"code\" ~ '^[A-Z0-9][A-Z0-9_-]{1,31}$'"
+        },
+        "hiring_cycle_internal_label_check": {
+          "name": "hiring_cycle_internal_label_check",
+          "value": "char_length(\"app\".\"hiring_cycle\".\"internal_label\") BETWEEN 1 AND 120"
+        },
+        "hiring_cycle_public_label_check": {
+          "name": "hiring_cycle_public_label_check",
+          "value": "\"app\".\"hiring_cycle\".\"public_label\" IS NULL OR char_length(\"app\".\"hiring_cycle\".\"public_label\") BETWEEN 1 AND 120"
+        },
+        "hiring_cycle_status_check": {
+          "name": "hiring_cycle_status_check",
+          "value": "\"app\".\"hiring_cycle\".\"status\" IN ('DRAFT', 'PUBLISHED', 'OPEN', 'CLOSED', 'CANCELLED', 'ARCHIVED')"
+        },
+        "hiring_cycle_window_check": {
+          "name": "hiring_cycle_window_check",
+          "value": "((\"app\".\"hiring_cycle\".\"closes_at\" IS NULL) = \"app\".\"hiring_cycle\".\"open_ended\") AND (\"app\".\"hiring_cycle\".\"closes_at\" IS NULL OR \"app\".\"hiring_cycle\".\"closes_at\" > \"app\".\"hiring_cycle\".\"opens_at\")"
+        },
+        "hiring_cycle_timezone_check": {
+          "name": "hiring_cycle_timezone_check",
+          "value": "char_length(\"app\".\"hiring_cycle\".\"display_timezone\") BETWEEN 1 AND 64"
+        },
+        "hiring_cycle_worker_paths_check": {
+          "name": "hiring_cycle_worker_paths_check",
+          "value": "\"app\".\"hiring_cycle\".\"worker_paths_snapshot\" IS NULL OR \"app\".\"hiring_cycle\".\"worker_paths_snapshot\" IN ('W2_ONLY', 'CONTRACTOR_ELIGIBLE_ONLY', 'W2_AND_CONTRACTOR_ELIGIBLE')"
+        },
+        "hiring_cycle_snapshot_check": {
+          "name": "hiring_cycle_snapshot_check",
+          "value": "(\"app\".\"hiring_cycle\".\"published_at\" IS NULL) = (\"app\".\"hiring_cycle\".\"published_by_account_id\" IS NULL) AND (\"app\".\"hiring_cycle\".\"published_at\" IS NULL OR (\"app\".\"hiring_cycle\".\"job_description_version_id\" IS NOT NULL AND \"app\".\"hiring_cycle\".\"worker_paths_snapshot\" IS NOT NULL AND \"app\".\"hiring_cycle\".\"public_title_snapshot\" IS NOT NULL AND \"app\".\"hiring_cycle\".\"location_label_snapshot\" IS NOT NULL))"
+        },
+        "hiring_cycle_lifecycle_check": {
+          "name": "hiring_cycle_lifecycle_check",
+          "value": "(\"app\".\"hiring_cycle\".\"status\" <> 'DRAFT' OR (\"app\".\"hiring_cycle\".\"published_at\" IS NULL AND \"app\".\"hiring_cycle\".\"cancelled_at\" IS NULL)) AND (\"app\".\"hiring_cycle\".\"status\" NOT IN ('PUBLISHED', 'OPEN', 'CLOSED') OR \"app\".\"hiring_cycle\".\"published_at\" IS NOT NULL) AND ((\"app\".\"hiring_cycle\".\"opened_at\" IS NULL) = (\"app\".\"hiring_cycle\".\"opened_by_account_id\" IS NULL)) AND (\"app\".\"hiring_cycle\".\"status\" <> 'OPEN' OR \"app\".\"hiring_cycle\".\"opened_at\" IS NOT NULL) AND ((\"app\".\"hiring_cycle\".\"closed_at\" IS NULL) = (\"app\".\"hiring_cycle\".\"closed_by_account_id\" IS NULL)) AND ((\"app\".\"hiring_cycle\".\"status\" = 'CLOSED') <= (\"app\".\"hiring_cycle\".\"closed_at\" IS NOT NULL)) AND ((\"app\".\"hiring_cycle\".\"cancelled_at\" IS NULL) = (\"app\".\"hiring_cycle\".\"cancelled_by_account_id\" IS NULL)) AND ((\"app\".\"hiring_cycle\".\"status\" = 'CANCELLED') <= (\"app\".\"hiring_cycle\".\"cancelled_at\" IS NOT NULL)) AND ((\"app\".\"hiring_cycle\".\"archived_at\" IS NULL) = (\"app\".\"hiring_cycle\".\"archived_by_account_id\" IS NULL)) AND ((\"app\".\"hiring_cycle\".\"status\" = 'ARCHIVED') = (\"app\".\"hiring_cycle\".\"archived_at\" IS NOT NULL)) AND ((\"app\".\"hiring_cycle\".\"closed_at\" IS NOT NULL OR \"app\".\"hiring_cycle\".\"cancelled_at\" IS NOT NULL) = (\"app\".\"hiring_cycle\".\"end_reason_code\" IS NOT NULL)) AND NOT (\"app\".\"hiring_cycle\".\"closed_at\" IS NOT NULL AND \"app\".\"hiring_cycle\".\"cancelled_at\" IS NOT NULL)"
+        },
+        "hiring_cycle_reason_check": {
+          "name": "hiring_cycle_reason_check",
+          "value": "\"app\".\"hiring_cycle\".\"end_reason_code\" IS NULL OR \"app\".\"hiring_cycle\".\"end_reason_code\" ~ '^[A-Z][A-Z0-9_]{1,63}$'"
+        },
+        "hiring_cycle_version_check": {
+          "name": "hiring_cycle_version_check",
+          "value": "\"app\".\"hiring_cycle\".\"version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.job_description_version": {
+      "name": "job_description_version",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position_id": {
+          "name": "position_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version_number": {
+          "name": "version_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "public_title": {
+          "name": "public_title",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "summary": {
+          "name": "summary",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content_format": {
+          "name": "content_format",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'PLAIN_TEXT_V1'"
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'DRAFT'"
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "published_by_account_id": {
+          "name": "published_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "superseded_at": {
+          "name": "superseded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_account_id": {
+          "name": "created_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_account_id": {
+          "name": "updated_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "job_description_version_one_draft": {
+          "name": "job_description_version_one_draft",
+          "columns": [
+            {
+              "expression": "position_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"app\".\"job_description_version\".\"status\" = 'DRAFT'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "job_description_version_one_published": {
+          "name": "job_description_version_one_published",
+          "columns": [
+            {
+              "expression": "position_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"app\".\"job_description_version\".\"status\" = 'PUBLISHED'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "job_description_version_position_fk": {
+          "name": "job_description_version_position_fk",
+          "tableFrom": "job_description_version",
+          "tableTo": "position",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "organization_id",
+            "position_id"
+          ],
+          "columnsTo": [
+            "organization_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "job_description_version_published_by_fk": {
+          "name": "job_description_version_published_by_fk",
+          "tableFrom": "job_description_version",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "published_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "job_description_version_created_by_fk": {
+          "name": "job_description_version_created_by_fk",
+          "tableFrom": "job_description_version",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "created_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "job_description_version_updated_by_fk": {
+          "name": "job_description_version_updated_by_fk",
+          "tableFrom": "job_description_version",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "updated_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "job_description_version_position_id_unique": {
+          "name": "job_description_version_position_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "position_id",
+            "id"
+          ]
+        },
+        "job_description_version_number_unique": {
+          "name": "job_description_version_number_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "position_id",
+            "version_number"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "job_description_version_number_check": {
+          "name": "job_description_version_number_check",
+          "value": "\"app\".\"job_description_version\".\"version_number\" >= 1"
+        },
+        "job_description_version_public_title_check": {
+          "name": "job_description_version_public_title_check",
+          "value": "char_length(\"app\".\"job_description_version\".\"public_title\") BETWEEN 1 AND 120"
+        },
+        "job_description_version_summary_check": {
+          "name": "job_description_version_summary_check",
+          "value": "char_length(\"app\".\"job_description_version\".\"summary\") BETWEEN 1 AND 500"
+        },
+        "job_description_version_body_check": {
+          "name": "job_description_version_body_check",
+          "value": "char_length(\"app\".\"job_description_version\".\"body\") BETWEEN 1 AND 8000"
+        },
+        "job_description_version_format_check": {
+          "name": "job_description_version_format_check",
+          "value": "\"app\".\"job_description_version\".\"content_format\" = 'PLAIN_TEXT_V1'"
+        },
+        "job_description_version_status_check": {
+          "name": "job_description_version_status_check",
+          "value": "\"app\".\"job_description_version\".\"status\" IN ('DRAFT', 'PUBLISHED', 'SUPERSEDED', 'RETIRED')"
+        },
+        "job_description_version_lifecycle_check": {
+          "name": "job_description_version_lifecycle_check",
+          "value": "((\"app\".\"job_description_version\".\"status\" IN ('PUBLISHED', 'SUPERSEDED')) = (\"app\".\"job_description_version\".\"published_at\" IS NOT NULL AND \"app\".\"job_description_version\".\"published_by_account_id\" IS NOT NULL)) AND ((\"app\".\"job_description_version\".\"status\" = 'SUPERSEDED') = (\"app\".\"job_description_version\".\"superseded_at\" IS NOT NULL))"
+        },
+        "job_description_version_version_check": {
+          "name": "job_description_version_version_check",
+          "value": "\"app\".\"job_description_version\".\"version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.organization": {
+      "name": "organization",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "legal_name": {
+          "name": "legal_name",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'DRAFT'"
+        },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "inactivated_at": {
+          "name": "inactivated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_account_id": {
+          "name": "created_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_account_id": {
+          "name": "updated_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "organization_created_by_fk": {
+          "name": "organization_created_by_fk",
+          "tableFrom": "organization",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "created_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "organization_updated_by_fk": {
+          "name": "organization_updated_by_fk",
+          "tableFrom": "organization",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "updated_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "organization_code_unique": {
+          "name": "organization_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "organization_code_check": {
+          "name": "organization_code_check",
+          "value": "\"app\".\"organization\".\"code\" ~ '^[A-Z0-9][A-Z0-9_-]{1,31}$'"
+        },
+        "organization_legal_name_check": {
+          "name": "organization_legal_name_check",
+          "value": "char_length(\"app\".\"organization\".\"legal_name\") BETWEEN 1 AND 200"
+        },
+        "organization_display_name_check": {
+          "name": "organization_display_name_check",
+          "value": "char_length(\"app\".\"organization\".\"display_name\") BETWEEN 1 AND 120"
+        },
+        "organization_timezone_check": {
+          "name": "organization_timezone_check",
+          "value": "char_length(\"app\".\"organization\".\"timezone\") BETWEEN 1 AND 64"
+        },
+        "organization_status_check": {
+          "name": "organization_status_check",
+          "value": "\"app\".\"organization\".\"status\" IN ('DRAFT', 'ACTIVE', 'INACTIVE', 'ARCHIVED')"
+        },
+        "organization_lifecycle_check": {
+          "name": "organization_lifecycle_check",
+          "value": "(\"app\".\"organization\".\"status\" = 'DRAFT') = (\"app\".\"organization\".\"activated_at\" IS NULL)"
+        },
+        "organization_version_check": {
+          "name": "organization_version_check",
+          "value": "\"app\".\"organization\".\"version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.organization_command_receipt": {
+      "name": "organization_command_receipt",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "actor_account_id": {
+          "name": "actor_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "command_key": {
+          "name": "command_key",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "command_name": {
+          "name": "command_name",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "result_version": {
+          "name": "result_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "organization_command_receipt_actor_fk": {
+          "name": "organization_command_receipt_actor_fk",
+          "tableFrom": "organization_command_receipt",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "actor_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "organization_command_receipt_key_unique": {
+          "name": "organization_command_receipt_key_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "actor_account_id",
+            "command_key"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "organization_command_receipt_name_check": {
+          "name": "organization_command_receipt_name_check",
+          "value": "\"app\".\"organization_command_receipt\".\"command_name\" ~ '^[a-z][a-z_]{1,63}$'"
+        },
+        "organization_command_receipt_version_check": {
+          "name": "organization_command_receipt_version_check",
+          "value": "\"app\".\"organization_command_receipt\".\"result_version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.position": {
+      "name": "position",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "internal_title": {
+          "name": "internal_title",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "public_title": {
+          "name": "public_title",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "worker_paths_allowed": {
+          "name": "worker_paths_allowed",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'DRAFT'"
+        },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "retired_at": {
+          "name": "retired_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_account_id": {
+          "name": "created_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_account_id": {
+          "name": "updated_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "position_scope_idx": {
+          "name": "position_scope_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "position_organization_fk": {
+          "name": "position_organization_fk",
+          "tableFrom": "position",
+          "tableTo": "organization",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "position_created_by_fk": {
+          "name": "position_created_by_fk",
+          "tableFrom": "position",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "created_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "position_updated_by_fk": {
+          "name": "position_updated_by_fk",
+          "tableFrom": "position",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "updated_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "position_organization_id_unique": {
+          "name": "position_organization_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "organization_id",
+            "id"
+          ]
+        },
+        "position_code_unique": {
+          "name": "position_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "organization_id",
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "position_code_check": {
+          "name": "position_code_check",
+          "value": "\"app\".\"position\".\"code\" ~ '^[A-Z0-9][A-Z0-9_-]{1,31}$'"
+        },
+        "position_internal_title_check": {
+          "name": "position_internal_title_check",
+          "value": "char_length(\"app\".\"position\".\"internal_title\") BETWEEN 1 AND 120"
+        },
+        "position_public_title_check": {
+          "name": "position_public_title_check",
+          "value": "char_length(\"app\".\"position\".\"public_title\") BETWEEN 1 AND 120"
+        },
+        "position_worker_paths_check": {
+          "name": "position_worker_paths_check",
+          "value": "\"app\".\"position\".\"worker_paths_allowed\" IN ('W2_ONLY', 'CONTRACTOR_ELIGIBLE_ONLY', 'W2_AND_CONTRACTOR_ELIGIBLE')"
+        },
+        "position_status_check": {
+          "name": "position_status_check",
+          "value": "\"app\".\"position\".\"status\" IN ('DRAFT', 'ACTIVE', 'INACTIVE', 'RETIRED')"
+        },
+        "position_lifecycle_check": {
+          "name": "position_lifecycle_check",
+          "value": "(\"app\".\"position\".\"status\" <> 'DRAFT' OR \"app\".\"position\".\"activated_at\" IS NULL) AND (\"app\".\"position\".\"status\" NOT IN ('ACTIVE', 'INACTIVE') OR \"app\".\"position\".\"activated_at\" IS NOT NULL) AND ((\"app\".\"position\".\"status\" = 'RETIRED') = (\"app\".\"position\".\"retired_at\" IS NOT NULL))"
+        },
+        "position_version_check": {
+          "name": "position_version_check",
+          "value": "\"app\".\"position\".\"version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.team": {
+      "name": "team",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "branch_id": {
+          "name": "branch_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'DRAFT'"
+        },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "inactivated_at": {
+          "name": "inactivated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_account_id": {
+          "name": "created_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_account_id": {
+          "name": "updated_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "team_scope_idx": {
+          "name": "team_scope_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "branch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "team_branch_fk": {
+          "name": "team_branch_fk",
+          "tableFrom": "team",
+          "tableTo": "branch",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "organization_id",
+            "branch_id"
+          ],
+          "columnsTo": [
+            "organization_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "team_created_by_fk": {
+          "name": "team_created_by_fk",
+          "tableFrom": "team",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "created_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "team_updated_by_fk": {
+          "name": "team_updated_by_fk",
+          "tableFrom": "team",
+          "tableTo": "user",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "updated_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "team_branch_id_unique": {
+          "name": "team_branch_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "branch_id",
+            "id"
+          ]
+        },
+        "team_code_unique": {
+          "name": "team_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "branch_id",
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "team_code_check": {
+          "name": "team_code_check",
+          "value": "\"app\".\"team\".\"code\" ~ '^[A-Z0-9][A-Z0-9_-]{1,31}$'"
+        },
+        "team_name_check": {
+          "name": "team_name_check",
+          "value": "char_length(\"app\".\"team\".\"name\") BETWEEN 1 AND 120"
+        },
+        "team_status_check": {
+          "name": "team_status_check",
+          "value": "\"app\".\"team\".\"status\" IN ('DRAFT', 'ACTIVE', 'INACTIVE', 'ARCHIVED')"
+        },
+        "team_lifecycle_check": {
+          "name": "team_lifecycle_check",
+          "value": "(\"app\".\"team\".\"status\" = 'DRAFT') = (\"app\".\"team\".\"activated_at\" IS NULL)"
+        },
+        "team_version_check": {
+          "name": "team_version_check",
+          "value": "\"app\".\"team\".\"version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "app": "app",
+    "audit": "audit",
+    "auth": "auth"
+  },
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

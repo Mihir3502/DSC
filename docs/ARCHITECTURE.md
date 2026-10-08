@@ -204,7 +204,7 @@ Release 1 modules are:
 | Module | Owns |
 |---|---|
 | `identity-access` | Accounts, sessions, roles, permission assignments, scope evaluation |
-| `organization` | Organization, branch, team, position configuration |
+| `organization` | Organization, branch, team, position, job-description version, and hiring-cycle configuration; public position projections; the organization/branch/team scope-resolver adapter (M2.1) |
 | `candidates` | Person profile, candidate contact details, candidacy identity |
 | `applications` | Application versions, answers, submission |
 | `recruiting` | Prescreen, interview, selection decisions, communications |

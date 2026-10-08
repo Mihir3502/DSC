@@ -147,21 +147,21 @@ void runScript("db:verify-empty", async () => {
         WHERE nspname NOT LIKE 'pg\\_%' AND nspname <> 'information_schema' ORDER BY 1`);
         assertCheck(
           schemas.rows.map((r) => r.name).join(",") ===
-            "app,auth,drizzle,public",
+            "app,audit,auth,drizzle,public",
           `unexpected schemas: ${schemas.rows.map((r) => r.name).join(",")}`,
         );
-        ok("schemas are exactly app, auth, drizzle, public");
+        ok("schemas are exactly app, audit, auth, drizzle, public");
 
         const tables = await c.query<{ t: string }>(`
         SELECT schemaname || '.' || tablename AS t FROM pg_tables
         WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY 1`);
         assertCheck(
           tables.rows.map((r) => r.t).join(",") ===
-            "app.system_metadata,auth.account,auth.authorization_subject,auth.permission,auth.role,auth.role_permission,auth.session,auth.staff_invitation,auth.staff_recovery_case,auth.totp_replay_guard,auth.two_factor,auth.user,auth.user_role_assignment,auth.verification,drizzle.__drizzle_migrations",
+            "app.branch,app.hiring_cycle,app.job_description_version,app.organization,app.organization_command_receipt,app.position,app.system_metadata,app.team,audit.audit_event,audit.chain_head,audit.security_event,auth.account,auth.authorization_subject,auth.permission,auth.role,auth.role_permission,auth.session,auth.staff_invitation,auth.staff_recovery_case,auth.totp_replay_guard,auth.two_factor,auth.user,auth.user_role_assignment,auth.verification,drizzle.__drizzle_migrations",
           `unexpected tables: ${tables.rows.map((r) => r.t).join(",")}`,
         );
         ok(
-          "tables are exactly app.system_metadata, the M1.1–M1.4 auth tables, and the migration journal",
+          "tables are exactly app.system_metadata, the M2.1 organization tables, the M1.1–M1.4 auth tables, the M1.6 audit tables, and the migration journal",
         );
 
         const columns = await c.query<{ c: string }>(`

@@ -68,6 +68,45 @@ const edit = (area: (typeof configAreas)[number]) =>
 const publish = (area: (typeof configAreas)[number]) =>
   `configuration.${area}.publish`;
 
+// M2.1 organization configuration grants (catalog version 2; restrictive
+// mapping of ROLE_PERMISSION_MATRIX §14 "Organization hierarchy",
+// "Positions and job descriptions", and "Hiring cycles"). Hierarchy
+// changes and every activation, publication, and lifecycle decision are
+// PSA Manager only; HR prepares drafts; the auditor reads through an
+// audit assignment. No recruiter, reviewer, trainer, or administrator
+// grant: technical authority never implies business publication.
+const configurationReads = [
+  "organization.read",
+  "branch.read",
+  "team.read",
+  "position.read",
+  "job_description.read",
+  "hiring_cycle.read",
+] as const;
+const configurationDrafts = [
+  "position.create",
+  "position.edit",
+  "job_description.edit",
+  "hiring_cycle.create",
+  "hiring_cycle.edit",
+] as const;
+const configurationDecisions = [
+  "organization.configure",
+  "organization.status_change",
+  "branch.configure",
+  "branch.status_change",
+  "team.configure",
+  "team.status_change",
+  "position.activate",
+  "position.retire",
+  "job_description.publish",
+  "hiring_cycle.publish",
+  "hiring_cycle.open",
+  "hiring_cycle.close",
+  "hiring_cycle.cancel",
+  "hiring_cycle.archive",
+] as const;
+
 const grantSpecs: Readonly<Record<RoleCode, readonly Spec[]>> = {
   CANDIDATE: [
     ["candidate.own_profile.read", owned],
@@ -214,6 +253,8 @@ const grantSpecs: Readonly<Record<RoleCode, readonly Spec[]>> = {
     edit("message_template"),
     history("message_template"),
     "configuration.requirement.read",
+    ...configurationReads,
+    ...configurationDrafts,
   ],
 
   CLASSIFICATION_REVIEWER: [
@@ -394,6 +435,9 @@ const grantSpecs: Readonly<Record<RoleCode, readonly Spec[]>> = {
       history(area),
     ]),
     "configuration.requirement.read",
+    ...configurationReads,
+    ...configurationDrafts,
+    ...configurationDecisions,
   ],
 
   SYSTEM_ADMINISTRATOR: [
@@ -446,6 +490,7 @@ const grantSpecs: Readonly<Record<RoleCode, readonly Spec[]>> = {
     "role_assignment.read",
     ...configAreas.map(history),
     "configuration.requirement.read",
+    ...configurationReads,
   ],
 };
 

@@ -72,7 +72,14 @@ async function main() {
     const database = await createOwnedDatabase(owned.context, "e2e");
     databaseName = database.name;
     const harnessEnv = buildHarnessEnv(database);
-    for (const step of ["bootstrap", "migrate", "bootstrap"] as const) {
+    // M2.1: the reviewed authorization catalog (version 2) is applied as
+    // in every deployment, so business permissions decide real requests.
+    for (const step of [
+      "bootstrap",
+      "migrate",
+      "bootstrap",
+      "catalog",
+    ] as const) {
       const result = await runDbScript(step, harnessEnv);
       assertNoSecrets(owned.context, result.output);
       if (result.code !== 0) throw new Error(`database ${step} failed`);

@@ -89,6 +89,8 @@ export type AuditFacts = Readonly<{
   organizationRef?: string;
   candidacyRef?: string;
   filterCodes?: readonly string[];
+  /** Changed field-category codes of a configuration edit (never values). */
+  changeCodes?: readonly string[];
 }>;
 
 export type PreparedEvent =
@@ -220,6 +222,8 @@ export function prepareEvent(
   }
   const filterCodes =
     facts.filterCodes === undefined ? null : codeList(facts.filterCodes);
+  const changeCodes =
+    facts.changeCodes === undefined ? null : codeList(facts.changeCodes);
 
   const metadata: Record<
     string,
@@ -231,6 +235,7 @@ export function prepareEvent(
   if (roleCode) metadata.assigned_role_code = roleCode;
   if (scopeType) metadata.assigned_scope_type = scopeType;
   if (filterCodes) metadata.filter_codes = filterCodes;
+  if (changeCodes) metadata.changed_fields = changeCodes;
 
   const subjectId = accountRef ?? recordRef ?? actorRef;
 
