@@ -15,4 +15,6 @@ Current modules:
 - `identity-access/` — accounts, authentication, MFA, recovery, roles, scopes, and authorization (M1.1–M1.5).
 - `audit/` — append-only, HMAC-chained audit and security events; the versioned event catalog; `withAuditedTransaction`; the read-only integrity verifier; and the authorized internal audit query projection (M1.6, ADR-0012).
 
+- `applications/` — versioned application templates, one draft per candidacy, per-section answers with optimistic versions, and candidate-safe validation (M2.4). It uses the `candidates` command runner, so idempotency receipts and audit stay in one place.
+
 Do not create empty module directories ahead of the work item that needs them.

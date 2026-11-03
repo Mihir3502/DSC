@@ -1,5 +1,6 @@
 import type { SelfServicePolicyCode } from "@/modules/identity-access/domain/self-service-policy";
 import type { organizationProjectionNames } from "@/modules/organization/presentation/staff-views";
+import type { applicationProjectionNames } from "@/modules/applications/presentation/application-views";
 import type { candidateProjectionNames } from "@/modules/candidates/presentation/candidate-views";
 import type { formSchemas } from "@/app/_auth/form-schemas";
 
@@ -84,6 +85,8 @@ export type OutputContract =
   | (typeof organizationProjectionNames)[number]
   /** M2.2 person/candidacy projections (CONFIDENTIAL_PERSONNEL). */
   | (typeof candidateProjectionNames)[number]
+  /** M2.4 candidate application-draft projections (CONFIDENTIAL_PERSONNEL). */
+  | (typeof applicationProjectionNames)[number]
   /** M2.1 public-only hiring-cycle projections (classification PUBLIC). */
   | "PUBLIC_POSITION_LIST"
   | "PUBLIC_POSITION_DETAIL"
@@ -316,6 +319,7 @@ const configAction = (
 const R = "RECENT_STAFF_AUTH" as const;
 
 const candidateStart = `${A}/(candidate)/candidate/(account)/applications/new`;
+const candidateApplication = `${A}/(candidate)/candidate/(account)/applications/[candidacyId]`;
 const staffCandidates = `${A}/(staff)/staff/(account)/candidates`;
 
 /** M2.2 staff candidate-record page (candidates module, packet M2.2 §18). */
@@ -1286,6 +1290,104 @@ export const routeManifest: readonly ManifestEntry[] = Object.freeze([
     input: "candidateStart",
     csrf: "NEXT_SERVER_ACTION_ORIGIN",
     rateLimit: ["candidateStartPerAccount"],
+    cache: "PRIVATE_NO_STORE",
+    denial: "SIGN_IN_OR_NOT_FOUND",
+    recentAuth: "NONE",
+    futureAudit: "SECURITY_EVENT_AND_DENIAL",
+  },
+
+  // ------------------------------------------- M2.4 candidate application
+  {
+    id: "candidate.application_overview",
+    kind: "PAGE",
+    file: `${candidateApplication}/page.tsx`,
+    method: "RENDER",
+    route: "/candidate/applications/[candidacyId]",
+    audience: "CANDIDATE",
+    authentication: "REQUIRED",
+    account: "ACTIVE_VERIFIED_CANDIDATE",
+    authorization: {
+      kind: "PERMISSION",
+      permissions: ["candidate.candidacy.read_own"],
+    },
+    service: "queryApplicationOverview",
+    resource: "OWN_CANDIDATE_RECORD",
+    output: "candidate.application_overview.v1",
+    csrf: "NO_STATE_CHANGE",
+    rateLimit: [],
+    cache: "PRIVATE_NO_STORE",
+    denial: "SIGN_IN_OR_NOT_FOUND",
+    recentAuth: "NONE",
+    futureAudit: "NONE",
+  },
+  {
+    id: "candidate.application_section",
+    kind: "PAGE",
+    file: `${candidateApplication}/[section]/page.tsx`,
+    method: "RENDER",
+    route: "/candidate/applications/[candidacyId]/[section]",
+    audience: "CANDIDATE",
+    authentication: "REQUIRED",
+    account: "ACTIVE_VERIFIED_CANDIDATE",
+    authorization: {
+      kind: "PERMISSION",
+      permissions: ["application.own.edit"],
+    },
+    service: "queryApplicationSection",
+    resource: "OWN_CANDIDATE_RECORD",
+    output: "candidate.application_section.v1",
+    csrf: "NO_STATE_CHANGE",
+    rateLimit: [],
+    cache: "PRIVATE_NO_STORE",
+    denial: "SIGN_IN_OR_NOT_FOUND",
+    recentAuth: "NONE",
+    futureAudit: "NONE",
+  },
+  {
+    id: "candidate.application.begin",
+    kind: "SERVER_ACTION",
+    file: `${candidateApplication}/actions.ts`,
+    export: "beginApplicationDraftAction",
+    method: "POST",
+    route: "/candidate/applications/[candidacyId]",
+    audience: "CANDIDATE",
+    authentication: "REQUIRED",
+    account: "ACTIVE_VERIFIED_CANDIDATE",
+    authorization: {
+      kind: "PERMISSION",
+      permissions: ["application.own.edit"],
+    },
+    service: "beginApplicationDraft",
+    resource: "OWN_CANDIDATE_RECORD",
+    output: "FORM_STATE",
+    input: "applicationBegin",
+    csrf: "NEXT_SERVER_ACTION_ORIGIN",
+    rateLimit: [],
+    cache: "PRIVATE_NO_STORE",
+    denial: "SIGN_IN_OR_NOT_FOUND",
+    recentAuth: "NONE",
+    futureAudit: "SECURITY_EVENT_AND_DENIAL",
+  },
+  {
+    id: "candidate.application.save_section",
+    kind: "SERVER_ACTION",
+    file: `${candidateApplication}/actions.ts`,
+    export: "saveApplicationSectionAction",
+    method: "POST",
+    route: "/candidate/applications/[candidacyId]",
+    audience: "CANDIDATE",
+    authentication: "REQUIRED",
+    account: "ACTIVE_VERIFIED_CANDIDATE",
+    authorization: {
+      kind: "PERMISSION",
+      permissions: ["application.own.edit"],
+    },
+    service: "saveApplicationSection",
+    resource: "OWN_CANDIDATE_RECORD",
+    output: "FORM_STATE",
+    input: "applicationSave",
+    csrf: "NEXT_SERVER_ACTION_ORIGIN",
+    rateLimit: ["applicationSavePerAccount"],
     cache: "PRIVATE_NO_STORE",
     denial: "SIGN_IN_OR_NOT_FOUND",
     recentAuth: "NONE",

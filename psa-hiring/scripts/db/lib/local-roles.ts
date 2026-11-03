@@ -187,6 +187,21 @@ export async function applyLocalDatabaseGrants(
     }
   }
 
+  // M2.4 applications: templates are read-only at runtime; drafts are
+  // never deleted or truncated.
+  for (const table of applicationTemplateTables) {
+    if (await tableExists(admin, `app.${table}`)) {
+      statements.push(
+        `REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON app.${table} FROM ${app}`,
+      );
+    }
+  }
+  for (const table of applicationDraftTables) {
+    if (await tableExists(admin, `app.${table}`)) {
+      statements.push(`REVOKE DELETE, TRUNCATE ON app.${table} FROM ${app}`);
+    }
+  }
+
   // The runtime role reaches audit storage only through the reviewed
   // SECURITY DEFINER append functions, and may read only the projection
   // columns of audit_event: never integrity hashes, key versions, chain
@@ -245,6 +260,18 @@ export const candidateAppendOnlyTables = [
   "candidacy_stage_history",
   "person_merge_record",
   "candidate_command_receipt",
+] as const;
+
+/** M2.4 published templates (runtime SELECT only). */
+export const applicationTemplateTables = [
+  "application_template",
+  "application_template_version",
+] as const;
+
+/** M2.4 drafts (no runtime DELETE/TRUNCATE). */
+export const applicationDraftTables = [
+  "application_version",
+  "application_draft_section",
 ] as const;
 
 /** Assignment columns the runtime role may update (lifecycle only). */

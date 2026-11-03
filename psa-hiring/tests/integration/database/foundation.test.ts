@@ -314,7 +314,7 @@ describe("runtime client (src/shared/database)", () => {
 });
 
 describe("scope", () => {
-  it("10. contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table", async () => {
+  it("10. contains only the M2.1 organization, M2.2 candidate, and M2.4 application tables beyond M1, and no posting table", async () => {
     const { rows } = await admin.query<{ t: string }>(`
       SELECT schemaname || '.' || tablename AS t FROM pg_tables
       WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY 1`);
@@ -326,6 +326,10 @@ describe("scope", () => {
     // organization hierarchy, positions, description versions, hiring
     // cycles, and command receipts (DATA_MODEL §5, ADR-0013).
     expect(rows.map((r) => r.t)).toEqual([
+      "app.application_draft_section",
+      "app.application_template",
+      "app.application_template_version",
+      "app.application_version",
       "app.branch",
       "app.candidacy",
       "app.candidacy_stage_history",
@@ -359,7 +363,7 @@ describe("scope", () => {
       "drizzle.__drizzle_migrations",
     ]);
     const forbidden =
-      /account|screening|offer|onboard|readiness|assignment|timesheet|payroll|leave|audit|outbox|posting|requisition|vacanc|campaign|application|answer|template/;
+      /account|screening|offer|onboard|readiness|assignment|timesheet|payroll|leave|audit|outbox|posting|requisition|vacanc|campaign|attachment|certification|submission/;
     expect(
       rows.filter(
         (r) =>
@@ -368,11 +372,11 @@ describe("scope", () => {
           forbidden.test(r.t),
       ),
     ).toEqual([]);
-    // M2.3+ entities (applications, answers, templates, audit
+    // Later entities (attachments, certifications, submissions, audit
     // assignments) and competing opening concepts do not exist yet.
     expect(
       rows.filter((r) =>
-        /application|answer|template|audit_assignment|job_posting|opening/.test(
+        /attachment|certification|submission|audit_assignment|job_posting|opening/.test(
           r.t,
         ),
       ),

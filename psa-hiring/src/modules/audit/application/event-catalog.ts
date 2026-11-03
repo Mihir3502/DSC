@@ -650,6 +650,19 @@ const definitions: readonly EventDefinition[] = [
     "DUPLICATE_MATCH",
   ),
   candidateRecord("person.merged", "PERSON_MERGE", "PERSON"),
+  // M2.4 application drafts. Metadata names the section and its status,
+  // never an answer.
+  candidateRecord("application.started", "APPLICATION_START", "CANDIDACY"),
+  candidateRecord(
+    "application.section_saved",
+    "APPLICATION_SECTION_SAVE",
+    "CANDIDACY",
+  ),
+  candidateRecord(
+    "application.section_assisted",
+    "APPLICATION_SECTION_ASSIST",
+    "CANDIDACY",
+  ),
   // A blocked merge is durable denial evidence; nothing else is written.
   def({
     name: "person.merge_blocked",
@@ -785,6 +798,9 @@ export const catalogEventNames = [
   "duplicate_match.reviewed",
   "person.merged",
   "person.merge_blocked",
+  "application.started",
+  "application.section_saved",
+  "application.section_assisted",
 ] as const;
 export type CatalogEventName = (typeof catalogEventNames)[number];
 

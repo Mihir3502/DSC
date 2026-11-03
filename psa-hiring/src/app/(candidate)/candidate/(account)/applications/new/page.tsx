@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
 import { cookies } from "next/headers";
 import { currentRequestHeaders } from "@/app/_auth/auth-messages";
 import { applicationHandoffCookie } from "@/modules/identity-access";
@@ -59,13 +60,13 @@ export default async function ApplicationStartPage({
             <span className="font-mono">{view.own.reference}</span>. Status:{" "}
             {view.own.status}.
           </p>
-          <p>
-            The application form will be available soon. Nothing has been
-            submitted yet.
-          </p>
+          <p>Nothing has been submitted yet.</p>
         </div>
-        <Link href="/positions" className="underline underline-offset-4">
-          See open positions
+        <Link
+          href={`/candidate/applications/${view.own.candidacyId}`}
+          className={buttonVariants({ size: "lg" })}
+        >
+          Continue your application
         </Link>
       </div>
     );
@@ -108,6 +109,12 @@ export default async function ApplicationStartPage({
             {view.own.status}.
           </p>
         </div>
+        <Link
+          href={`/candidate/applications/${view.own.candidacyId}`}
+          className={buttonVariants({ size: "lg" })}
+        >
+          Continue your application
+        </Link>
       </div>
     );
   }

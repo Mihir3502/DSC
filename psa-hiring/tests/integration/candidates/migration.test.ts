@@ -53,6 +53,7 @@ describe("migration from the accepted M2.1 schema", () => {
       );
       writeFileSync(journalPath, JSON.stringify(journal));
       rmSync(path.join(folder, "0006_person_candidacy.sql"));
+      rmSync(path.join(folder, "0007_application_draft.sql"));
       const migrator = await connect(m21.urls.migrator);
       try {
         await migrate(drizzle({ client: migrator }), {
@@ -102,6 +103,8 @@ describe("migration from the accepted M2.1 schema", () => {
         "candidacy_stage_history",
         "duplicate_candidate_match",
         "person_merge_record",
+        "application_version",
+        "application_draft_section",
       ]) {
         expect(
           (await admin.query(`SELECT count(*)::int AS n FROM app.${table}`))
@@ -126,6 +129,93 @@ describe("migration from the accepted M2.1 schema", () => {
         "SELECT has_table_privilege('psa_app', 'app.person', 'DELETE') AS person, has_table_privilege('psa_app', 'app.candidacy_stage_history', 'UPDATE') AS history",
       );
       expect(grants.rows[0]).toEqual({ person: false, history: false });
+    } finally {
+      await admin.end();
+    }
+  });
+
+  it("applies 0007 over M2.2, seeding one template and fabricating no draft", async () => {
+    const m22 = await createOwnedDatabase(ctx, "app_m22");
+    databases.push(m22.name);
+    const env = buildHarnessEnv(m22);
+    const boot = await runDbScript("bootstrap", env);
+    expect(boot.code, boot.output).toBe(0);
+    const folder = mkdtempSync(path.join(tmpdir(), "psa-m22-"));
+    try {
+      cpSync(path.resolve(import.meta.dirname, "../../../drizzle"), folder, {
+        recursive: true,
+      });
+      const journalPath = path.join(folder, "meta/_journal.json");
+      const journal = JSON.parse(readFileSync(journalPath, "utf8"));
+      journal.entries = journal.entries.filter(
+        (e: { idx: number }) => e.idx <= 6,
+      );
+      writeFileSync(journalPath, JSON.stringify(journal));
+      rmSync(path.join(folder, "0007_application_draft.sql"));
+      const migrator = await connect(m22.urls.migrator);
+      try {
+        await migrate(drizzle({ client: migrator }), {
+          migrationsFolder: folder,
+          migrationsSchema: "drizzle",
+          migrationsTable: "__drizzle_migrations",
+        });
+      } finally {
+        await migrator.end();
+      }
+    } finally {
+      rmSync(folder, { recursive: true, force: true });
+    }
+    const admin = await adminClient(ctx, m22.name);
+    try {
+      expect(
+        (
+          await admin.query(
+            "SELECT to_regclass('app.application_version') AS t",
+          )
+        ).rows[0].t,
+      ).toBeNull();
+      for (const step of [
+        "migrate",
+        "bootstrap",
+        "catalog",
+        "check",
+      ] as const) {
+        const result = await runDbScript(step, env);
+        assertNoSecrets(ctx, result.output);
+        expect(result.code, `${step}: ${result.output}`).toBe(0);
+      }
+      const seeded = await admin.query(
+        "SELECT t.code, v.version_number FROM app.application_template_version v JOIN app.application_template t ON t.id = v.application_template_id",
+      );
+      expect(seeded.rows).toEqual([
+        { code: "CANDIDATE_APPLICATION", version_number: 1 },
+      ]);
+      for (const table of [
+        "application_version",
+        "application_draft_section",
+      ]) {
+        expect(
+          (await admin.query(`SELECT count(*)::int AS n FROM app.${table}`))
+            .rows[0].n,
+          table,
+        ).toBe(0);
+      }
+      const grants = await admin.query(
+        `SELECT has_table_privilege('psa_app', 'app.application_template_version', 'SELECT') AS template_read,
+                has_table_privilege('psa_app', 'app.application_template_version', 'INSERT') AS template_insert,
+                has_table_privilege('psa_app', 'app.application_template_version', 'UPDATE') AS template_update,
+                has_table_privilege('psa_app', 'app.application_draft_section', 'UPDATE') AS section_update,
+                has_table_privilege('psa_app', 'app.application_draft_section', 'DELETE') AS section_delete,
+                has_table_privilege('psa_app', 'app.application_version', 'DELETE') AS draft_delete`,
+      );
+      expect(grants.rows[0]).toEqual({
+        template_read: true,
+        template_insert: false,
+        template_update: false,
+        section_update: true,
+        section_delete: false,
+        draft_delete: false,
+      });
     } finally {
       await admin.end();
     }

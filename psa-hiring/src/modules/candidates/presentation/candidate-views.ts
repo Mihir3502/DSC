@@ -60,6 +60,7 @@ const startSchema = z.strictObject({
   /** The candidate's own candidacy for this opening, or the latest one. */
   own: z
     .strictObject({
+      candidacyId: publicId,
       reference,
       status: z.enum(["Not started", "Application started", "Closed"]),
       title: label,

@@ -24,6 +24,11 @@ const forbidden = /[\u0000-\u001f\u007f-\u009f؜​-‏‪-‮⁠-⁩﻿]/u;
  */
 const nameCharacters = /^[\p{L}\p{M}][\p{L}\p{M} '’\-.]*$/u;
 
+/** True when text holds a control, zero-width, bidi, or BOM character. */
+export function hasForbiddenCharacters(value: string): boolean {
+  return forbidden.test(value);
+}
+
 export type NameResult =
   | Readonly<{ ok: true; value: string | null }>
   | Readonly<{ ok: false; problem: FieldProblem }>;

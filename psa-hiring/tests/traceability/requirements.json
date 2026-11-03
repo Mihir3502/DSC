@@ -255,7 +255,7 @@
       "id": "PRD-APP-002",
       "title": "Required questions shall be configurable by worker path and position",
       "status": "partial",
-      "note": "M2.1 delivers the reusable position, worker-path eligibility, and hiring-cycle foundation; application templates and questions arrive in M2.3.",
+      "note": "M2.4: one versioned template with per-field required flags, pinned per draft. Configuring questions by worker path and position remains open.",
       "tests": [
         {
           "file": "tests/integration/organization/configuration.test.ts",
@@ -264,6 +264,10 @@
         {
           "file": "tests/integration/organization/configuration.test.ts",
           "title": "keeps a published cycle's snapshot"
+        },
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "keeps a started draft on its template version when a newer one takes effect"
         }
       ]
     },
@@ -468,6 +472,38 @@
         {
           "file": "tests/integration/candidates/candidacy.test.ts",
           "title": "merges a confirmed duplicate with provenance, transfers the single account link, and keeps old references resolvable"
+        }
+      ]
+    },
+    {
+      "id": "PRD-APP-001",
+      "title": "The candidate may save a draft application",
+      "status": "covered",
+      "note": "M2.4: autosave and manual save per section with optimistic versions.",
+      "tests": [
+        {
+          "file": "tests/e2e/application-draft.spec.ts",
+          "title": "a candidate begins a draft, autosaves, fixes an error, and resumes"
+        },
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "saves a partial section In progress, then Complete"
+        }
+      ]
+    },
+    {
+      "id": "PRD-APP-003",
+      "title": "The system shall validate required fields before submission",
+      "status": "partial",
+      "note": "M2.4 tracks required fields per section (a missing answer keeps it In progress). The submission check itself is M2.6.",
+      "tests": [
+        {
+          "file": "src/modules/applications/domain/application-template.test.ts",
+          "title": "keeps a partial draft In progress and names what is missing"
+        },
+        {
+          "file": "src/modules/applications/domain/application-template.test.ts",
+          "title": "marks a section complete once every required answer is valid"
         }
       ]
     }
@@ -1005,7 +1041,7 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
+          "title": "contains only the M2.1 organization, M2.2 candidate, and M2.4 application tables beyond M1, and no posting table"
         },
         {
           "file": "tests/integration/auth/staff-authentication.test.ts",
@@ -1121,7 +1157,7 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
+          "title": "contains only the M2.1 organization, M2.2 candidate, and M2.4 application tables beyond M1, and no posting table"
         },
         {
           "file": "tests/integration/authorization/role-assignments.test.ts",
@@ -1317,7 +1353,7 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
+          "title": "contains only the M2.1 organization, M2.2 candidate, and M2.4 application tables beyond M1, and no posting table"
         },
         {
           "file": "tests/guards/authorization-matrix.test.ts",
@@ -1705,7 +1741,7 @@
         },
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
+          "title": "contains only the M2.1 organization, M2.2 candidate, and M2.4 application tables beyond M1, and no posting table"
         }
       ]
     },
@@ -1918,7 +1954,7 @@
         },
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
+          "title": "contains only the M2.1 organization, M2.2 candidate, and M2.4 application tables beyond M1, and no posting table"
         },
         {
           "file": "tests/integration/audit/persistence.test.ts",
@@ -1982,7 +2018,7 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
+          "title": "contains only the M2.1 organization, M2.2 candidate, and M2.4 application tables beyond M1, and no posting table"
         },
         {
           "file": "tests/guards/authorization-boundaries.test.ts",
@@ -2258,7 +2294,7 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
+          "title": "contains only the M2.1 organization, M2.2 candidate, and M2.4 application tables beyond M1, and no posting table"
         },
         {
           "file": "tests/guards/authorization-boundaries.test.ts",
@@ -2559,7 +2595,7 @@
         },
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
+          "title": "contains only the M2.1 organization, M2.2 candidate, and M2.4 application tables beyond M1, and no posting table"
         }
       ]
     },
@@ -2614,7 +2650,7 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
+          "title": "contains only the M2.1 organization, M2.2 candidate, and M2.4 application tables beyond M1, and no posting table"
         },
         {
           "file": "tests/integration/organization/configuration.test.ts",
@@ -2651,7 +2687,7 @@
         },
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
+          "title": "contains only the M2.1 organization, M2.2 candidate, and M2.4 application tables beyond M1, and no posting table"
         }
       ]
     },
@@ -2693,7 +2729,7 @@
         },
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
+          "title": "contains only the M2.1 organization, M2.2 candidate, and M2.4 application tables beyond M1, and no posting table"
         }
       ]
     },
@@ -2944,7 +2980,7 @@
         },
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
+          "title": "contains only the M2.1 organization, M2.2 candidate, and M2.4 application tables beyond M1, and no posting table"
         }
       ]
     },
@@ -2982,7 +3018,7 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
+          "title": "contains only the M2.1 organization, M2.2 candidate, and M2.4 application tables beyond M1, and no posting table"
         },
         {
           "file": "tests/integration/candidates/candidacy.test.ts",
@@ -2991,6 +3027,174 @@
         {
           "file": "tests/integration/candidates/migration.test.ts",
           "title": "applies 0006 over M2.1 with synthetic data, fabricating no person or candidacy rows"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.4-01",
+      "tests": [
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "pins the effective template version once, audits it, and repeats safely"
+        },
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "keeps a started draft on its template version when a newer one takes effect"
+        },
+        {
+          "file": "src/modules/applications/domain/application-template.test.ts",
+          "title": "parses the seeded version 1 with exactly the approved neutral sections"
+        },
+        {
+          "file": "src/modules/applications/domain/application-template.test.ts",
+          "title": "collects no eligibility, disclosure, identity, or medical question in version 1"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.4-02",
+      "tests": [
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "saves a partial section In progress, then Complete"
+        },
+        {
+          "file": "src/modules/applications/domain/application-template.test.ts",
+          "title": "keeps a partial draft In progress and names what is missing"
+        },
+        {
+          "file": "tests/e2e/application-draft.spec.ts",
+          "title": "a candidate begins a draft, autosaves, fixes an error, and resumes"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.4-03",
+      "tests": [
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "refuses a stale version with no change and keeps sections independent"
+        },
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "replays the same key and request once"
+        },
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "serializes concurrent saves of the same version so only one applies"
+        },
+        {
+          "file": "tests/e2e/application-draft.spec.ts",
+          "title": "a candidate begins a draft, autosaves, fixes an error, and resumes"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.4-04",
+      "tests": [
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "reports invalid answers by field without saving or echoing them"
+        },
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "rejects mass assignment, malformed JSON, oversized input, unknown sections, and bad keys with no change"
+        },
+        {
+          "file": "src/modules/applications/domain/application-template.test.ts",
+          "title": "rejects unknown fields and non-object submissions as a whole"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.4-05",
+      "tests": [
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "records who assisted and why, and audits it separately"
+        },
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "requires a listed reason and refuses a candidate actor"
+        },
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "denies every staff role the candidate commands and, with no grant, the assist command"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.4-X1",
+      "tests": [
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "gives another candidate the same result as an unknown reference, with no read or write"
+        },
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "returns exact candidate projections with no internal ID, stage, or staff field"
+        },
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "denies every staff role the candidate commands"
+        },
+        {
+          "file": "tests/e2e/application-draft.spec.ts",
+          "title": "another candidate and an unknown reference get the same safe not-found"
+        },
+        {
+          "file": "src/modules/identity-access/policy/workflow-policies.test.ts",
+          "title": "permits only draft editing, and only in APPLICATION_INCOMPLETE"
+        },
+        {
+          "file": "tests/authorization/admin-auditor.matrix.test.ts",
+          "title": "auditor grants are read or export only"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.4-X2",
+      "tests": [
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "denies the runtime role template writes and any delete, and refuses bad writes"
+        },
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "refuses even the migration owner when it edits a published template"
+        },
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "rolls the save back when the audit append fails"
+        },
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "keeps every audit chain verifiable"
+        },
+        {
+          "file": "tests/integration/candidates/migration.test.ts",
+          "title": "applies 0007 over M2.2, seeding one template and fabricating no draft"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.4-X3",
+      "tests": [
+        {
+          "file": "tests/accessibility/application-draft.a11y.spec.ts",
+          "title": "the overview and section form are accessible, keyboard operable, and reflow"
+        },
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "never writes on a read"
+        },
+        {
+          "file": "tests/integration/applications/application-draft.test.ts",
+          "title": "limits saves per account before touching any record"
+        },
+        {
+          "file": "tests/e2e/application-draft.spec.ts",
+          "title": "a candidate begins a draft, autosaves, fixes an error, and resumes"
         }
       ]
     }

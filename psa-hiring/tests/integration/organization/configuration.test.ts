@@ -1893,9 +1893,8 @@ describe("public projections and the start-application handoff (AC-M2.1-10/11/15
     );
     expect(after.rows[0].n).toBe(before.rows[0].n);
     const business = await admin.query(
-      // M2.2 added person/candidacy tables; the handoff still writes no
-      // row to them, and no application table exists.
-      "SELECT ((SELECT count(*) FROM app.person) + (SELECT count(*) FROM app.candidacy) + (SELECT count(*) FROM pg_tables WHERE tablename ~ 'application'))::int AS n",
+      // The handoff writes no person, candidacy, or application row.
+      "SELECT ((SELECT count(*) FROM app.person) + (SELECT count(*) FROM app.candidacy) + (SELECT count(*) FROM app.application_version))::int AS n",
     );
     expect(business.rows[0].n).toBe(0);
   });

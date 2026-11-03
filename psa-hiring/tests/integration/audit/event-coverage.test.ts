@@ -803,6 +803,11 @@ describe("event coverage (§17)", () => {
       "duplicate_match.reviewed",
       "person.merged",
       "person.merge_blocked",
+      // M2.4 application events: asserted in
+      // tests/integration/applications/application-draft.test.ts.
+      "application.started",
+      "application.section_saved",
+      "application.section_assisted",
     ];
     for (const name of elsewhere) covered.add(name);
     const all = [...new Set(eventCatalog.map((d) => d.name))];

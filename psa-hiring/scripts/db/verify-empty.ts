@@ -157,11 +157,11 @@ void runScript("db:verify-empty", async () => {
         WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY 1`);
         assertCheck(
           tables.rows.map((r) => r.t).join(",") ===
-            "app.branch,app.candidacy,app.candidacy_stage_history,app.candidate_command_receipt,app.duplicate_candidate_match,app.hiring_cycle,app.job_description_version,app.organization,app.organization_command_receipt,app.person,app.person_merge_record,app.position,app.system_metadata,app.team,audit.audit_event,audit.chain_head,audit.security_event,auth.account,auth.authorization_subject,auth.permission,auth.role,auth.role_permission,auth.session,auth.staff_invitation,auth.staff_recovery_case,auth.totp_replay_guard,auth.two_factor,auth.user,auth.user_role_assignment,auth.verification,drizzle.__drizzle_migrations",
+            "app.application_draft_section,app.application_template,app.application_template_version,app.application_version,app.branch,app.candidacy,app.candidacy_stage_history,app.candidate_command_receipt,app.duplicate_candidate_match,app.hiring_cycle,app.job_description_version,app.organization,app.organization_command_receipt,app.person,app.person_merge_record,app.position,app.system_metadata,app.team,audit.audit_event,audit.chain_head,audit.security_event,auth.account,auth.authorization_subject,auth.permission,auth.role,auth.role_permission,auth.session,auth.staff_invitation,auth.staff_recovery_case,auth.totp_replay_guard,auth.two_factor,auth.user,auth.user_role_assignment,auth.verification,drizzle.__drizzle_migrations",
           `unexpected tables: ${tables.rows.map((r) => r.t).join(",")}`,
         );
         ok(
-          "tables are exactly app.system_metadata, the M2.1 organization and M2.2 candidate tables, the M1.1–M1.4 auth tables, the M1.6 audit tables, and the migration journal",
+          "tables are exactly app.system_metadata, the M2.1 organization, M2.2 candidate, and M2.4 application tables, the M1.1–M1.4 auth tables, the M1.6 audit tables, and the migration journal",
         );
 
         const columns = await c.query<{ c: string }>(`

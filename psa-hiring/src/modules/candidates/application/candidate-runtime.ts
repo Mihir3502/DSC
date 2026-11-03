@@ -70,6 +70,7 @@ export const candidateRefusals = [
   "OWNER_NOT_ELIGIBLE",
   "COMMAND_KEY_CONFLICT",
   "RATE_LIMITED",
+  "TEMPLATE_UNAVAILABLE",
   "BLOCKED_CASE_NOT_CONFIRMED",
   "BLOCKED_PERSON_NOT_ACTIVE",
   "BLOCKED_TWO_CANDIDATE_ACCOUNTS",
@@ -150,6 +151,7 @@ export async function authorizeCandidateCommand(
   operation: AuthorizationRequest["operation"],
   resource: AuthorizationRequest["resource"],
   reasonCode?: string,
+  workflow?: AuthorizationRequest["workflow"],
 ): Promise<void> {
   const { actor } = ctx;
   if (actor.kind === "BOOTSTRAP") {
@@ -170,6 +172,7 @@ export async function authorizeCandidateCommand(
       operation,
       resource,
       ...(reasonCode ? { reasonCode } : {}),
+      ...(workflow ? { workflow } : {}),
     },
     deps,
   );

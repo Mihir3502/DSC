@@ -50,6 +50,13 @@
       "when": 1791462781449,
       "tag": "0006_person_candidacy",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793720290053,
+      "tag": "0007_application_draft",
+      "breakpoints": true
     }
   ]
 }

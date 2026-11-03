@@ -8,6 +8,7 @@ import { selfServicePolicies } from "@/modules/identity-access/domain/self-servi
 import { securityProjectionNames } from "@/modules/identity-access/presentation/security-view-models";
 import { findPermission } from "@/modules/identity-access/policy/permission-catalog";
 import { organizationProjectionNames } from "@/modules/organization/presentation/staff-views";
+import { applicationProjectionNames } from "@/modules/applications/presentation/application-views";
 import { candidateProjectionNames } from "@/modules/candidates/presentation/candidate-views";
 import { isProtectedPath } from "@/shared/security/protected-cache-policy";
 import {
@@ -68,6 +69,7 @@ function organizationService(name: string) {
   return [
     ...listFiles("src/modules/organization/application"),
     ...listFiles("src/modules/candidates/application"),
+    ...listFiles("src/modules/applications/application"),
   ]
     .filter((f) => /\.ts$/.test(f) && !/\.test\.ts$/.test(f))
     .map((f) => ({ text: read(f), body: exportedFunction(read(f), name) }))
@@ -290,6 +292,7 @@ describe("route and entry-point manifest", () => {
             ...securityProjectionNames,
             ...organizationProjectionNames,
             ...candidateProjectionNames,
+            ...applicationProjectionNames,
           ],
           entry.id,
         ).toContain(entry.output);

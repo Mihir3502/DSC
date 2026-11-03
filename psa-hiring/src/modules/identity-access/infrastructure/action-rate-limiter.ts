@@ -38,6 +38,8 @@ export const candidateRateLimits = Object.freeze({
   // lookup, so reaching the limit says nothing about existing records.
   candidateStartPerAccount: { limit: 20, windowMs: 15 * 60_000 },
   staffProspectCreatePerAccount: { limit: 30, windowMs: 15 * 60_000 },
+  // M2.4 draft saves: autosave runs at most once per idle period.
+  applicationSavePerAccount: { limit: 300, windowMs: 15 * 60_000 },
 } satisfies Record<string, RateLimitPolicy>);
 
 export type RateLimitBucket = keyof typeof candidateRateLimits;

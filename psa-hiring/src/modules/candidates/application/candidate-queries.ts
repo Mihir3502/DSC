@@ -186,6 +186,7 @@ export async function queryCandidateStart(
         );
         if (existing) {
           mine = {
+            candidacyId: existing.publicId,
             reference: existing.candidateReference,
             status: statusLabel(existing.currentStage, existing.status),
             title: found.cycle.publicTitle,
@@ -209,6 +210,7 @@ export async function queryCandidateStart(
     if (latest) {
       const summary = await openingSummary(deps, latest.hiringCycleId);
       mine = {
+        candidacyId: latest.publicId,
         reference: latest.candidateReference,
         status: statusLabel(latest.currentStage, latest.status),
         title: summary?.title ?? "",

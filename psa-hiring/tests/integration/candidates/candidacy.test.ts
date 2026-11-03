@@ -307,10 +307,12 @@ describe("candidate self-start (AC-M2.2-01/02/03/04/06/07)", () => {
       "candidacy.created",
       "candidacy.stage_changed",
     ]);
-    // No application draft or version of any kind exists.
+    // Starting a candidacy creates no application draft or version; only
+    // the candidate's own begin command does (M2.4).
     expect(
       await count(
-        "SELECT count(*)::int AS n FROM pg_tables WHERE tablename ~ 'application'",
+        "SELECT count(*)::int AS n FROM app.application_version WHERE candidacy_id = $1",
+        [result.targetId],
       ),
     ).toBe(0);
     // A later, different opening reuses the same person (PRD-CAN-006).

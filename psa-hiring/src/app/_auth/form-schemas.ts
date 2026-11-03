@@ -176,6 +176,19 @@ export const formSchemas = Object.freeze({
     preferredName: shortText,
     phone: key,
   }),
+  applicationBegin: defineFormSchema({
+    commandKey: ref,
+    candidacyId: key,
+  }),
+  // One JSON object of answers; the command validates it against the
+  // section's template and refuses any field the section doesn't define.
+  applicationSave: defineFormSchema({
+    commandKey: ref,
+    candidacyId: key,
+    sectionCode: key,
+    expectedVersion: version,
+    answers: { maxLength: 40000 },
+  }),
   prospectCreate: defineFormSchema({
     commandKey: ref,
     cycleReference: key,
