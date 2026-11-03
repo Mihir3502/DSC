@@ -392,6 +392,13 @@ export const hiringCycle = appSchema.table(
   },
   (table) => [
     unique("hiring_cycle_public_reference_unique").on(table.publicReference),
+    // M2.2 composite-key target: a candidacy copies the cycle's hierarchy.
+    unique("hiring_cycle_candidacy_key").on(
+      table.id,
+      table.organizationId,
+      table.positionId,
+      table.branchId,
+    ),
     unique("hiring_cycle_code_unique").on(table.organizationId, table.code),
     foreignKey({
       name: "hiring_cycle_position_fk",

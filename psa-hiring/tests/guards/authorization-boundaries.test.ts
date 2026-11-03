@@ -8,6 +8,7 @@ import { selfServicePolicies } from "@/modules/identity-access/domain/self-servi
 import { securityProjectionNames } from "@/modules/identity-access/presentation/security-view-models";
 import { findPermission } from "@/modules/identity-access/policy/permission-catalog";
 import { organizationProjectionNames } from "@/modules/organization/presentation/staff-views";
+import { candidateProjectionNames } from "@/modules/candidates/presentation/candidate-views";
 import { isProtectedPath } from "@/shared/security/protected-cache-policy";
 import {
   codeLines,
@@ -62,9 +63,12 @@ function exportedFunction(text: string, name: string): string | null {
   return next < 0 ? text.slice(start) : text.slice(start, start + 1 + next);
 }
 
-/** The organization-module application file defining a service. */
+/** The organization- or candidates-module application file defining a service. */
 function organizationService(name: string) {
-  return listFiles("src/modules/organization/application")
+  return [
+    ...listFiles("src/modules/organization/application"),
+    ...listFiles("src/modules/candidates/application"),
+  ]
     .filter((f) => /\.ts$/.test(f) && !/\.test\.ts$/.test(f))
     .map((f) => ({ text: read(f), body: exportedFunction(read(f), name) }))
     .find((x) => x.body);
@@ -168,7 +172,7 @@ describe("route and entry-point manifest", () => {
           continue;
         }
         if (
-          !/authorizeConfiguration\(|authorizeScopedList\(|authorizeQueryScope\(|\ballows\(/.test(
+          !/authorizeConfiguration\(|authorizeScopedList\(|authorizeQueryScope\(|\ballows\(|authorizeCandidateCommand\(|\bauthorize\(/.test(
             owner.body ?? "",
           )
         ) {
@@ -282,7 +286,11 @@ describe("route and entry-point manifest", () => {
     for (const entry of routeManifest) {
       if (entry.output.endsWith(".v1")) {
         expect(
-          [...securityProjectionNames, ...organizationProjectionNames],
+          [
+            ...securityProjectionNames,
+            ...organizationProjectionNames,
+            ...candidateProjectionNames,
+          ],
           entry.id,
         ).toContain(entry.output);
       }

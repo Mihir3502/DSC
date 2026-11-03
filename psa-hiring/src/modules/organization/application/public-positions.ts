@@ -13,9 +13,14 @@ import {
 } from "../domain/values";
 import {
   findPublicCycle,
+  listAcceptingCyclesInScope,
+  loadCycleForCandidacy,
+  type CandidacyCycle,
+  type Executor,
   type PublicCycleSource,
   type PublicListQuery,
 } from "../infrastructure/organization-repository";
+import type { QueryConstraint } from "@/modules/identity-access";
 import {
   cachedPublicCycle,
   cachedPublicList,
@@ -275,4 +280,34 @@ export async function confirmApplicationHandoff(
     location: view.location,
     closes: view.closes,
   };
+}
+
+// ------------------------------------------------ candidacy contract (M2.2)
+
+export type { CandidacyCycle };
+
+/**
+ * The cycle a candidacy command names, with whether it accepts
+ * applications at the trusted instant. Read inside the caller's
+ * transaction (cycle and parents FOR SHARE). Never cached.
+ */
+export async function cycleForCandidacy(
+  tx: unknown,
+  key: Readonly<{ publicReference: string }> | Readonly<{ cycleId: string }>,
+  now: Date,
+): Promise<Readonly<{ cycle: CandidacyCycle; accepting: boolean }> | null> {
+  if ("publicReference" in key && !isPublicReference(key.publicReference))
+    return null;
+  const cycle = await loadCycleForCandidacy(tx as Executor, key);
+  if (!cycle) return null;
+  return { cycle, accepting: availabilityOf(cycle, now) === "ACCEPTING" };
+}
+
+/** Accepting openings inside an authorized staff constraint (no cache). */
+export function acceptingCyclesInScope(
+  tx: unknown,
+  constraint: QueryConstraint,
+  now: Date,
+) {
+  return listAcceptingCyclesInScope(tx as Executor, constraint, now);
 }

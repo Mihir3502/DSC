@@ -44,7 +44,7 @@ describe("audit event catalog", () => {
     }
     const unregistered = [...emitted].filter(
       (name) =>
-        /^(auth|staff|authz|account|audit|organization|branch|team|position|job_description|hiring_cycle)\./.test(
+        /^(auth|staff|authz|account|audit|organization|branch|team|position|job_description|hiring_cycle|person|candidacy|prospect|duplicate_match)\./.test(
           name,
         ) && !findEventDefinition(name),
     );

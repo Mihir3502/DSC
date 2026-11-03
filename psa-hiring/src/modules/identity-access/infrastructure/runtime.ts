@@ -25,11 +25,16 @@ import {
   type AssignmentHarnessGate,
 } from "./assignment-harness";
 import { RegistrationIntentRepository } from "./registration-intent-repository";
-import { UnavailableCandidateOwnership } from "./scope-resolvers";
 // M2.1 (ADR-0005 note): the organization module's real hierarchy adapter.
 // It imports only types from this module, so composing it here creates no
 // evaluation cycle.
 import { OrganizationScopeResolver } from "@/modules/organization/infrastructure/organization-scope-resolver";
+// M2.2 (ADR-0005 note): candidacy and duplicate-case placement plus real
+// candidate ownership. Type-only imports back into this module.
+import {
+  CandidateRecordOwnership,
+  CompositeScopeResourceResolver,
+} from "@/modules/candidates/infrastructure/candidate-authorization-adapters";
 import {
   createAuditRecorder,
   getAuditKeyRing,
@@ -59,9 +64,11 @@ export type IdentityRuntime = Readonly<{
   /** Staff administration authorization (refusing until M1.4–M1.6). */
   staffAdmin: StaffAdministrationGate;
   /**
-   * M1.4 authorization ports. Organization/branch/team scopes resolve
-   * through the real M2.1 adapter; ownership, assigned-record, and
-   * audit-assignment facts still fail closed, and dual control is on.
+   * M1.4 authorization ports. Organization/branch/team scopes and
+   * organization records resolve through the M2.1 adapter; candidacies and
+   * duplicate cases, and candidate ownership, through the M2.2 adapters.
+   * Assigned-record and audit-assignment facts still fail closed, and
+   * dual control is on.
    */
   authorization: AuthorizationPorts;
   /** Role-assignment bootstrap gate (refusing outside tests). */
@@ -135,8 +142,11 @@ export function createIdentityRuntime(options: {
     limiter: options.limiter ?? new FixedWindowRateLimiter(),
     staffAdmin: options.staffAdmin ?? new RefusingStaffAdministrationGate(),
     authorization: Object.freeze({
-      resolver: new OrganizationScopeResolver(() => db),
-      ownership: new UnavailableCandidateOwnership(),
+      resolver: new CompositeScopeResourceResolver(
+        () => db,
+        new OrganizationScopeResolver(() => db),
+      ),
+      ownership: new CandidateRecordOwnership(() => db),
       workflow: productionWorkflowPolicies,
       separation: new MandatorySeparationOfDutiesPolicy(),
       dualControl: restrictiveDualControl,

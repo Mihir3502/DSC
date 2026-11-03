@@ -43,6 +43,13 @@
       "when": 1791426598217,
       "tag": "0005_organization_hiring_cycle",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791462781449,
+      "tag": "0006_person_candidacy",
+      "breakpoints": true
     }
   ]
 }

@@ -93,6 +93,10 @@ const recentAccess: RecentAuthRequirement = {
   policy: "RECENT_STAFF_AUTH",
   purpose: "PRIVILEGED_ACCESS_CHANGE",
 };
+const recentIdentityReview: RecentAuthRequirement = {
+  policy: "RECENT_STAFF_AUTH",
+  purpose: "CANDIDATE_IDENTITY_REVIEW",
+};
 const recentConfiguration: RecentAuthRequirement = {
   policy: "RECENT_STAFF_AUTH",
   purpose: "CONFIGURATION_CHANGE",
@@ -1594,6 +1598,103 @@ const organizationConfiguration = [
   ),
 ];
 
+// ------------------------------- person and candidacy (M2.2, catalog v3)
+// Candidate-self permissions bind to the candidate's own account/person/
+// candidacy through the CANDIDATE_OWNERSHIP condition. Staff prospect,
+// owner, duplicate-review, and merge permissions are narrow and scoped;
+// review and merge need recent authentication and a reason (packet M2.2
+// §16; ROLE_PERMISSION_MATRIX §8 rows added by M2.2).
+const candidateRecords = [
+  p(
+    "candidate",
+    "person.read_own",
+    "READ",
+    CP,
+    C,
+    "Read own canonical person",
+    ["§7:Own candidate profile"],
+  ),
+  p(
+    "candidate",
+    "person.create_own",
+    "CREATE",
+    CP,
+    C,
+    "Create own canonical person",
+    ["§8:Start own application"],
+  ),
+  p(
+    "candidate",
+    "candidacy.create_own",
+    "CREATE",
+    CP,
+    C,
+    "Start own candidacy",
+    ["§8:Start own application"],
+  ),
+  p("candidate", "candidacy.read_own", "READ", CP, C, "Read own candidacy", [
+    "§7:Own candidate profile",
+  ]),
+  p(
+    "candidate",
+    "prospect.create",
+    "CREATE",
+    CP,
+    S,
+    "Create a prospect or start its application",
+    ["§8:Create prospect", "§8:Start own application"],
+  ),
+  p(
+    "candidate",
+    "prospect.read",
+    "READ",
+    CP,
+    S,
+    "Read a prospect or candidacy summary",
+    ["§8:Create prospect"],
+  ),
+  p(
+    "candidate",
+    "prospect.close",
+    "EDIT",
+    CP,
+    S,
+    "Close a prospect",
+    ["§8:Close prospect"],
+    { reason: true },
+  ),
+  p(
+    "candidate",
+    "owner.assign",
+    "EDIT",
+    CP,
+    S,
+    "Assign operational candidacy ownership",
+    ["§8:Assign candidacy owner"],
+    { reason: true },
+  ),
+  p(
+    "candidate",
+    "duplicate.review",
+    "REVIEW",
+    CP,
+    S,
+    "Review a possible duplicate person",
+    ["§8:Review possible duplicates"],
+    { recentAuth: recentIdentityReview, reason: true },
+  ),
+  p(
+    "candidate",
+    "person.merge",
+    "APPROVE",
+    CP,
+    S,
+    "Merge confirmed duplicate people",
+    ["§8:Merge candidate records"],
+    { recentAuth: recentIdentityReview, reason: true },
+  ),
+];
+
 // ---------------------------------------- access and technical (ADM)
 const technical = [
   p(
@@ -1769,6 +1870,7 @@ export const permissionCatalog: readonly PermissionDefinition[] = Object.freeze(
     ...audit,
     ...configuration,
     ...organizationConfiguration,
+    ...candidateRecords,
     ...technical,
   ],
 );

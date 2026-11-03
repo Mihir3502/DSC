@@ -4,7 +4,10 @@ import { getLogger, getRequestContext, type AppLogger } from "@/shared/logging";
 import { canResolvePrincipal } from "../domain/account-policy";
 import type { AccountStatus, AccountType } from "../domain/account-types";
 import { evaluateAssurance } from "../domain/authentication-assurance";
-import { findAccountById } from "../infrastructure/account-repository";
+import {
+  findAccountById,
+  findAccountEmail,
+} from "../infrastructure/account-repository";
 import { readSessionAssurance } from "../infrastructure/better-auth-mfa-adapter";
 import type { Auth } from "../infrastructure/auth";
 import { getAuth } from "../infrastructure/runtime";
@@ -115,4 +118,27 @@ export async function resolveCurrentAccount(
     sessionId: result.session.id,
     authenticatedAt: new Date(result.session.createdAt),
   });
+}
+
+/**
+ * M2.2: the normalized login email of an ACTIVE, verified CANDIDATE
+ * account, read inside the caller's transaction; null otherwise. The
+ * candidates module uses it as the person's contact email, so ownership is
+ * never established from an email the browser supplies.
+ */
+export async function readVerifiedCandidateEmail(
+  tx: unknown,
+  accountId: string,
+): Promise<string | null> {
+  const db = tx as Database;
+  const account = await findAccountById(db, accountId);
+  if (
+    !account ||
+    account.accountType !== "CANDIDATE" ||
+    account.status !== "ACTIVE" ||
+    !account.emailVerified
+  ) {
+    return null;
+  }
+  return findAccountEmail(db, accountId);
 }

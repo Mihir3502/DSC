@@ -450,36 +450,46 @@ The M1 `ScopeResourceResolver` port has a real adapter (`organization` module):
 
 ## 6. Person and Candidacy Domain
 
+M2.2 implements `person`, `candidacy`, `candidacy_stage_history`, `duplicate_candidate_match`, `person_merge_record`, and `candidate_command_receipt` (migration `0006_person_candidacy`, `candidates` module). `address` and `person_sensitive_identity` are not created yet. Rows are never hard-deleted: the runtime role has no `DELETE` or `TRUNCATE` on any of these tables, and triggers (error class `CN`) refuse deletes as well.
+
 ### 6.1 `person`
 
-Canonical identity independent of a particular application.
+Canonical identity, independent of any account, candidacy, or application.
 
 Key fields:
 
-- `id`
-- `public_reference`
-- `legal_first_name`
-- `legal_middle_name`
-- `legal_last_name`
-- `preferred_name`
-- `email_normalized`
-- `phone_normalized`
-- `date_of_birth_encrypted`
-- `address_id`
-- `candidate_user_account_id`
-- `status`
-- `possible_duplicate_flag`
-- Common timestamps
+- `id`: database-generated UUID; persons have no public or route reference.
+- `legal_first_name`, `legal_middle_name` (nullable), `legal_last_name`, `preferred_name` (nullable): at most 100 characters each.
+- `email_display`, `email_normalized`.
+- `phone_display` (nullable), `phone_e164` (nullable; set only for a validly formed number).
+- `normalization_version`: currently `NORM-1`.
+- `candidate_account_id` (nullable; FK to the auth user): the one candidate-account owner.
+- `status`: `ACTIVE`, `MERGED`, `ARCHIVED`.
+- `merged_into_person_id`, `merged_at`: set exactly when the status is `MERGED`.
+- `version`, actor columns, common timestamps.
 
-Notes:
+Normalization `NORM-1`, applied on the server:
 
-- Do not store Social Security number in this general table.
-- Search views should use minimal normalized fields and masked results.
-- Candidate account and person remain separate because a person may exist before account activation.
+- **Names:** Unicode NFC and whitespace collapse. Letters and marks of any script, spaces, apostrophes, hyphens, and periods are accepted. Controls, zero-width characters, bidi overrides, digits, symbols, and markup are refused. Names are never a comparison key.
+- **Email:** the identity module's login-email normalization. A candidate's email is always their account's verified login email, read on the server.
+- **Phone:** a display value. An E.164 comparison value is derived for NANP numbers and for numbers already in `+<digits>` form.
 
-Classification: Confidential Personnel, with selected restricted fields.
+Ownership:
+
+- **One to one.** A partial unique index on `candidate_account_id`, and a trigger requires the owner to be an `ACTIVE`, verified `CANDIDATE` account.
+- **Linking is server-derived only.** Creating a candidate's own person links it. A link is never replaced or removed, except when a merge transfers it.
+- **Staff-entered prospects are unowned.** The prospect invitation and claim path is deferred.
+- **A merged person is frozen,** and email and creation facts are immutable.
+
+Indexes: exact B-tree indexes on `email_normalized` and `phone_e164` only. There is no fuzzy, trigram, or full-text index.
+
+Date of birth, address, and tax identifiers are not collected in M2.2.
+
+Classification: Confidential Personnel.
 
 ### 6.2 `address`
+
+Not implemented (no approved M2.2 use).
 
 Key fields:
 
@@ -491,7 +501,7 @@ Key fields:
 
 ### 6.3 `person_sensitive_identity`
 
-Stores highly restricted identity values separately.
+Not implemented. It stores highly restricted identity values separately.
 
 Key fields:
 
@@ -506,82 +516,136 @@ Access must be rare, recently authenticated, and audited.
 
 ### 6.4 `candidacy`
 
-Aggregate root for one person's application to one position.
-
-M2.2 will add `hiring_cycle_id` as the candidacy's reference to the selected opening. `position_id` and `branch_id` are taken from that cycle's published snapshot and must match it. M2.1 creates no candidacy.
+One person's candidacy for one M2.1 hiring cycle.
 
 Key fields:
 
-- `id`
-- `candidate_reference`
-- `person_id`
-- `position_id`
-- `branch_id`
-- `source_code`
-- `current_stage`
-- `candidate_visible_status_code`
-- `owner_user_id`
-- `proposed_worker_path`: `W2`, `CONTRACTOR`, `UNDECIDED`
-- `current_classification_id`
-- `started_at`
-- `submitted_at`
-- `closed_at`
-- `closure_reason_code`
-- `status`: `ACTIVE`, `ON_HOLD`, `TERMINAL`, `ARCHIVED`
-- `version`
-- Common timestamps
+- `id`: internal UUID, never shown in a URL.
+- `public_id`: 12 random lowercase Crockford characters, unique; the staff route identifier.
+- `candidate_reference`: `C-` plus 8 random Crockford characters, unique; a human support reference.
+- `person_id`.
+- `hiring_cycle_id`, `organization_id`, `position_id`, `branch_id`, `team_id` (nullable).
+- `source_code`: `CANDIDATE_SELF_SERVICE` or `STAFF_ENTERED`.
+- `current_stage`: `PROSPECT` or `APPLICATION_INCOMPLETE` in M2.2.
+- `status`: `ACTIVE`, `TERMINAL`, `ARCHIVED`.
+- `candidate_visible_status`:
+  - `NOT_STARTED` for an active `PROSPECT`;
+  - `APPLICATION_STARTED` for an active `APPLICATION_INCOMPLETE`;
+  - `CLOSED` otherwise.
+- `owner_account_id` (nullable): the staff member following up.
+- `proposed_worker_path`: `UNDECIDED` (default), `W2`, `CONTRACTOR`. This is never a classification decision.
+- `started_at`: set when the application stage is entered, then immutable.
+- `closed_at`, `closure_reason_code`: set together when a prospect is closed.
+- `version`, actor columns, common timestamps.
 
-Constraints:
+Integrity:
 
-- Controlled fields change only through domain commands.
-- A person may have multiple candidacies.
-- Only one candidacy may be marked current for the same person and position when configured.
+- **Opening coherence.** A composite FK `(hiring_cycle_id, organization_id, position_id, branch_id)` references the new `hiring_cycle_candidacy_key` unique key. A trigger requires `team_id` to equal the cycle's team. The opening references never change after insert.
+- **Current uniqueness.** A partial unique index `candidacy_current_unique` covers `(person_id, hiring_cycle_id)` where the status is `ACTIVE`. A concurrent second start maps to the existing candidacy.
+- **Reparenting.** `person_id` may change only to the survivor recorded in a `person_merge_record`.
+- **Stage and status moves.** There is no backward stage move and no reopening.
+- **Creation-time checks.** The cycle must be effectively accepting at creation: `OPEN`, every parent `ACTIVE`, and inside its window. This is checked under a share lock.
+- **No downstream placeholders.** No application, template, draft, or answer row is created. Application versions remain M2.4 scope (§7.3).
+
+Stage commands (`candidacy_stage_history.command_code`):
+
+```text
+create_prospect:                  none -> PROSPECT (ACTIVE)            staff
+start_application:                none -> APPLICATION_INCOMPLETE       candidate (own)
+start_application_from_prospect:  PROSPECT -> APPLICATION_INCOMPLETE   staff
+close_prospect:                   PROSPECT ACTIVE -> TERMINAL          staff, reason
+```
+
+Owner assignment does not change the stage.
 
 ### 6.5 `candidacy_stage_history`
 
-Append-only transition record.
+An append-only transition record. The runtime role has no `UPDATE`, `DELETE`, or `TRUNCATE`, and triggers also refuse these.
 
 Key fields:
 
-- `id`
-- `candidacy_id`
-- `from_stage`
-- `to_stage`
+- `id`, `candidacy_id`
+- `from_stage`, `to_stage`, `from_status`, `to_status`
 - `command_code`
-- `actor_user_id`
+- `actor_account_id` or `system_actor`
 - `reason_code`
-- `internal_comment`
-- `candidate_message_template_version_id`
-- `occurred_at`
-- `correlation_id`
+- `version_before`, `version_after`
+- `correlation_id`, `occurred_at`
+
+There is no free-text comment and no message-template reference in M2.2.
 
 ### 6.6 `duplicate_candidate_match`
 
+An advisory duplicate case. It never blocks, links, or merges anything by itself.
+
 Key fields:
 
-- `id`
-- `person_id_a`
-- `person_id_b`
-- `match_signals_json`
-- `score`
-- `status`: `PENDING`, `CONFIRMED_DUPLICATE`, `NOT_DUPLICATE`, `MERGED`
-- `reviewed_by_user_id`
-- `reviewed_at`
-- `merge_record_id`
+- `id`, `public_id` (12 characters; the review route identifier)
+- `organization_id`
+- `person_a_id`, `person_b_id`: canonical ordering `a < b`, never the same person.
+- `ruleset_version`: `DUP-1`.
+- `signal_codes`: a subset of `EXACT_EMAIL`, `EXACT_PHONE`. No raw values are stored.
+- `confidence_tier`: `HIGH` when the email matches, otherwise `MEDIUM`.
+- `status`: `PENDING`, `CONFIRMED_DUPLICATE`, `NOT_DUPLICATE`, `MERGED`.
+- `reviewed_by_account_id`, `reviewed_at`, `reason_code`, `merge_record_id`, `version`.
+
+Rules:
+
+- Comparison runs only against `ACTIVE` persons with a candidacy in the same organization.
+- The partial unique index `duplicate_candidate_match_open_unique` allows one open case (`PENDING` or `CONFIRMED_DUPLICATE`) per pair and ruleset.
+- The evidence columns are immutable.
+- The only status moves are `PENDING → CONFIRMED_DUPLICATE`, `PENDING → NOT_DUPLICATE`, and `CONFIRMED_DUPLICATE → MERGED`.
 
 ### 6.7 `person_merge_record`
 
-Records an authorized merge without erasing provenance.
+Records an authorized merge without erasing either identity. Append-only.
 
 Key fields:
 
-- `id`
-- `surviving_person_id`
-- `merged_person_id`
-- `field_resolution_json`
-- `approved_by_user_id`
-- `executed_by_user_id`
-- `occurred_at`
+- `id`, `surviving_person_id`
+- `merged_person_id`: unique, so a person is merged at most once.
+- `match_id`
+- `field_resolution_codes`: for example `SURVIVOR_ACCOUNT_OWNED` or `SURVIVOR_OLDEST`, `SURVIVOR_IDENTITY_KEPT`, `CANDIDACIES_REPARENTED`, `ACCOUNT_LINK_TRANSFERRED`.
+- `reason_code`, `executed_by_account_id`, `occurred_at`
+
+Merge rules:
+
+- **Survivor.** The account-owned person survives; otherwise the older record (ties are broken by ID).
+- **Effects:**
+  - the merge record is written first;
+  - the merged person's candidacies are reparented;
+  - any account link moves to the survivor;
+  - the merged person becomes `MERGED` with `merged_into_person_id`;
+  - the case becomes `MERGED`.
+- **Preservation.** Old candidacy public IDs and references keep resolving.
+- **Blocking.** A merge is refused atomically, with a durable `person.merge_blocked` denial event, when:
+  - the case is not confirmed;
+  - either person is not `ACTIVE`;
+  - two different candidate accounts are involved;
+  - both persons hold an `ACTIVE` candidacy for the same hiring cycle.
+
+### 6.8 `candidate_command_receipt`
+
+Idempotency receipts for M2.2 commands. Append-only.
+
+Key fields:
+
+- `actor_account_id`, `command_key`: unique together.
+- `command_name`
+- `request_fingerprint`: SHA-256 hex of the canonical request; it never contains PII.
+- `target_id`, `result_version`, `outcome_code`, `created_at`
+
+The same key with the same fingerprint replays the original outcome. The same key with a different request is refused (`COMMAND_KEY_CONFLICT`).
+
+### 6.9 Deferred
+
+These remain later work and are not implemented:
+
+- prospect invitation and claim;
+- an outbox for notifications;
+- a retention or purge job;
+- date of birth and address;
+- staff owner assignment to anyone other than oneself.
 
 ## 7. Application and Interview Domain
 
@@ -609,6 +673,8 @@ Key fields:
 - `effective_to`
 
 ### 7.3 `application_version`
+
+Future scope (M2.4). M2.2 creates no application template, version, draft, or answer.
 
 Key fields:
 

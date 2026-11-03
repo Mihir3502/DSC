@@ -19,6 +19,7 @@ import {
   createHiringCycle,
 } from "@/modules/organization/application/commands/hiring-cycle-commands";
 import { closeDatabasePool, getDatabase } from "@/shared/database";
+import { AUTHORIZATION_CATALOG_VERSION } from "@/modules/identity-access/policy/authorization-catalog";
 import { connect } from "../support/audit";
 import {
   createBootstrapPair,
@@ -410,11 +411,11 @@ describe("migration from the accepted M1 schema", () => {
         );
         expect(count.rows[0].n, table).toBe(0);
       }
-      // The catalog moved to version 2 (one apply event, nothing else).
+      // The catalog moved to the current version (one apply event only).
       const catalog = await m1Admin.query(
         "SELECT max(catalog_version)::int AS v FROM auth.permission",
       );
-      expect(catalog.rows[0].v).toBe(2);
+      expect(catalog.rows[0].v).toBe(AUTHORIZATION_CATALOG_VERSION);
       const events = await m1Admin.query(
         "SELECT event_name FROM audit.audit_event",
       );

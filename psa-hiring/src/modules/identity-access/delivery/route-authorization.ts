@@ -100,6 +100,18 @@ export function refuseConfigurationAccess(kind: ApplicationResultKind): never {
 }
 
 /**
+ * Terminal refusal for M2.2 duplicate review and merge: a required step-up
+ * continues on the reauthentication page for the identity-review purpose;
+ * every other outcome is refuseAccess.
+ */
+export function refuseIdentityReviewAccess(kind: ApplicationResultKind): never {
+  if (kind === "REAUTHENTICATION_REQUIRED") {
+    safeRedirect("/staff/reauthenticate?purpose=CANDIDATE_IDENTITY_REVIEW");
+  }
+  return refuseAccess(kind, "STAFF");
+}
+
+/**
  * Terminal refusal for a page or Server Action: the application result is
  * mapped through the single outcome mapper and enforced; any outcome that
  * has no in-page state here falls back to the safe not-found.

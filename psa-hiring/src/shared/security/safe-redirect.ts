@@ -61,6 +61,11 @@ export const registeredDestinations: readonly string[] = Object.freeze([
   "/sign-in?next=APPLICATION_START",
   "/candidate/applications/new",
   "/positions",
+  // M2.2 candidate start, staff prospects, and duplicate review.
+  "/candidate/applications/new?notice=started",
+  "/staff/candidates/new",
+  "/staff/candidates/duplicates",
+  "/staff/reauthenticate?purpose=CANDIDATE_IDENTITY_REVIEW",
 ]);
 
 const registered = new Set(registeredDestinations);

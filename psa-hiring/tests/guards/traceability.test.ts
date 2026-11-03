@@ -49,6 +49,7 @@ describe("requirement traceability", () => {
     ["M1.6", 16],
     ["M1.7", 16],
     ["M2.1", 16],
+    ["M2.2", 16],
   ] as const)(
     "covers every %s acceptance criterion exactly once",
     (item, count) => {

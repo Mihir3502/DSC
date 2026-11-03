@@ -95,6 +95,18 @@ Exit:
 - Candidate activates access and starts an application.
 - Staff closes the prospect as not proceeding.
 
+M2.2 commands (stage history `command_code`; `DATA_MODEL.md` §6.4):
+
+| Command | Transition | Actor and gate | Events |
+| --- | --- | --- | --- |
+| `create_prospect` | none → `PROSPECT` | Recruiter, HR, or PSA Manager in scope (`candidate.prospect.create`); cycle accepting; duplicate acknowledgement when signalled | `person.created`, `candidacy.created`, `candidacy.stage_changed`, `duplicate_match.created` (when signalled) |
+| `start_application` | none → `APPLICATION_INCOMPLETE` | Verified candidate, own account (`candidate.candidacy.create_own`, `candidate.person.create_own`); signed handoff; cycle accepting | `person.created` and `person.account_linked` (first time), `candidacy.created`, `candidacy.stage_changed` |
+| `start_application_from_prospect` | `PROSPECT` → `APPLICATION_INCOMPLETE` | Scoped staff (`candidate.prospect.create`); cycle still accepting; expected version | `candidacy.stage_changed` |
+| `close_prospect` | `PROSPECT` → closed (`TERMINAL`) | Scoped staff (`candidate.prospect.close`); reason `NOT_INTERESTED`, `UNREACHABLE`, `DUPLICATE_RECORD`, or `NOT_QUALIFIED` | `candidacy.stage_changed`, `prospect.closed` |
+| `assign_candidacy_owner` | no stage change | PSA Manager or Recruiter (`candidate.owner.assign`), self-assignment only | `candidacy.owner_assigned` |
+
+Duplicate review and person merge are identity actions, not stage transitions. They emit `duplicate_match.reviewed`, `person.merged`, or `person.merge_blocked`. Invitation sending and claiming are deferred.
+
 ### 5.2 Application Incomplete
 
 Entry:

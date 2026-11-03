@@ -1,4 +1,5 @@
 import "server-only";
+import { currentAuthorizationExecutor } from "@/modules/identity-access/application/ports/authorization-executor";
 import type {
   ResourceResolution,
   ScopeResolution,
@@ -42,7 +43,10 @@ export class OrganizationScopeResolver implements ScopeResourceResolver {
     if (!isUuid(referenceId)) return { status: "MISSING" };
     let entity;
     try {
-      entity = await findScopeEntity(this.db(), referenceId);
+      entity = await findScopeEntity(
+        currentAuthorizationExecutor<Executor>() ?? this.db(),
+        referenceId,
+      );
     } catch {
       return { status: "UNAVAILABLE" };
     }
@@ -85,7 +89,10 @@ export class OrganizationScopeResolver implements ScopeResourceResolver {
     if (!isUuid(resourceId)) return { status: "MISSING" };
     let placement;
     try {
-      placement = await findPlacement(this.db(), resourceId);
+      placement = await findPlacement(
+        currentAuthorizationExecutor<Executor>() ?? this.db(),
+        resourceId,
+      );
     } catch {
       return { status: "UNAVAILABLE" };
     }

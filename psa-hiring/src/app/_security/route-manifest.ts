@@ -1,5 +1,6 @@
 import type { SelfServicePolicyCode } from "@/modules/identity-access/domain/self-service-policy";
 import type { organizationProjectionNames } from "@/modules/organization/presentation/staff-views";
+import type { candidateProjectionNames } from "@/modules/candidates/presentation/candidate-views";
 import type { formSchemas } from "@/app/_auth/form-schemas";
 
 // Reviewed route and entry-point authorization manifest (packet M1.5 §7,
@@ -81,6 +82,8 @@ export type OutputContract =
   | "candidate.account_security.v1"
   | "staff.account_security.v1"
   | (typeof organizationProjectionNames)[number]
+  /** M2.2 person/candidacy projections (CONFIDENTIAL_PERSONNEL). */
+  | (typeof candidateProjectionNames)[number]
   /** M2.1 public-only hiring-cycle projections (classification PUBLIC). */
   | "PUBLIC_POSITION_LIST"
   | "PUBLIC_POSITION_DETAIL"
@@ -123,6 +126,10 @@ export type ManifestEntry = Readonly<{
     | "PUBLIC_HIRING_CYCLE"
     /** M2.1: the caller's own signed start-application handoff. */
     | "OWN_HANDOFF"
+    /** M2.2: the verified candidate's own person/candidacy (owned grant). */
+    | "OWN_CANDIDATE_RECORD"
+    /** M2.2: a candidacy or duplicate case addressed by its public id. */
+    | "CANDIDATE_RECORD"
     | "NONE";
   output: OutputContract;
   input?: keyof typeof formSchemas;
@@ -307,6 +314,37 @@ const configAction = (
 });
 
 const R = "RECENT_STAFF_AUTH" as const;
+
+const candidateStart = `${A}/(candidate)/candidate/(account)/applications/new`;
+const staffCandidates = `${A}/(staff)/staff/(account)/candidates`;
+
+/** M2.2 staff candidate-record page (candidates module, packet M2.2 §18). */
+const candidatePage = (
+  id: string,
+  file: string,
+  route: string,
+  service: string,
+  output: OutputContract,
+  permissions: readonly string[],
+): ManifestEntry => ({
+  ...configPage(id, file, route, service, output, permissions),
+  resource: "CANDIDATE_RECORD",
+});
+
+/** M2.2 staff candidate-record command (named, audited, idempotent). */
+const candidateAction = (
+  id: string,
+  name: string,
+  service: string,
+  input: keyof typeof formSchemas,
+  permissions: readonly string[],
+  recentAuth: "NONE" | "RECENT_STAFF_AUTH",
+): ManifestEntry => ({
+  ...configAction(id, name, service, input, permissions, recentAuth),
+  file: `${staffCandidates}/actions.ts`,
+  route: "/staff/candidates",
+  resource: "CANDIDATE_RECORD",
+});
 
 export const routeManifest: readonly ManifestEntry[] = Object.freeze([
   // ------------------------------------------------------------ framework
@@ -1203,16 +1241,19 @@ export const routeManifest: readonly ManifestEntry[] = Object.freeze([
   {
     id: "candidate.application_start",
     kind: "PAGE",
-    file: `${A}/(candidate)/candidate/(account)/applications/new/page.tsx`,
+    file: `${candidateStart}/page.tsx`,
     method: "RENDER",
     route: "/candidate/applications/new",
     audience: "CANDIDATE",
     authentication: "REQUIRED",
     account: "ACTIVE_VERIFIED_CANDIDATE",
-    authorization: { kind: "HANDOFF_REVALIDATION" },
-    service: "confirmApplicationHandoff",
-    resource: "OWN_HANDOFF",
-    output: "HANDOFF_STATE",
+    authorization: {
+      kind: "PERMISSION",
+      permissions: ["candidate.candidacy.read_own"],
+    },
+    service: "queryCandidateStart",
+    resource: "OWN_CANDIDATE_RECORD",
+    output: "candidate.application_start.v1",
     csrf: "NO_STATE_CHANGE",
     rateLimit: [],
     cache: "PRIVATE_NO_STORE",
@@ -1220,6 +1261,116 @@ export const routeManifest: readonly ManifestEntry[] = Object.freeze([
     recentAuth: "NONE",
     futureAudit: "NONE",
   },
+  {
+    id: "candidate.application_start.start",
+    kind: "SERVER_ACTION",
+    file: `${candidateStart}/actions.ts`,
+    export: "startOwnApplicationAction",
+    method: "POST",
+    route: "/candidate/applications/new",
+    audience: "CANDIDATE",
+    authentication: "REQUIRED",
+    account: "ACTIVE_VERIFIED_CANDIDATE",
+    authorization: {
+      kind: "PERMISSION",
+      permissions: [
+        "candidate.candidacy.create_own",
+        "candidate.person.create_own",
+      ],
+    },
+    service: "startOwnCandidacy",
+    resource: "OWN_CANDIDATE_RECORD",
+    output: "FORM_STATE",
+    input: "candidateStart",
+    csrf: "NEXT_SERVER_ACTION_ORIGIN",
+    rateLimit: [],
+    cache: "PRIVATE_NO_STORE",
+    denial: "SIGN_IN_OR_NOT_FOUND",
+    recentAuth: "NONE",
+    futureAudit: "SECURITY_EVENT_AND_DENIAL",
+  },
+
+  // ------------------------------------------ M2.2 staff candidate records
+  candidatePage(
+    "staff.prospect_new",
+    `${staffCandidates}/new/page.tsx`,
+    "/staff/candidates/new",
+    "queryProspectForm",
+    "staff.prospect_form.v1",
+    ["candidate.prospect.read"],
+  ),
+  candidatePage(
+    "staff.prospect_detail",
+    `${staffCandidates}/[candidacyId]/page.tsx`,
+    "/staff/candidates/[candidacyId]",
+    "queryProspectDetail",
+    "staff.prospect_detail.v1",
+    ["candidate.prospect.read"],
+  ),
+  candidatePage(
+    "staff.duplicate_queue",
+    `${staffCandidates}/duplicates/page.tsx`,
+    "/staff/candidates/duplicates",
+    "queryDuplicateQueue",
+    "staff.duplicate_queue.v1",
+    ["candidate.prospect.read", "candidate.duplicate.review"],
+  ),
+  candidatePage(
+    "staff.duplicate_review",
+    `${staffCandidates}/duplicates/[matchId]/page.tsx`,
+    "/staff/candidates/duplicates/[matchId]",
+    "queryDuplicateReview",
+    "staff.duplicate_review.v1",
+    ["candidate.duplicate.review", "candidate.person.merge"],
+  ),
+  candidateAction(
+    "staff.prospect.create",
+    "createProspectAction",
+    "createStaffProspect",
+    "prospectCreate",
+    ["candidate.prospect.create", "candidate.owner.assign"],
+    "NONE",
+  ),
+  candidateAction(
+    "staff.prospect.start_application",
+    "startApplicationFromProspectAction",
+    "startApplicationFromProspect",
+    "candidacyCommand",
+    ["candidate.prospect.create"],
+    "NONE",
+  ),
+  candidateAction(
+    "staff.prospect.close",
+    "closeProspectAction",
+    "closeProspect",
+    "candidacyCommand",
+    ["candidate.prospect.close"],
+    "NONE",
+  ),
+  candidateAction(
+    "staff.candidacy.assign_owner",
+    "assignOwnerToMeAction",
+    "assignCandidacyOwnerToSelf",
+    "candidacyCommand",
+    ["candidate.owner.assign", "candidate.prospect.read"],
+    "NONE",
+  ),
+  candidateAction(
+    "staff.duplicate.review",
+    "reviewDuplicateAction",
+    "reviewDuplicateMatch",
+    "duplicateReview",
+    ["candidate.duplicate.review"],
+    R,
+  ),
+  candidateAction(
+    "staff.person.merge",
+    "mergePeopleAction",
+    "mergePeople",
+    "personMerge",
+    ["candidate.person.merge"],
+    R,
+  ),
 
   // ------------------------------------------------ Better Auth endpoints
   ...(["GET", "POST"] as const).map((method): ManifestEntry => ({

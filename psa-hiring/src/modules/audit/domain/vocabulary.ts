@@ -16,6 +16,8 @@ export const auditCategories = [
   "RESTRICTED_ACCESS",
   "CONFIGURATION",
   "AUDIT_ACCESS",
+  // M2.2 person and candidacy records.
+  "CANDIDATE_RECORD",
 ] as const;
 export type AuditCategory = (typeof auditCategories)[number];
 
@@ -60,6 +62,10 @@ export const targetTypes = [
   "POSITION",
   "JOB_DESCRIPTION_VERSION",
   "HIRING_CYCLE",
+  // M2.2 person and candidacy (packet M2.2 §20).
+  "PERSON",
+  "CANDIDACY",
+  "DUPLICATE_MATCH",
 ] as const;
 export type TargetType = (typeof targetTypes)[number];
 

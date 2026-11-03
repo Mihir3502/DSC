@@ -205,7 +205,7 @@ Release 1 modules are:
 |---|---|
 | `identity-access` | Accounts, sessions, roles, permission assignments, scope evaluation |
 | `organization` | Organization, branch, team, position, job-description version, and hiring-cycle configuration; public position projections; the organization/branch/team scope-resolver adapter (M2.1) |
-| `candidates` | Person profile, candidate contact details, candidacy identity |
+| `candidates` | Person profile, candidate contact details, candidacy identity; stage history, duplicate cases, and person merge; the candidate ownership and candidate-record placement adapters (M2.2) |
 | `applications` | Application versions, answers, submission |
 | `recruiting` | Prescreen, interview, selection decisions, communications |
 | `classification` | W-2 default, 1099 review request, evidence, approval decision |

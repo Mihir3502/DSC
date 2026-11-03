@@ -173,6 +173,20 @@ export async function applyLocalDatabaseGrants(
     );
   }
 
+  // M2.2 candidate records (packet M2.2 §22): never deleted or truncated
+  // by the runtime role; stage history, merge records, and command
+  // receipts are insert-only. Triggers refuse the same for every role.
+  for (const table of candidateTables) {
+    if (await tableExists(admin, `app.${table}`)) {
+      statements.push(`REVOKE DELETE, TRUNCATE ON app.${table} FROM ${app}`);
+    }
+  }
+  for (const table of candidateAppendOnlyTables) {
+    if (await tableExists(admin, `app.${table}`)) {
+      statements.push(`REVOKE UPDATE ON app.${table} FROM ${app}`);
+    }
+  }
+
   // The runtime role reaches audit storage only through the reviewed
   // SECURITY DEFINER append functions, and may read only the projection
   // columns of audit_event: never integrity hashes, key versions, chain
@@ -201,6 +215,7 @@ export async function applyLocalDatabaseGrants(
     `authorization: ${app} has SELECT only on auth.role, auth.permission, auth.role_permission; INSERT and lifecycle-column UPDATE only on auth.user_role_assignment; no DELETE`,
     `audit: owned by ${migrator}, no default privileges; ${app} has EXECUTE on the append functions and column-limited SELECT on audit.audit_event only`,
     `organization configuration: ${app} has SELECT/INSERT/UPDATE (no DELETE/TRUNCATE); command receipts are INSERT/SELECT only`,
+    `candidate records: ${app} has SELECT/INSERT/UPDATE on person, candidacy, and duplicate cases (no DELETE/TRUNCATE); history, merge records, and receipts are INSERT/SELECT only`,
   ];
 }
 
@@ -213,6 +228,23 @@ export const organizationTables = [
   "job_description_version",
   "hiring_cycle",
   "organization_command_receipt",
+] as const;
+
+/** M2.2 candidate tables (no runtime DELETE/TRUNCATE). */
+export const candidateTables = [
+  "person",
+  "candidacy",
+  "candidacy_stage_history",
+  "duplicate_candidate_match",
+  "person_merge_record",
+  "candidate_command_receipt",
+] as const;
+
+/** M2.2 append-only tables (no runtime UPDATE either). */
+export const candidateAppendOnlyTables = [
+  "candidacy_stage_history",
+  "person_merge_record",
+  "candidate_command_receipt",
 ] as const;
 
 /** Assignment columns the runtime role may update (lifecycle only). */

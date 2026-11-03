@@ -1,6 +1,7 @@
 // Public API of the identity-access module. Other modules and delivery code
 // import only from here (ARCHITECTURE §6, §12). Server-only.
 export {
+  readVerifiedCandidateEmail,
   resolveCurrentAccount,
   type Principal,
 } from "./application/current-account";

@@ -42,6 +42,8 @@ const reauthenticationDestinations = Object.freeze({
   CHANGE_PASSWORD: "/staff/security#password",
   /** M2.1 configuration status changes and publication (ADR-0005 note). */
   CONFIGURATION_CHANGE: "/staff/admin/positions",
+  /** M2.2 duplicate review and person merge (PSA Manager). */
+  CANDIDATE_IDENTITY_REVIEW: "/staff/candidates/duplicates",
 } as const);
 /**
  * Purposes satisfied only by an inline step-up made by the command that

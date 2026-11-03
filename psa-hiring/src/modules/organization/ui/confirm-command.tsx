@@ -22,7 +22,7 @@ export function ConfirmCommand({
   recordLabel,
   result,
   consequence,
-  reasons,
+  reasons = [],
   hidden,
   destructive = false,
 }: {
@@ -35,7 +35,8 @@ export function ConfirmCommand({
   /** Resulting status in words. */
   result: string;
   consequence: string;
-  reasons: readonly Readonly<{ value: string; label: string }>[];
+  /** Closed reason codes; omit or pass [] when the command takes none. */
+  reasons?: readonly Readonly<{ value: string; label: string }>[];
   hidden: Readonly<Record<string, string>>;
   destructive?: boolean;
 }) {
@@ -92,27 +93,29 @@ export function ConfirmCommand({
           {Object.entries(hidden).map(([name, value]) => (
             <input key={name} type="hidden" name={name} value={value} />
           ))}
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor={reasonId} className="font-medium">
-              Reason
-            </label>
-            <select
-              id={reasonId}
-              name="reasonCode"
-              required
-              defaultValue=""
-              className="h-10 w-full rounded-lg border border-input bg-background px-3"
-            >
-              <option value="" disabled>
-                Choose a reason
-              </option>
-              {reasons.map((reason) => (
-                <option key={reason.value} value={reason.value}>
-                  {reason.label}
+          {reasons.length > 0 ? (
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor={reasonId} className="font-medium">
+                Reason
+              </label>
+              <select
+                id={reasonId}
+                name="reasonCode"
+                required
+                defaultValue=""
+                className="h-10 w-full rounded-lg border border-input bg-background px-3"
+              >
+                <option value="" disabled>
+                  Choose a reason
                 </option>
-              ))}
-            </select>
-          </div>
+                {reasons.map((reason) => (
+                  <option key={reason.value} value={reason.value}>
+                    {reason.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <div className="flex flex-wrap gap-3">
             <Button type="submit" disabled={pending} aria-disabled={pending}>
               {pending ? "Working…" : `Confirm: ${label}`}

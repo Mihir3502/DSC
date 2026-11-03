@@ -152,6 +152,9 @@ const targetTypes = new Set([
   "POSITION",
   "JOB_DESCRIPTION_VERSION",
   "HIRING_CYCLE",
+  "PERSON",
+  "CANDIDACY",
+  "DUPLICATE_MATCH",
 ]);
 const eventNames = new Set<string>(catalogEventNames);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;

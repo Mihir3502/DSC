@@ -287,6 +287,45 @@ const configuration = (
     ...extra,
   });
 
+/**
+ * M2.2 person and candidacy records (packet M2.2 §20). Atomic with the
+ * change; one row per (target, new record version). Metadata carries only
+ * codes (source, stage, ruleset, tier, signal, reason). Never names,
+ * email, phone, references, or raw comparison values.
+ */
+const candidateRecord = (
+  name: string,
+  action: string,
+  target: TargetType,
+  extra: Partial<Spec> = {},
+): EventDefinition =>
+  def({
+    name,
+    stream: "AUDIT",
+    category: "CANDIDATE_RECORD",
+    outcome: "SUCCEEDED",
+    atomicity: "IN_TRANSACTION",
+    action,
+    actor: "ACTOR_OR_SYSTEM",
+    target,
+    targetFrom: "recordRef",
+    requires: ["recordRef", "organizationRef", "newVersion"],
+    allows: [
+      "actorRef",
+      "systemActor",
+      "effective",
+      "candidacyRef",
+      "accountRef",
+      "reasonCode",
+      "previousVersion",
+      "changeCodes",
+      "count",
+    ],
+    idempotent: true,
+    projectable: ["changed_fields", "affected_count", "policy_version"],
+    ...extra,
+  });
+
 // ------------------------------------------------------------- catalog
 
 const definitions: readonly EventDefinition[] = [
@@ -585,6 +624,46 @@ const definitions: readonly EventDefinition[] = [
     "HIRING_CYCLE_ARCHIVE",
     "HIRING_CYCLE",
   ),
+  // M2.2 person, candidacy, duplicate, and merge records.
+  candidateRecord("person.created", "PERSON_CREATE", "PERSON"),
+  candidateRecord("person.account_linked", "PERSON_ACCOUNT_LINK", "PERSON"),
+  candidateRecord("candidacy.created", "CANDIDACY_CREATE", "CANDIDACY"),
+  candidateRecord(
+    "candidacy.stage_changed",
+    "CANDIDACY_STAGE_CHANGE",
+    "CANDIDACY",
+  ),
+  candidateRecord(
+    "candidacy.owner_assigned",
+    "CANDIDACY_OWNER_ASSIGN",
+    "CANDIDACY",
+  ),
+  candidateRecord("prospect.closed", "PROSPECT_CLOSE", "CANDIDACY"),
+  candidateRecord(
+    "duplicate_match.created",
+    "DUPLICATE_MATCH_CREATE",
+    "DUPLICATE_MATCH",
+  ),
+  candidateRecord(
+    "duplicate_match.reviewed",
+    "DUPLICATE_MATCH_REVIEW",
+    "DUPLICATE_MATCH",
+  ),
+  candidateRecord("person.merged", "PERSON_MERGE", "PERSON"),
+  // A blocked merge is durable denial evidence; nothing else is written.
+  def({
+    name: "person.merge_blocked",
+    stream: "AUDIT",
+    category: "CANDIDATE_RECORD",
+    outcome: "DENIED",
+    atomicity: "STANDALONE_REQUIRED",
+    action: "PERSON_MERGE",
+    actor: "ACTOR_OR_SYSTEM",
+    target: "DUPLICATE_MATCH",
+    targetFrom: "recordRef",
+    requires: ["recordRef", "organizationRef", "reasonCode"],
+    allows: ["actorRef", "systemActor"],
+  }),
 ];
 
 const registry = new Map<string, EventDefinition>();
@@ -696,6 +775,16 @@ export const catalogEventNames = [
   "hiring_cycle.closed",
   "hiring_cycle.cancelled",
   "hiring_cycle.archived",
+  "person.created",
+  "person.account_linked",
+  "candidacy.created",
+  "candidacy.stage_changed",
+  "candidacy.owner_assigned",
+  "prospect.closed",
+  "duplicate_match.created",
+  "duplicate_match.reviewed",
+  "person.merged",
+  "person.merge_blocked",
 ] as const;
 export type CatalogEventName = (typeof catalogEventNames)[number];
 

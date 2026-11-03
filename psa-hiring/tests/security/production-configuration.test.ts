@@ -13,6 +13,11 @@ import { buildProductionEnvInput } from "../fixtures/foundation";
 import type { ScopeResourceResolver } from "@/modules/identity-access/application/ports/scope-resource-resolver";
 import { refusingBootstrap } from "@/modules/organization/application/configuration-runtime";
 import { OrganizationScopeResolver } from "@/modules/organization/infrastructure/organization-scope-resolver";
+import {
+  CandidateRecordOwnership,
+  CompositeScopeResourceResolver,
+} from "@/modules/candidates/infrastructure/candidate-authorization-adapters";
+import { refusingBootstrap as refusingCandidateBootstrap } from "@/modules/candidates/application/candidate-runtime";
 
 // M1.7 §20, §31(14), AC-M1.7-13: production-like configuration rejects
 // every test adapter, test key/secret, insecure setting, and harness, in
@@ -158,6 +163,33 @@ describe("production-like configuration refuses unsafe settings (§20)", () => {
     expect(await broken.resolveScope("TEAM", "not-a-uuid", at, {})).toEqual({
       status: "MISSING",
     });
+  });
+
+  it("refuses the M2.2 candidate bootstrap actor and fails candidate ownership and placement closed (M2.2)", async () => {
+    expect(refusingCandidateBootstrap.allowsBootstrap()).toBe(false);
+    const unreachable = () => {
+      throw new Error("TEST database unavailable");
+    };
+    const account = "00000000-0000-4000-8000-000000000001";
+    const record = "00000000-0000-4000-8000-000000000002";
+    const at = new Date();
+    const ownership = new CandidateRecordOwnership(unreachable);
+    expect(await ownership.owns(account, record)).toBe("UNAVAILABLE");
+    // Malformed references never reach the database and never own.
+    expect(await ownership.owns(account, "not-a-uuid")).toBe("NOT_OWNER");
+    const resolver = new CompositeScopeResourceResolver(
+      unreachable,
+      new OrganizationScopeResolver(unreachable),
+    );
+    expect(await resolver.resolveResource(record, at, {})).toEqual({
+      status: "UNAVAILABLE",
+    });
+    expect(await resolver.resolveResource("not-a-uuid", at, {})).toEqual({
+      status: "MISSING",
+    });
+    expect(await resolver.resolveScope("ORGANIZATION", record, at, {})).toEqual(
+      { status: "UNAVAILABLE" },
+    );
   });
 
   it("accepts the same production-shaped configuration once every unsafe value is removed", () => {

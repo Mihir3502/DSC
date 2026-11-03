@@ -24,6 +24,6 @@ export type ConfigFormAction = (
   formData: FormData,
 ) => Promise<ConfigFormState>;
 
-/** Only staff position-administration paths may be opened from a state. */
+/** Only staff position-administration and M2.2 candidacy paths may be opened. */
 export const configNextPattern =
-  /^\/staff\/admin\/positions(?:\/[0-9a-f-]{36}(?:\/(?:descriptions|cycles)\/[0-9a-f-]{36})?)?$/;
+  /^(?:\/staff\/admin\/positions(?:\/[0-9a-f-]{36}(?:\/(?:descriptions|cycles)\/[0-9a-f-]{36})?)?|\/staff\/candidates\/[0-9a-hjkmnp-tv-z]{12})$/;

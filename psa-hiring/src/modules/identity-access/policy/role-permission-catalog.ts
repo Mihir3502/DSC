@@ -125,6 +125,10 @@ const grantSpecs: Readonly<Record<RoleCode, readonly Spec[]>> = {
     ["candidacy.own.withdraw", owned],
     ["candidacy.own.request_reactivation", owned],
     ["record.export.own_documents", owned],
+    ["candidate.person.read_own", owned],
+    ["candidate.person.create_own", owned],
+    ["candidate.candidacy.create_own", owned],
+    ["candidate.candidacy.read_own", owned],
   ],
 
   RECRUITER: [
@@ -169,6 +173,11 @@ const grantSpecs: Readonly<Record<RoleCode, readonly Spec[]>> = {
     edit("message_template"),
     history("message_template"),
     "configuration.requirement.read",
+    // M2.2 prospects (scoped) and self-assigned operational ownership.
+    "candidate.prospect.create",
+    "candidate.prospect.read",
+    "candidate.prospect.close",
+    "candidate.owner.assign",
   ],
 
   HR_SPECIALIST: [
@@ -255,6 +264,10 @@ const grantSpecs: Readonly<Record<RoleCode, readonly Spec[]>> = {
     "configuration.requirement.read",
     ...configurationReads,
     ...configurationDrafts,
+    // M2.2 prospects (scoped).
+    "candidate.prospect.create",
+    "candidate.prospect.read",
+    "candidate.prospect.close",
   ],
 
   CLASSIFICATION_REVIEWER: [
@@ -438,6 +451,13 @@ const grantSpecs: Readonly<Record<RoleCode, readonly Spec[]>> = {
     ...configurationReads,
     ...configurationDrafts,
     ...configurationDecisions,
+    // M2.2 prospects, ownership, and the only duplicate review/merge.
+    "candidate.prospect.create",
+    "candidate.prospect.read",
+    "candidate.prospect.close",
+    "candidate.owner.assign",
+    "candidate.duplicate.review",
+    "candidate.person.merge",
   ],
 
   SYSTEM_ADMINISTRATOR: [
@@ -491,6 +511,7 @@ const grantSpecs: Readonly<Record<RoleCode, readonly Spec[]>> = {
     ...configAreas.map(history),
     "configuration.requirement.read",
     ...configurationReads,
+    "candidate.prospect.read",
   ],
 };
 

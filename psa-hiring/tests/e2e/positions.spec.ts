@@ -258,7 +258,7 @@ test.describe("position administration and public positions @critical", () => {
     acceptExpectedNotFound(guards, 2);
   });
 
-  test("the start-application handoff continues through candidate sign-in to the M2.2 boundary without creating an application @critical", async ({
+  test("the start-application handoff continues through candidate sign-in and starts exactly one application @critical", async ({
     page,
   }) => {
     await useDistinctClient(page);
@@ -295,11 +295,29 @@ test.describe("position administration and public positions @critical", () => {
       await page.getByRole("button", { name: "Sign in" }).click();
     }
     await expect(page).toHaveURL("/candidate/applications/new");
-    await expect(page.getByRole("main").getByRole("status")).toContainText(
-      `We have noted your interest in TEST Handoff Caregiver ${id}`,
-    );
+    // M2.2: minimal details, then one candidacy; the email comes from the
+    // verified account and is never typed here.
     await expect(page.getByRole("main")).toContainText(
-      "No application has been started or submitted",
+      `TEST Handoff Caregiver ${id}`,
+    );
+    await expect(page.getByLabel("Email")).toHaveCount(0);
+    await page.getByLabel("Legal first name").fill("TEST Zoë");
+    await page.getByLabel("Legal last name").fill("O'Brien-Nguyễn");
+    const start = page.getByRole("button", { name: "Start application" });
+    await start.dblclick();
+    await expect(page).toHaveURL("/candidate/applications/new?notice=started");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Application started",
+    );
+    await expect(page.getByRole("main").getByRole("status")).toContainText(
+      /Your reference is C-[0-9A-HJKMNP-TV-Z]{8}\. Status: Application started\./,
+    );
+    // Returning through the same opening shows the same one candidacy.
+    await page.goto(`/apply/${ref}`);
+    await page.getByRole("button", { name: /Continue/ }).click();
+    await expect(page).toHaveURL("/candidate/applications/new");
+    await expect(page.getByRole("main").getByRole("status")).toContainText(
+      "You have already started an application",
     );
     // The handoff cookie never appears in a URL or script-readable storage.
     expect(page.url()).not.toContain("handoff");

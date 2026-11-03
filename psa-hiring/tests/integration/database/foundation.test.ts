@@ -314,7 +314,7 @@ describe("runtime client (src/shared/database)", () => {
 });
 
 describe("scope", () => {
-  it("10. contains only the M2.1 organization tables beyond M1, and no person, candidacy, or posting table", async () => {
+  it("10. contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table", async () => {
     const { rows } = await admin.query<{ t: string }>(`
       SELECT schemaname || '.' || tablename AS t FROM pg_tables
       WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY 1`);
@@ -327,10 +327,16 @@ describe("scope", () => {
     // cycles, and command receipts (DATA_MODEL §5, ADR-0013).
     expect(rows.map((r) => r.t)).toEqual([
       "app.branch",
+      "app.candidacy",
+      "app.candidacy_stage_history",
+      "app.candidate_command_receipt",
+      "app.duplicate_candidate_match",
       "app.hiring_cycle",
       "app.job_description_version",
       "app.organization",
       "app.organization_command_receipt",
+      "app.person",
+      "app.person_merge_record",
       "app.position",
       "app.system_metadata",
       "app.team",
@@ -353,7 +359,7 @@ describe("scope", () => {
       "drizzle.__drizzle_migrations",
     ]);
     const forbidden =
-      /candida|account|person|screening|offer|onboard|readiness|assignment|timesheet|payroll|leave|audit|outbox|posting|requisition|vacanc|campaign/;
+      /account|screening|offer|onboard|readiness|assignment|timesheet|payroll|leave|audit|outbox|posting|requisition|vacanc|campaign|application|answer|template/;
     expect(
       rows.filter(
         (r) =>
@@ -362,11 +368,11 @@ describe("scope", () => {
           forbidden.test(r.t),
       ),
     ).toEqual([]);
-    // M2.2+ entities (person, candidacy, application, audit assignment)
-    // and competing opening concepts do not exist in M2.1.
+    // M2.3+ entities (applications, answers, templates, audit
+    // assignments) and competing opening concepts do not exist yet.
     expect(
       rows.filter((r) =>
-        /person|candidacy|application|audit_assignment|job_posting|opening/.test(
+        /application|answer|template|audit_assignment|job_posting|opening/.test(
           r.t,
         ),
       ),

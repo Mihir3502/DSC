@@ -1,4 +1,5 @@
 import "server-only";
+import { withAuthorizationExecutor } from "./ports/authorization-executor";
 import type { Database } from "@/shared/database";
 import type { AppLogger } from "@/shared/logging";
 import {
@@ -141,10 +142,14 @@ export function authorizeInTransaction(
   request: AuthorizationRequest,
   deps: AuthorizationDependencies,
 ): Promise<AuthorizationDecision> {
-  return evaluateAuthorization(
-    request,
-    new DatabaseAuthorizationFacts(tx, { lockSubject: true }),
-    deps,
+  // Resolver adapters read through this same transaction (no second
+  // pooled connection while this one holds locks).
+  return withAuthorizationExecutor(tx, () =>
+    evaluateAuthorization(
+      request,
+      new DatabaseAuthorizationFacts(tx, { lockSubject: true }),
+      deps,
+    ),
   );
 }
 

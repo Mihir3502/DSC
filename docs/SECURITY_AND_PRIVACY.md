@@ -328,6 +328,13 @@ Break-glass access cannot approve classification, screening disposition, compete
 - Recalculate authorization and business gates at command execution time.
 - Use idempotency keys for retried commands and provider operations.
 - Public business content (M2.1 positions) is bounded plain text rendered only as escaped text: no HTML, links, embeds, remote resources, or templates. Public projections contain only approved public snapshot fields.
+- Person identity (M2.2) is normalized on the server (`NORM-1`):
+  - Names refuse controls, zero-width characters, bidi overrides, digits, symbols, and markup, and are never a matching key.
+  - Duplicate signals use only exact normalized email and E.164 phone (`DUP-1`).
+  - Candidates never learn that a duplicate exists. Staff without review authority see one generic flag.
+  - The review projection masks contact values.
+  - Audit metadata, logs, receipts (SHA-256 request fingerprints), URLs, and titles never contain names, emails, or phones.
+  - Merges preserve both identities and are blocked rather than resolved silently.
 - Only the exact public position projection may be cached, with tag invalidation after commit and a short lifetime. Acceptance is always recomputed from the server clock (ADR-0013). Staff projections are never cached and keep `private, no-store`.
 
 ## 11. Document and Upload Security

@@ -42,6 +42,9 @@ export {
   queryPositionList,
 } from "./application/staff-queries";
 export {
+  acceptingCyclesInScope,
+  cycleForCandidacy,
+  type CandidacyCycle,
   beginApplicationHandoff,
   confirmApplicationHandoff,
   queryHandoffOpening,

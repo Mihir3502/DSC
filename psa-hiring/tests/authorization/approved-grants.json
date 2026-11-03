@@ -1,7 +1,7 @@
 {
-  "$comment": "Reviewed snapshot of the accepted grant catalog (packet M1.7 §7; version 2 adds the M2.1 organization-configuration grants). Changing a grant requires an approved catalog change AND an updated snapshot; tests/authorization/m1-matrix-coverage.test.ts fails on any difference.",
-  "catalogVersion": 2,
-  "catalogDigest": "dee3eb0410f665f5e3e9363865033fb8054422ed40f5dbee52029ab6b1918d03",
+  "$comment": "Reviewed snapshot of the accepted grant catalog (packet M1.7 §7; version 2 adds the M2.1 organization-configuration grants; version 3 the M2.2 person and candidacy grants). Changing a grant requires an approved catalog change AND an updated snapshot; tests/authorization/m1-matrix-coverage.test.ts fails on any difference.",
+  "catalogVersion": 3,
+  "catalogDigest": "10dc8a26d0ba5595ea8356de02c1107fa60aa5611d9f9f77a3295a5d2b1c81b9",
   "grants": [
     {
       "role": "AUDITOR_READ_ONLY",
@@ -42,6 +42,12 @@
     {
       "role": "AUDITOR_READ_ONLY",
       "permission": "branch.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "AUDITOR_READ_ONLY",
+      "permission": "candidate.prospect.read",
       "condition": null,
       "status": "ACTIVE"
     },
@@ -344,6 +350,24 @@
     },
     {
       "role": "CANDIDATE",
+      "permission": "candidate.candidacy.create_own",
+      "condition": {
+        "v": 1,
+        "kind": "CANDIDATE_OWNERSHIP"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CANDIDATE",
+      "permission": "candidate.candidacy.read_own",
+      "condition": {
+        "v": 1,
+        "kind": "CANDIDATE_OWNERSHIP"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CANDIDATE",
       "permission": "candidate.own_profile.edit",
       "condition": {
         "v": 1,
@@ -354,6 +378,24 @@
     {
       "role": "CANDIDATE",
       "permission": "candidate.own_profile.read",
+      "condition": {
+        "v": 1,
+        "kind": "CANDIDATE_OWNERSHIP"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CANDIDATE",
+      "permission": "candidate.person.create_own",
+      "condition": {
+        "v": 1,
+        "kind": "CANDIDATE_OWNERSHIP"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "role": "CANDIDATE",
+      "permission": "candidate.person.read_own",
       "condition": {
         "v": 1,
         "kind": "CANDIDATE_OWNERSHIP"
@@ -963,6 +1005,24 @@
     },
     {
       "role": "HR_SPECIALIST",
+      "permission": "candidate.prospect.close",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "candidate.prospect.create",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
+      "permission": "candidate.prospect.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
       "permission": "candidate.read.assigned",
       "condition": null,
       "status": "ACTIVE"
@@ -1498,6 +1558,42 @@
     {
       "role": "PSA_MANAGER",
       "permission": "candidacy.withdraw",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "candidate.duplicate.review",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "candidate.owner.assign",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "candidate.person.merge",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "candidate.prospect.close",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "candidate.prospect.create",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "candidate.prospect.read",
       "condition": null,
       "status": "ACTIVE"
     },
@@ -2100,6 +2196,30 @@
     {
       "role": "RECRUITER",
       "permission": "application.start_on_behalf",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "candidate.owner.assign",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "candidate.prospect.close",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "candidate.prospect.create",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "candidate.prospect.read",
       "condition": null,
       "status": "ACTIVE"
     },

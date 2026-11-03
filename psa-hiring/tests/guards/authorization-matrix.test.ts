@@ -38,7 +38,7 @@ describe("authorization matrix traceability", () => {
   const matrix = readFileSync(matrixPath, "utf8");
   const sections = [
     ["§7", "## 7. Data-Domain Permission Matrix", 31],
-    ["§8", "## 8. Workflow Command Permission Matrix", 33],
+    ["§8", "## 8. Workflow Command Permission Matrix", 38],
     ["§14", "## 14. Configuration Permissions", 15],
   ] as const;
 

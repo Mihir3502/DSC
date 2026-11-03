@@ -108,7 +108,7 @@ flowchart TD
 M2.1 notes:
 - **The `[positionId]` route parameter** is the nonsequential `public_reference` of a hiring cycle (one opening of a reusable position; `DATA_MODEL.md` §5.0). Draft, cancelled, archived, never-opened, malformed, and unknown references return one indistinguishable not-found page. A closed formerly public reference shows one generic "no longer accepting applications" page.
 - **The list** shows only currently accepting openings. Filters are limited to an allowlisted location and worker-path filter, page size is bounded, and ordering is fixed.
-- **Start application** links to `/apply/[positionId]`. That page re-checks availability without the cache and, on confirmation, sets a short-lived signed handoff cookie, then continues to candidate sign-in or `/candidate/applications/new`. M2.1 renders only an accurate placeholder there and creates no person, candidacy, or application; M2.2 replaces it.
+- **Start application** links to `/apply/[positionId]`. That page re-checks availability without the cache and, on confirmation, sets a short-lived signed handoff cookie, then continues to candidate sign-in or `/candidate/applications/new`. M2.1 rendered only a placeholder there; M2.2 now starts the candidate's own candidacy (§7.2).
 
 ### Authentication flow
 
@@ -190,6 +190,17 @@ Before creating a candidacy, the system checks for:
 - A closed position.
 
 Duplicate detection must not reveal another person’s data. Staff review possible matches.
+
+M2.2 implementation:
+
+- **States.**
+  - No valid handoff: "choose a position".
+  - Opening confirmed: a minimal details form (legal first, middle, and last name, preferred name, and optional phone), shown only when no person is linked yet.
+  - Existing own candidacy for this opening: its reference and status.
+  - After start: "Application started", with the `C-` reference, at `?notice=started`.
+- **Email.** The email is the account's verified login email; it is never typed.
+- **Safety.** Double submission is idempotent (a server-issued command key). Candidates never see duplicate warnings, other people, or staff fields.
+- **Not yet.** There is no portal shell, dashboard, or application wizard yet (M2.3/M2.4).
 
 ### 7.3 Application wizard
 
@@ -504,6 +515,27 @@ A user who lacks access to a tab must not infer its record count or content from
 **Routes:** `/staff/candidates/new`, `/staff/invitations/new`
 
 Collect only minimal contact information, position/hiring cycle, source, branch, and assigned recruiter. Show possible duplicates before creation without revealing unauthorized details.
+
+M2.2 implementation:
+
+- **`/staff/candidates/new`** (Recruiter, HR, or PSA Manager in scope):
+  - an opening selector listing accepting cycles in the actor's scope;
+  - minimal fields;
+  - optional "make me the owner" (requires `candidate.owner.assign`).
+  - A possible duplicate returns one generic warning. Creating anyway needs an explicit confirmation, and input is preserved.
+  - Invitations (`/staff/invitations/new`) are deferred.
+- **`/staff/candidates/[candidacyId]`** is a bounded prospect detail, not the §10 workspace. It shows:
+  - name and contact, opening, stage, status, source, and owner;
+  - a generic possible-duplicate note;
+  - stage history;
+  - confirmation dialogs for "Start application", "Assign to me", and "Close prospect" (with a reason).
+- **`/staff/candidates/duplicates`** and **`/staff/candidates/duplicates/[matchId]`** (PSA Manager only):
+  - Both sit behind the `CANDIDATE_IDENTITY_REVIEW` step-up.
+  - The queue carries no personal data.
+  - The review shows a masked side-by-side comparison and the signals.
+  - "Confirm same person", "Not the same person", and "Merge records" are confirmation dialogs with closed reasons. A blocked merge shows a plain-language blocker.
+
+Route IDs are random 12-character public IDs. Page titles and URLs carry no personal data.
 
 Actions:
 

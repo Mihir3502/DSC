@@ -53,6 +53,9 @@ export const criticalScope = [
   // M2.1 organization configuration.
   "src/modules/organization/**/*.test.ts",
   "src/modules/organization/**/*.test.tsx",
+  // M2.2 person and candidacy.
+  "src/modules/candidates/**/*.test.ts",
+  "src/modules/candidates/**/*.test.tsx",
 ];
 
 function main() {

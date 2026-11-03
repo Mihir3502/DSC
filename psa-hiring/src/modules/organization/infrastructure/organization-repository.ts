@@ -1133,3 +1133,136 @@ export async function findPublicCycle(
 export function isActive(status: HierarchyStatus | PositionStatus): boolean {
   return status === "ACTIVE";
 }
+
+// ------------------------------------------ candidacy support (M2.2)
+
+export type CandidacyCycle = PublicCycleSource &
+  Readonly<{
+    id: string;
+    organizationId: string;
+    positionId: string;
+    branchId: string;
+    teamId: string | null;
+  }>;
+
+/**
+ * The cycle with its IDs, snapshot, and parent activity for a candidacy
+ * command, read inside the caller's transaction with the cycle and parent
+ * rows held FOR SHARE (a racing close or parent inactivation waits).
+ */
+export async function loadCycleForCandidacy(
+  tx: Executor,
+  key: Readonly<{ publicReference: string }> | Readonly<{ cycleId: string }>,
+): Promise<CandidacyCycle | null> {
+  // Lock the cycle, then each parent, FOR SHARE (row locks cannot pass
+  // through the optional team's outer join), then read the joined view.
+  const [base] = await tx
+    .select({
+      id: hiringCycle.id,
+      organizationId: hiringCycle.organizationId,
+      branchId: hiringCycle.branchId,
+      positionId: hiringCycle.positionId,
+      teamId: hiringCycle.teamId,
+    })
+    .from(hiringCycle)
+    .where(
+      "publicReference" in key
+        ? eq(hiringCycle.publicReference, key.publicReference)
+        : eq(hiringCycle.id, key.cycleId),
+    )
+    .for("share");
+  if (!base) return null;
+  await tx
+    .select({ id: organization.id })
+    .from(organization)
+    .where(eq(organization.id, base.organizationId))
+    .for("share");
+  await tx
+    .select({ id: branch.id })
+    .from(branch)
+    .where(eq(branch.id, base.branchId))
+    .for("share");
+  await tx
+    .select({ id: position.id })
+    .from(position)
+    .where(eq(position.id, base.positionId))
+    .for("share");
+  if (base.teamId) {
+    await tx
+      .select({ id: team.id })
+      .from(team)
+      .where(eq(team.id, base.teamId))
+      .for("share");
+  }
+  const rows = await tx
+    .select({
+      ...publicColumns,
+      id: hiringCycle.id,
+      organizationId: hiringCycle.organizationId,
+      positionId: hiringCycle.positionId,
+      branchId: hiringCycle.branchId,
+      teamId: hiringCycle.teamId,
+    })
+    .from(hiringCycle)
+    .innerJoin(
+      jobDescriptionVersion,
+      eq(jobDescriptionVersion.id, hiringCycle.jobDescriptionVersionId),
+    )
+    .innerJoin(organization, eq(organization.id, hiringCycle.organizationId))
+    .innerJoin(branch, eq(branch.id, hiringCycle.branchId))
+    .innerJoin(position, eq(position.id, hiringCycle.positionId))
+    .leftJoin(team, eq(team.id, hiringCycle.teamId))
+    .where(eq(hiringCycle.id, base.id));
+  return (rows[0] as CandidacyCycle | undefined) ?? null;
+}
+
+export type AcceptingCycleOption = Readonly<{
+  publicReference: string;
+  publicTitle: string;
+  locationLabel: string;
+  closesAt: Date | null;
+  displayTimezone: string;
+}>;
+
+/**
+ * Currently accepting cycles whose placement lies inside an authorized
+ * constraint (staff prospect form). Bounded and stably ordered.
+ */
+export async function listAcceptingCyclesInScope(
+  db: Executor,
+  constraint: QueryConstraint,
+  now: Date,
+): Promise<readonly AcceptingCycleOption[]> {
+  const rows = await publicBase(db)
+    .where(
+      and(
+        eq(hiringCycle.status, "OPEN"),
+        sql`${hiringCycle.opensAt} <= ${now}`,
+        or(isNull(hiringCycle.closesAt), gt(hiringCycle.closesAt, now)),
+        eq(organization.status, "ACTIVE"),
+        eq(branch.status, "ACTIVE"),
+        eq(position.status, "ACTIVE"),
+        or(isNull(hiringCycle.teamId), eq(team.status, "ACTIVE")),
+        constraintPredicate(constraint, {
+          organizationId: hiringCycle.organizationId,
+          branchId: hiringCycle.branchId,
+          teamId: hiringCycle.teamId,
+          subjectAccountId: noSubject,
+        }),
+      ),
+    )
+    .orderBy(
+      asc(
+        sql`coalesce(${hiringCycle.publicLabel}, ${hiringCycle.publicTitleSnapshot})`,
+      ),
+      asc(hiringCycle.publicReference),
+    )
+    .limit(100);
+  return rows.map((r) => ({
+    publicReference: r.publicReference,
+    publicTitle: r.publicTitle,
+    locationLabel: r.locationLabel,
+    closesAt: r.closesAt,
+    displayTimezone: r.displayTimezone,
+  }));
+}

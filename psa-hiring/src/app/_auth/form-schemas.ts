@@ -166,4 +166,45 @@ export const formSchemas = Object.freeze({
   }),
   // M2.1 public start-application handoff: only the public reference.
   startApplication: defineFormSchema({ reference: key }),
+  // M2.2 (packet M2.2 §17, §30): no person, owner, hierarchy, stage,
+  // status, match, survivor, actor, or time field exists in any schema.
+  candidateStart: defineFormSchema({
+    commandKey: ref,
+    legalFirstName: shortText,
+    legalMiddleName: shortText,
+    legalLastName: shortText,
+    preferredName: shortText,
+    phone: key,
+  }),
+  prospectCreate: defineFormSchema({
+    commandKey: ref,
+    cycleReference: key,
+    legalFirstName: shortText,
+    legalMiddleName: shortText,
+    legalLastName: shortText,
+    preferredName: shortText,
+    email: { maxLength: 320 },
+    phone: key,
+    acknowledgeDuplicate: key,
+    assignToMe: key,
+  }),
+  candidacyCommand: defineFormSchema({
+    commandKey: ref,
+    candidacyId: key,
+    expectedVersion: version,
+    reasonCode: key,
+  }),
+  duplicateReview: defineFormSchema({
+    commandKey: ref,
+    matchId: key,
+    expectedVersion: version,
+    decision: key,
+    reasonCode: key,
+  }),
+  personMerge: defineFormSchema({
+    commandKey: ref,
+    matchId: key,
+    expectedVersion: version,
+    reasonCode: key,
+  }),
 });

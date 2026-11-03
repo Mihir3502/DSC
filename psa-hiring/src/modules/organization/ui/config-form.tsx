@@ -141,6 +141,9 @@ function FieldControl({
       ) : field.kind === "select" ? (
         <select
           {...common}
+          // Remount on a re-rendered value: React's post-action form reset
+          // does not re-apply a changed defaultValue to a <select>.
+          key={`${state.attempt ?? 0}:${value}`}
           defaultValue={value}
           required={field.required}
           className={`${inputClass} h-10`}

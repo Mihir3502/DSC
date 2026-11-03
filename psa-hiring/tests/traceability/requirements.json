@@ -33,7 +33,7 @@
       "id": "PRD-AUTH-002",
       "title": "Candidates access only their own information",
       "status": "partial",
-      "note": "Own-account security and sessions (M1.2) are enforced by the CANDIDATE_* self-service policies and exact projections (M1.5, ADR-0011); candidate business-record ownership arrives with M2 and the full matrix with M1.7. M1.7: Candidate A/B cross-record denial is proven over synthetic ownership envelopes for every candidate-self permission (tests/authorization/candidate-cross-record.matrix.test.ts); real candidacy ownership remains M2.",
+      "note": "Own-account security and sessions (M1.2) are enforced by the CANDIDATE_* self-service policies and exact projections (M1.5, ADR-0011); candidate business-record ownership arrives with M2 and the full matrix with M1.7. M1.7: Candidate A/B cross-record denial is proven over synthetic ownership envelopes for every candidate-self permission (tests/authorization/candidate-cross-record.matrix.test.ts); real candidacy ownership remains M2. M2.2: real candidate ownership (CandidateRecordOwnership) now protects person and candidacy records; the status stays partial until application and document records exist.",
       "tests": [
         {
           "file": "tests/integration/auth/candidate-registration.test.ts",
@@ -58,6 +58,14 @@
         {
           "file": "tests/authorization/candidate-cross-record.matrix.test.ts",
           "title": "Candidate A reaches only A's own envelope for %s"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "shows the candidate only their own start state and never another person or a duplicate"
+        },
+        {
+          "file": "tests/e2e/candidates.spec.ts",
+          "title": "another organization's recruiter and unknown candidacy ids get the same safe not-found"
         }
       ]
     },
@@ -336,6 +344,130 @@
         {
           "file": "tests/integration/organization/configuration.test.ts",
           "title": "answers draft, cancelled, never-opened"
+        }
+      ]
+    },
+    {
+      "id": "PRD-CAN-001",
+      "title": "Staff may create a candidate or invite a candidate to self-register",
+      "status": "partial",
+      "note": "M2.2: scoped Recruiter/HR/PSA Manager create minimal unowned prospects and candidates self-start from an accepting opening. The prospect invitation and claim path is deferred (needs a prospect-bound invitation and an outbox).",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "lets scoped recruiters, HR, and managers create unowned prospects and denies everyone else"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "starts the application from a prospect, assigns the actor as owner, and closes prospects with history"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "creates one person, ownership link, candidacy, history, and audit for a verified candidate"
+        },
+        {
+          "file": "tests/e2e/candidates.spec.ts",
+          "title": "a recruiter records a prospect behind a generic duplicate warning, and a PSA manager reviews and merges after a step-up"
+        }
+      ]
+    },
+    {
+      "id": "PRD-CAN-002",
+      "title": "One canonical candidate record with a unique internal identifier",
+      "status": "covered",
+      "note": "M2.2: one durable person (database UUID), one-to-one candidate-account ownership, candidacy per person and hiring cycle with a random public id and a C- reference.",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "creates one person, ownership link, candidacy, history, and audit for a verified candidate"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "lets exactly one of two concurrent first starts create the person and candidacy"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "refuses deletes, history rewrites, non-candidate owners, and incoherent candidacies for the runtime role"
+        },
+        {
+          "file": "src/modules/candidates/domain/candidacy-policy.test.ts",
+          "title": "generates well-formed, varied references and route ids"
+        }
+      ]
+    },
+    {
+      "id": "PRD-CAN-003",
+      "title": "Warn authorized staff about probable duplicates using normalized identifying fields",
+      "status": "covered",
+      "note": "M2.2: deterministic ruleset DUP-1 over NORM-1 email and E.164 phone (names never match); staff see one generic warning; candidates see nothing.",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "warns about a possible duplicate with one boolean, then creates only after explicit acknowledgement"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "never matches on names alone"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "records a case when a candidate's own email matches a staff prospect, without telling the candidate anything"
+        },
+        {
+          "file": "src/modules/candidates/domain/candidacy-policy.test.ts",
+          "title": "scores exact email HIGH and exact phone MEDIUM"
+        }
+      ]
+    },
+    {
+      "id": "PRD-CAN-004",
+      "title": "Duplicate review does not automatically merge records",
+      "status": "covered",
+      "note": "M2.2: review records CONFIRMED_DUPLICATE or NOT_DUPLICATE only; merge is a separate command.",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "limits review to the stepped-up PSA manager and refuses everyone else identically"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "serializes a merge against a concurrent review so only one decision applies"
+        }
+      ]
+    },
+    {
+      "id": "PRD-CAN-005",
+      "title": "Authorized users merge confirmed duplicates through an audited process",
+      "status": "covered",
+      "note": "M2.2: PSA Manager at organization scope with a CANDIDATE_IDENTITY_REVIEW step-up and a reason; provenance record, blocked merges recorded as person.merge_blocked.",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "merges a confirmed duplicate with provenance, transfers the single account link, and keeps old references resolvable"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "blocks a merge of two candidate accounts or colliding current candidacies with zero changes and durable evidence"
+        },
+        {
+          "file": "tests/e2e/candidates.spec.ts",
+          "title": "a recruiter records a prospect behind a generic duplicate warning, and a PSA manager reviews and merges after a step-up"
+        }
+      ]
+    },
+    {
+      "id": "PRD-CAN-006",
+      "title": "Distinguish person, candidacy, and eventual worker engagement",
+      "status": "partial",
+      "note": "M2.2: person and candidacy are separate; a returning person reuses the same person for a later opening. Worker engagement arrives with later releases.",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "creates one person, ownership link, candidacy, history, and audit for a verified candidate"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "merges a confirmed duplicate with provenance, transfers the single account link, and keeps old references resolvable"
         }
       ]
     }
@@ -873,7 +1005,7 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization tables beyond M1, and no person, candidacy, or posting table"
+          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
         },
         {
           "file": "tests/integration/auth/staff-authentication.test.ts",
@@ -989,7 +1121,7 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization tables beyond M1, and no person, candidacy, or posting table"
+          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
         },
         {
           "file": "tests/integration/authorization/role-assignments.test.ts",
@@ -1185,7 +1317,7 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization tables beyond M1, and no person, candidacy, or posting table"
+          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
         },
         {
           "file": "tests/guards/authorization-matrix.test.ts",
@@ -1573,7 +1705,7 @@
         },
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization tables beyond M1, and no person, candidacy, or posting table"
+          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
         }
       ]
     },
@@ -1786,7 +1918,7 @@
         },
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization tables beyond M1, and no person, candidacy, or posting table"
+          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
         },
         {
           "file": "tests/integration/audit/persistence.test.ts",
@@ -1850,7 +1982,7 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization tables beyond M1, and no person, candidacy, or posting table"
+          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
         },
         {
           "file": "tests/guards/authorization-boundaries.test.ts",
@@ -2044,7 +2176,7 @@
       "tests": [
         {
           "file": "tests/integration/audit/event-coverage.test.ts",
-          "title": "records exactly one classified event for every catalog event exercised by the M1 and M2.1 suites"
+          "title": "records exactly one classified event for every catalog event exercised by the M1, M2.1, and M2.2 suites"
         },
         {
           "file": "tests/integration/audit/event-coverage.test.ts",
@@ -2126,7 +2258,7 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization tables beyond M1, and no person, candidacy, or posting table"
+          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
         },
         {
           "file": "tests/guards/authorization-boundaries.test.ts",
@@ -2427,7 +2559,7 @@
         },
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization tables beyond M1"
+          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
         }
       ]
     },
@@ -2482,7 +2614,7 @@
       "tests": [
         {
           "file": "tests/integration/database/foundation.test.ts",
-          "title": "contains only the M2.1 organization tables beyond M1"
+          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
         },
         {
           "file": "tests/integration/organization/configuration.test.ts",
@@ -2495,6 +2627,370 @@
         {
           "file": "tests/guards/authorization-matrix.test.ts",
           "title": "references only rows that exist in the matrix"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.2-01",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "creates one person, ownership link, candidacy, history, and audit for a verified candidate"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "rejects malicious Unicode, control, bidi, markup, and oversized names without creating anything"
+        },
+        {
+          "file": "src/modules/candidates/domain/normalization.test.ts",
+          "title": "keeps the lawful name %j"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "refuses deletes, history rewrites, non-candidate owners, and incoherent candidacies for the runtime role"
+        },
+        {
+          "file": "tests/integration/database/foundation.test.ts",
+          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.2-02",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "creates one person, ownership link, candidacy, history, and audit for a verified candidate"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "refuses closed, tampered, and wrong-purpose openings and unverified or staff actors with no partial state"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "refuses deletes, history rewrites, non-candidate owners, and incoherent candidacies for the runtime role"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "shows the candidate only their own start state and never another person or a duplicate"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.2-03",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "creates one person, ownership link, candidacy, history, and audit for a verified candidate"
+        },
+        {
+          "file": "src/modules/candidates/domain/candidacy-policy.test.ts",
+          "title": "generates well-formed, varied references and route ids"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "refuses deletes, history rewrites, non-candidate owners, and incoherent candidacies for the runtime role"
+        },
+        {
+          "file": "tests/integration/database/foundation.test.ts",
+          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.2-04",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "lets exactly one of two concurrent first starts create the person and candidacy"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "returns the original outcome for a retried key, refuses a reused key with a different request"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.2-05",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "starts the application from a prospect, assigns the actor as owner, and closes prospects with history"
+        },
+        {
+          "file": "src/modules/candidates/domain/candidacy-policy.test.ts",
+          "title": "allows only the named M2.2 transitions"
+        },
+        {
+          "file": "src/modules/candidates/domain/candidacy-policy.test.ts",
+          "title": "refuses repeated, backward, and reopening transitions"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "refuses deletes, history rewrites, non-candidate owners, and incoherent candidacies for the runtime role"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.2-06",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "refuses closed, tampered, and wrong-purpose openings and unverified or staff actors with no partial state"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "lets scoped recruiters, HR, and managers create unowned prospects and denies everyone else"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.2-07",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "creates one person, ownership link, candidacy, history, and audit for a verified candidate"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "shows the candidate only their own start state and never another person or a duplicate"
+        },
+        {
+          "file": "tests/e2e/positions.spec.ts",
+          "title": "the start-application handoff continues through candidate sign-in and starts exactly one application"
+        },
+        {
+          "file": "tests/accessibility/candidates.a11y.spec.ts",
+          "title": "the candidate start form and its error state are accessible and reflow"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.2-08",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "lets scoped recruiters, HR, and managers create unowned prospects and denies everyone else"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "warns about a possible duplicate with one boolean, then creates only after explicit acknowledgement"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "starts the application from a prospect, assigns the actor as owner, and closes prospects with history"
+        },
+        {
+          "file": "tests/e2e/candidates.spec.ts",
+          "title": "a recruiter records a prospect behind a generic duplicate warning, and a PSA manager reviews and merges after a step-up"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.2-09",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "warns about a possible duplicate with one boolean, then creates only after explicit acknowledgement"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "never matches on names alone"
+        },
+        {
+          "file": "src/modules/candidates/domain/candidacy-policy.test.ts",
+          "title": "scores exact email HIGH and exact phone MEDIUM"
+        },
+        {
+          "file": "src/modules/candidates/domain/candidacy-policy.test.ts",
+          "title": "never matches on absent phones or anything other than exact values"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "records a case when a candidate's own email matches a staff prospect, without telling the candidate anything"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.2-10",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "records a case when a candidate's own email matches a staff prospect, without telling the candidate anything"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "shows the candidate only their own start state and never another person or a duplicate"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "shows staff exact scoped projections and one NOT_FOUND for everything out of scope"
+        },
+        {
+          "file": "tests/e2e/candidates.spec.ts",
+          "title": "another organization's recruiter and unknown candidacy ids get the same safe not-found"
+        },
+        {
+          "file": "src/modules/candidates/presentation/candidate-views.test.ts",
+          "title": "never emits duplicate or identifier fields on the candidate view"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.2-11",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "limits review to the stepped-up PSA manager and refuses everyone else identically"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "merges a confirmed duplicate with provenance, transfers the single account link, and keeps old references resolvable"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "blocks a merge of two candidate accounts or colliding current candidacies with zero changes and durable evidence"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "serializes a merge against a concurrent review so only one decision applies"
+        },
+        {
+          "file": "src/modules/candidates/domain/candidacy-policy.test.ts",
+          "title": "blocks two different candidate accounts and same-cycle collisions"
+        },
+        {
+          "file": "src/modules/candidates/domain/candidacy-policy.test.ts",
+          "title": "keeps the account-owned person, otherwise the older record"
+        },
+        {
+          "file": "tests/e2e/candidates.spec.ts",
+          "title": "a recruiter records a prospect behind a generic duplicate warning, and a PSA manager reviews and merges after a step-up"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.2-12",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "lets scoped recruiters, HR, and managers create unowned prospects and denies everyone else"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "shows staff exact scoped projections and one NOT_FOUND for everything out of scope"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "limits review to the stepped-up PSA manager and refuses everyone else identically"
+        },
+        {
+          "file": "src/modules/candidates/presentation/candidate-views.test.ts",
+          "title": "never emits duplicate or identifier fields on the candidate view"
+        },
+        {
+          "file": "src/modules/candidates/presentation/candidate-views.test.ts",
+          "title": "keeps personal data out of the duplicate queue"
+        },
+        {
+          "file": "tests/security/production-configuration.test.ts",
+          "title": "refuses the M2.2 candidate bootstrap actor and fails candidate ownership and placement closed (M2.2)"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.2-13",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "rolls everything back when the audit append fails"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "creates one person, ownership link, candidacy, history, and audit for a verified candidate"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "starts the application from a prospect, assigns the actor as owner, and closes prospects with history"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "merges a confirmed duplicate with provenance, transfers the single account link, and keeps old references resolvable"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "keeps every audit chain verifiable"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.2-14",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/migration.test.ts",
+          "title": "applies 0006 over M2.1 with synthetic data, fabricating no person or candidacy rows"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "lets exactly one of two concurrent first starts create the person and candidacy"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "serializes a merge against a concurrent review so only one decision applies"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "refuses deletes, history rewrites, non-candidate owners, and incoherent candidacies for the runtime role"
+        },
+        {
+          "file": "tests/integration/database/foundation.test.ts",
+          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.2-15",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "rejects malicious Unicode, control, bidi, markup, and oversized names without creating anything"
+        },
+        {
+          "file": "src/modules/candidates/domain/normalization.test.ts",
+          "title": "never throws on arbitrary generated input (deterministic fuzz)"
+        },
+        {
+          "file": "src/modules/candidates/domain/normalization.test.ts",
+          "title": "refuses hidden control or bidi characters in %j"
+        },
+        {
+          "file": "tests/accessibility/candidates.a11y.spec.ts",
+          "title": "the candidate start form and its error state are accessible and reflow"
+        },
+        {
+          "file": "tests/accessibility/candidates.a11y.spec.ts",
+          "title": "staff prospect form, detail, and confirmation dialog are accessible and keyboard operable"
+        },
+        {
+          "file": "tests/e2e/candidates.spec.ts",
+          "title": "another organization's recruiter and unknown candidacy ids get the same safe not-found"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.2-16",
+      "tests": [
+        {
+          "file": "tests/integration/database/foundation.test.ts",
+          "title": "contains only the M2.1 organization and M2.2 candidate tables beyond M1, and no application or posting table"
+        },
+        {
+          "file": "tests/integration/candidates/candidacy.test.ts",
+          "title": "creates one person, ownership link, candidacy, history, and audit for a verified candidate"
+        },
+        {
+          "file": "tests/integration/candidates/migration.test.ts",
+          "title": "applies 0006 over M2.1 with synthetic data, fabricating no person or candidacy rows"
         }
       ]
     }

@@ -108,6 +108,43 @@ describe("ConfigForm", () => {
     expect(code).toHaveValue("bad code!");
   });
 
+  it("keeps the chosen select option after an error (M2.2 prospect opening)", async () => {
+    render(
+      <ConfigForm
+        action={returning({
+          status: "error",
+          message: "A record may already exist.",
+          values: { cycleReference: "bbbbbbbbbbbb" },
+        })}
+        title="Prospect details"
+        submitLabel="Create prospect"
+        hidden={{ commandKey: "TEST-key" }}
+        fields={[
+          {
+            kind: "select",
+            name: "cycleReference",
+            label: "Opening",
+            options: [
+              { value: "aaaaaaaaaaaa", label: "TEST Opening A" },
+              { value: "bbbbbbbbbbbb", label: "TEST Opening B" },
+            ],
+          },
+        ]}
+      />,
+    );
+    await userEvent.selectOptions(
+      screen.getByLabelText("Opening"),
+      "bbbbbbbbbbbb",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Create prospect" }),
+    );
+    await screen.findByRole("alert");
+    await waitFor(() =>
+      expect(screen.getByLabelText("Opening")).toHaveValue("bbbbbbbbbbbb"),
+    );
+  });
+
   it("navigates after a create only to a staff position-administration path", async () => {
     const { unmount } = render(
       <ConfigForm

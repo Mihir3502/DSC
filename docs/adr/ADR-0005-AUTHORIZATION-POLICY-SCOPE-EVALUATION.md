@@ -266,7 +266,13 @@ Every denial writes one bounded log line (`authz.denied`: permission, reason, po
   - **Recent authentication.** Status-changing and publishing actions require `RECENT_STAFF_AUTH` with the new page-continuable purpose `CONFIGURATION_CHANGE` and a reason code.
   - **Real resolver.** `OrganizationScopeResolver` (organization module) replaces `UnavailableScopeResolver` as the runtime default for `ORGANIZATION`, `BRANCH`, and `TEAM` scopes and for organization-module records. It resolves ACTIVE only when the entity and every ancestor are ACTIVE. `ASSIGNED_RECORDS`, `AUDIT_ASSIGNMENT`, relationships, designations, and candidate ownership still resolve unavailable.
   - **Existing references.** No backfill was needed: no production assignment exists, and pre-production references that do not resolve keep denying. Proposals still refuse unless the reference resolves ACTIVE.
-- **M2.2+:** remaining scope entities and resolvers, ownership, designations, and workflow policies.
+- **M2.2 (catalog version 3):**
+  - **Permissions.** Adds 10 candidate-record permissions, traced to the new `ROLE_PERMISSION_MATRIX.md` §8 rows: four candidate-self permissions under `CANDIDATE_OWNERSHIP`, and prospect create, read, and close, owner assign, duplicate review, and person merge. Review and merge require `RECENT_STAFF_AUTH` with the page-continuable purpose `CANDIDATE_IDENTITY_REVIEW` and a reason.
+  - **Ownership.** `CandidateRecordOwnership` (candidates module) replaces the unavailable ownership adapter. It answers OWNER for a person or candidacy linked to the account, or for the account's own ID (the documented create-own resource before a person exists).
+  - **Placement.** `CompositeScopeResourceResolver` places candidacies and duplicate cases (organization, branch, and team, with the candidate account as subject, so `OWN_RECORD` separation applies) and delegates everything else to `OrganizationScopeResolver`.
+  - **Fail-closed.** Database failures in either adapter answer `UNAVAILABLE`.
+  - **Defect found and fixed.** `authorizeInTransaction` resolvers previously queried through the pool while the command transaction held locks. Under a small pool, a concurrent command could starve and deny (`SCOPE_UNAVAILABLE`). An `AsyncLocalStorage` authorization executor now makes in-transaction resolvers use the command's transaction. No grant or scope semantics changed. The fix is regression-tested by the concurrent review-versus-merge race.
+- **M2.3+:** remaining scope entities (`ASSIGNED_RECORDS`, `AUDIT_ASSIGNMENT`), designations, and workflow policies.
 
 ## Rejected alternatives
 

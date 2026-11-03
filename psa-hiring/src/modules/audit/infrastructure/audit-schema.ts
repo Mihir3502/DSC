@@ -188,6 +188,7 @@ export const auditEvent = auditSchema.table(
         "RESTRICTED_ACCESS",
         "CONFIGURATION",
         "AUDIT_ACCESS",
+        "CANDIDATE_RECORD",
       ]),
     ),
     check(
@@ -205,7 +206,7 @@ export const auditEvent = auditSchema.table(
     check(
       "audit_event_target_check",
       sql.raw(
-        `(target_type IS NOT NULL OR target_id IS NULL) AND (target_type IS NULL OR target_type IN ('USER_ACCOUNT', 'STAFF_INVITATION', 'STAFF_RECOVERY_CASE', 'ROLE_ASSIGNMENT', 'AUTHORIZATION_CATALOG', 'PROTECTED_RESOURCE', 'AUDIT_LOG', 'ORGANIZATION', 'BRANCH', 'TEAM', 'POSITION', 'JOB_DESCRIPTION_VERSION', 'HIRING_CYCLE')) AND (target_id IS NOT NULL OR target_type IS NULL OR target_type IN ('AUTHORIZATION_CATALOG', 'AUDIT_LOG'))`,
+        `(target_type IS NOT NULL OR target_id IS NULL) AND (target_type IS NULL OR target_type IN ('USER_ACCOUNT', 'STAFF_INVITATION', 'STAFF_RECOVERY_CASE', 'ROLE_ASSIGNMENT', 'AUTHORIZATION_CATALOG', 'PROTECTED_RESOURCE', 'AUDIT_LOG', 'ORGANIZATION', 'BRANCH', 'TEAM', 'POSITION', 'JOB_DESCRIPTION_VERSION', 'HIRING_CYCLE', 'PERSON', 'CANDIDACY', 'DUPLICATE_MATCH')) AND (target_id IS NOT NULL OR target_type IS NULL OR target_type IN ('AUTHORIZATION_CATALOG', 'AUDIT_LOG'))`,
       ),
     ),
     check(

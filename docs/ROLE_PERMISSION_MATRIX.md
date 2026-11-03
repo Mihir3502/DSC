@@ -195,6 +195,11 @@ Examples:
 | Command | CAN | REC | HR | CLR | COM | TRN | MGR | ADM | AUD |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Start own application | A | C | C | — | — | — | — | — | — |
+| Create prospect | — | C scoped | C scoped | — | — | — | C scoped | — | — |
+| Close prospect | — | A scoped | A scoped | — | — | — | A scoped | — | — |
+| Assign candidacy owner | — | M scoped (self) | — | — | — | — | M scoped (self) | — | — |
+| Review possible duplicates | — | Warning only | Warning only | — | — | — | A organization | — | — |
+| Merge candidate records | — | — | — | — | — | — | A organization | — | — |
 | Save own application | E | — | Assist only | — | — | — | — | — | — |
 | Submit application | A | Documented assist | Documented assist | — | — | — | — | — | — |
 | Return application | — | R | R | — | — | — | V | — | — |
@@ -227,6 +232,16 @@ Examples:
 | Reactivate candidacy | Request only | Request | Request | — | Review if applicable | Review if applicable | A | — | — |
 | Archive record | — | — | Request | — | Request | — | A | Technical operation after approval | — |
 | Export records | Own provided documents only | Limited approved export | Limited approved export | Limited approved export | Restricted approved export | Limited approved export | X | Technical export after approval | X assigned |
+
+The five rows after "Start own application" were added by M2.2 (authorization catalog version 3, approved 2026-10-08):
+
+- **Prospects:** Recruiter, HR, and PSA Manager may create, read, start, and close prospects within their organization, branch, or team scope (`candidate.prospect.*`).
+- **Operational owner:** Recruiter and PSA Manager may assign themselves as a candidacy's operational owner (`candidate.owner.assign`). It never grants candidate-account ownership.
+- **Duplicates and merge:** only the PSA Manager, at organization scope, reviews possible duplicates (`candidate.duplicate.review`) and merges confirmed duplicate people (`candidate.person.merge`), each with recent authentication and a reason. Recruiter and HR see only a "possible duplicate" warning.
+- **Auditor:** reads prospects only through an approved audit assignment.
+- **Administrator:** none of these permissions.
+- **Candidate:** reads and starts only their own person and candidacies (`candidate.person.*_own`, `candidate.candidacy.*_own`).
+- **Separation:** a staff member whose own candidate record is involved is denied by the own-record rule (§9.1 rule 8).
 
 ## 9. Separation-of-Duties Rules
 
@@ -421,6 +436,7 @@ Require password reentry, multifactor confirmation, or equivalent recent authent
 - Assigning or changing privileged roles.
 - Performing a restricted export.
 - Starting break-glass access.
+- Reviewing possible duplicate people and merging confirmed duplicates (M2.2: `RECENT_STAFF_AUTH`, purpose `CANDIDATE_IDENTITY_REVIEW`, with a reason code).
 - Changing organization, branch, or team status; activating, inactivating, or retiring a position; publishing a job description; and publishing, opening, closing, cancelling, or archiving a hiring cycle (M2.1: `RECENT_STAFF_AUTH`, purpose `CONFIGURATION_CHANGE`, with a reason code).
 
 The exact reauthentication interval will be defined in the security specification.
