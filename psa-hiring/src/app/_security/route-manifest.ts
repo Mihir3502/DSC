@@ -339,11 +339,13 @@ const candidateAction = (
   input: keyof typeof formSchemas,
   permissions: readonly string[],
   recentAuth: "NONE" | "RECENT_STAFF_AUTH",
+  rateLimit: readonly string[] = [],
 ): ManifestEntry => ({
   ...configAction(id, name, service, input, permissions, recentAuth),
   file: `${staffCandidates}/actions.ts`,
   route: "/staff/candidates",
   resource: "CANDIDATE_RECORD",
+  rateLimit,
 });
 
 export const routeManifest: readonly ManifestEntry[] = Object.freeze([
@@ -1283,7 +1285,7 @@ export const routeManifest: readonly ManifestEntry[] = Object.freeze([
     output: "FORM_STATE",
     input: "candidateStart",
     csrf: "NEXT_SERVER_ACTION_ORIGIN",
-    rateLimit: [],
+    rateLimit: ["candidateStartPerAccount"],
     cache: "PRIVATE_NO_STORE",
     denial: "SIGN_IN_OR_NOT_FOUND",
     recentAuth: "NONE",
@@ -1330,6 +1332,7 @@ export const routeManifest: readonly ManifestEntry[] = Object.freeze([
     "prospectCreate",
     ["candidate.prospect.create", "candidate.owner.assign"],
     "NONE",
+    ["staffProspectCreatePerAccount"],
   ),
   candidateAction(
     "staff.prospect.start_application",

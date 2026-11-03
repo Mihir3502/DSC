@@ -773,6 +773,14 @@ describe("staff sign-in and MFA", () => {
 
   it("accepts codes from the adjacent step only (±1 window)", async () => {
     const staff = await activatedStaff("window");
+    // Activation spent the code for its own step, and the replay guard
+    // remembers codes. Fix the clock mid-step, three steps later, so no
+    // offset below can be that spent code or cross a step boundary.
+    const stepMs = 30_000;
+    vi.useFakeTimers({
+      toFake: ["Date"],
+      now: (Math.floor(Date.now() / stepMs) + 3) * stepMs + stepMs / 2,
+    });
     for (const offset of [-2, 2]) {
       const { jar } = await firstFactor(staff.email);
       expect(

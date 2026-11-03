@@ -34,6 +34,10 @@ export const candidateRateLimits = Object.freeze({
   staffRecoveryPerClient: { limit: 10, windowMs: 60 * 60_000 },
   /** Silent cap: the public response stays generic. */
   staffRecoveryPerEmail: { limit: 3, windowMs: 24 * 60 * 60_000 },
+  // M2.2 identity-creating commands (packet §23, §30): counted before any
+  // lookup, so reaching the limit says nothing about existing records.
+  candidateStartPerAccount: { limit: 20, windowMs: 15 * 60_000 },
+  staffProspectCreatePerAccount: { limit: 30, windowMs: 15 * 60_000 },
 } satisfies Record<string, RateLimitPolicy>);
 
 export type RateLimitBucket = keyof typeof candidateRateLimits;

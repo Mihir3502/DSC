@@ -298,6 +298,11 @@ export async function startOwnCandidacy(
         phone: fields.phone?.display ?? null,
       }),
     };
+    if (Object.keys(fields.problems).length === 0) {
+      if (!deps.limiter.consume("candidateStartPerAccount", accountId)) {
+        return { kind: "REFUSED", reason: "RATE_LIMITED" };
+      }
+    }
     const attempt = () =>
       runCandidateCommand(
         deps,
@@ -500,6 +505,14 @@ export async function createStaffProspect(
     }
     if (Object.keys(fields.problems).length > 0)
       throw new InputProblems(fields.problems);
+    if (
+      !deps.limiter.consume(
+        "staffProspectCreatePerAccount",
+        actor.kind === "STAFF" ? actor.principal.accountId : actor.accountId,
+      )
+    ) {
+      return { kind: "REFUSED", reason: "RATE_LIMITED" };
+    }
     const reference = input.cycleReference!;
     return runCandidateCommand(
       deps,

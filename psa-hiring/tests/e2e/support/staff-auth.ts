@@ -4,7 +4,11 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { expect, type Page } from "@playwright/test";
 import { Client } from "pg";
-import { secretFromManualKey, totpCode } from "../../fixtures/auth/totp";
+import {
+  awayFromStepBoundary,
+  secretFromManualKey,
+  totpCode,
+} from "../../fixtures/auth/totp";
 import { waitForEmail } from "./candidate-auth";
 
 // Browser-test helpers for staff authentication (packet M1.3 §17.8).
@@ -81,6 +85,7 @@ export class TestAuthenticator {
 
   async code(): Promise<string> {
     for (let wait = 0; wait < 40; wait += 1) {
+      await awayFromStepBoundary();
       for (const offset of [0, 1, -1]) {
         const code = await totpCode(this.secret, offset);
         if (!this.#used.has(code)) {

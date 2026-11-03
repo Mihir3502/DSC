@@ -18,6 +18,9 @@ test.use({ trace: "off" });
 const blocking = new Set(["serious", "critical"]);
 
 async function expectNoBlockingViolations(page: Page, testInfo: TestInfo) {
+  // Next streams metadata, so a title can land just after navigation; a page
+  // with no title at all still fails here.
+  await expect(page).toHaveTitle(/\S/);
   const results = await new AxeBuilder({ page })
     .withTags([
       "wcag2a",
@@ -37,7 +40,10 @@ async function expectNoBlockingViolations(page: Page, testInfo: TestInfo) {
   expect(
     results.violations
       .filter((v) => blocking.has(v.impact ?? ""))
-      .map((v) => `${v.impact} ${v.id} (${v.nodes.length} node(s))`),
+      .map(
+        (v) =>
+          `${v.impact} ${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`,
+      ),
     "serious/critical axe violations",
   ).toEqual([]);
 }

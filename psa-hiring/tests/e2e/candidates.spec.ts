@@ -102,6 +102,9 @@ test.describe("person and candidacy @critical", () => {
     page,
     browser,
   }) => {
+    // Three actors each register or activate and sign in, which measures
+    // 23-27 s under parallel workers against the 30 s default budget.
+    test.setTimeout(90_000);
     const id = suffix();
     const tree = await orgHarness<Tree>("provision", id);
     const titleA = `TEST Caregiver A ${id}`;

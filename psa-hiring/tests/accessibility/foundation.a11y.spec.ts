@@ -15,6 +15,7 @@ for (const path of ["/", "/candidate", "/staff"]) {
       await page.goto(path);
       await expect(page.getByRole("main")).toBeVisible();
 
+      await expect(page).toHaveTitle(/\S/);
       const results = await new AxeBuilder({ page })
         .withTags([
           "wcag2a",

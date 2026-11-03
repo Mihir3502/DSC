@@ -14,6 +14,9 @@ import { activateStaff, staffSignIn } from "../e2e/support/staff-auth";
 test.use({ trace: "off", screenshot: "off", video: "off" });
 
 async function expectNoBlockingViolations(page: Page, testInfo: TestInfo) {
+  // Next streams metadata, so a title can land just after navigation; a page
+  // with no title at all still fails here.
+  await expect(page).toHaveTitle(/\S/);
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze();
@@ -66,7 +69,19 @@ test.describe("positions accessibility @critical", () => {
       "10080",
     );
 
-    await page.goto("/positions");
+    // The harness opens the cycle from another process, so it can't invalidate
+    // this server's cache. If a parallel test just loaded the list, the new
+    // opening appears only after the 60 s backstop (ADR-0013).
+    test.setTimeout(120_000);
+    await expect(async () => {
+      await page.goto("/positions");
+      await expect(
+        page.getByRole("link", {
+          name: `TEST Accessible Caregiver ${suffix}`,
+          exact: true,
+        }),
+      ).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 70_000, intervals: [2_000] });
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
       "Open positions",
     );

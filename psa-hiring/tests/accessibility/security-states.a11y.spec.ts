@@ -17,6 +17,9 @@ test.use({ trace: "off", screenshot: "off", video: "off" });
 const blocking = new Set(["serious", "critical"]);
 
 async function expectNoBlockingViolations(page: Page, testInfo: TestInfo) {
+  // Next streams metadata, so a title can land just after navigation; a page
+  // with no title at all still fails here.
+  await expect(page).toHaveTitle(/\S/);
   const results = await new AxeBuilder({ page })
     .withTags([
       "wcag2a",

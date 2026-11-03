@@ -54,6 +54,7 @@ const refusalText: Readonly<Record<string, string>> = {
   COMMAND_KEY_CONFLICT:
     "This form was already used for a different request. Reload the page and try again.",
   INVALID_INPUT: "Check the form and try again.",
+  RATE_LIMITED: "Too many attempts. Wait a few minutes, then try again.",
   BLOCKED_CASE_NOT_CONFIRMED: "Confirm the duplicate before merging.",
   BLOCKED_PERSON_NOT_ACTIVE:
     "One of these records is no longer active, so they cannot be merged.",

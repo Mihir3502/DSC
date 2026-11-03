@@ -19,6 +19,9 @@ import { activateStaff, staffSignIn } from "../e2e/support/staff-auth";
 test.use({ trace: "off", screenshot: "off", video: "off" });
 
 async function expectNoBlockingViolations(page: Page, testInfo: TestInfo) {
+  // Next streams metadata, so a title can land just after navigation; a page
+  // with no title at all still fails here.
+  await expect(page).toHaveTitle(/\S/);
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze();

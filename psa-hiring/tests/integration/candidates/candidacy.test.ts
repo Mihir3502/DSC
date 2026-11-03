@@ -62,6 +62,10 @@ import {
   reason,
   type Hierarchy,
 } from "../support/organization";
+import {
+  candidateRateLimits,
+  FixedWindowRateLimiter,
+} from "@/modules/identity-access/infrastructure/action-rate-limiter";
 
 // M2.2 person, ownership, candidacy, stages, duplicates, review, and merge
 // (packet M2.2 §7–§23, §28, §30; AC-M2.2-01..15). Candidates are real
@@ -537,6 +541,51 @@ describe("candidate self-start (AC-M2.2-01/02/03/04/06/07)", () => {
     ).toBe(0);
   });
 
+  it("limits start attempts per account, before any lookup, without affecting another account", async () => {
+    const cycle = await openCycle(tree.branch);
+    const limited = await candidateSession(h);
+    const other = await candidateSession(h);
+    const limiter = new FixedWindowRateLimiter();
+    const limitedDeps = candidateDeps(h, { limiter });
+    const start = (candidate: CandidateSession) =>
+      startOwnCandidacy(
+        {
+          commandKey: ckey(),
+          handoffToken: handoffFor(h, cycle.ref),
+          ...names,
+        },
+        candidate.actor,
+        limitedDeps,
+      );
+    for (
+      let n = 0;
+      n < candidateRateLimits.candidateStartPerAccount.limit;
+      n += 1
+    ) {
+      limiter.consume("candidateStartPerAccount", limited.accountId);
+    }
+    const people = "SELECT count(*)::int AS n FROM app.person";
+    const before = await count(people);
+    expect(outcome(await start(limited))).toBe("RATE_LIMITED");
+    expect(await count(people)).toBe(before);
+    // A typo is corrected, not counted, so it never exhausts the limit.
+    expect(
+      (
+        await startOwnCandidacy(
+          {
+            commandKey: ckey(),
+            handoffToken: handoffFor(h, cycle.ref),
+            legalFirstName: "",
+            legalLastName: "",
+          },
+          limited.actor,
+          limitedDeps,
+        )
+      ).kind,
+    ).toBe("INVALID_INPUT");
+    expect(outcome(await start(other))).toBe("CREATED");
+  });
+
   it("rolls everything back when the audit append fails", async () => {
     const cycle = await openCycle(tree.branch);
     const candidate = await candidateSession(h);
@@ -665,6 +714,39 @@ describe("staff prospects, owner, and stages (AC-M2.2-05/08/12)", () => {
     }
     const candidate = await candidateSession(h);
     expect(outcome(await prospect(candidate.actor))).toBe("NOT_AUTHORIZED");
+  });
+
+  it("limits prospect creation per account the same way whether or not the email already exists", async () => {
+    const limiter = new FixedWindowRateLimiter();
+    const limit = candidateRateLimits.staffProspectCreatePerAccount.limit;
+    for (let n = 0; n < limit; n += 1) {
+      limiter.consume(
+        "staffProspectCreatePerAccount",
+        staff.recruiter!.principal.accountId,
+      );
+    }
+    const existing = `test.limit.${randomUUID().slice(0, 8)}@example.test`;
+    expect(outcome(await prospect(as("recruiter"), { email: existing }))).toBe(
+      "CREATED",
+    );
+    const attempt = (email: string) =>
+      createStaffProspect(
+        {
+          commandKey: ckey(),
+          cycleReference: cycle.ref,
+          legalFirstName: "TEST Prospect",
+          legalLastName: "TEST Person",
+          email,
+        },
+        as("recruiter"),
+        candidateDeps(h, { limiter }),
+      );
+    const known = await attempt(existing);
+    const unknown = await attempt(
+      `test.limit.${randomUUID().slice(0, 8)}@example.test`,
+    );
+    expect(known).toEqual({ kind: "REFUSED", reason: "RATE_LIMITED" });
+    expect(unknown).toEqual(known);
   });
 
   it("warns about a possible duplicate with one boolean, then creates only after explicit acknowledgement", async () => {

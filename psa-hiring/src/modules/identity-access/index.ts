@@ -124,7 +124,11 @@ export {
   type AuthorizationDependencies,
   type QueryConstraint,
 } from "./application/authorize";
-export { authorizationDependencies } from "./application/authorization-support";
+export {
+  actionRateLimiter,
+  authorizationDependencies,
+  type ActionRateLimiter,
+} from "./application/authorization-support";
 // M1.5 route/object/field authorization (ADR-0011).
 export {
   authorizeAccountSelfService,

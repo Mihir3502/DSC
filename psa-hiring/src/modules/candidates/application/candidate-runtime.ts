@@ -1,10 +1,12 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import {
+  actionRateLimiter,
   authorizationDependencies,
   authorizeInTransaction,
   resolveCurrentCandidate,
   resolveCurrentStaff,
+  type ActionRateLimiter,
   type AuthorizationDependencies,
   type AuthorizationRequest,
   type Principal,
@@ -43,7 +45,7 @@ export const refusingBootstrap: BootstrapGate = Object.freeze({
 });
 
 export type CandidateDependencies = AuthorizationDependencies &
-  Readonly<{ bootstrap: BootstrapGate }>;
+  Readonly<{ bootstrap: BootstrapGate; limiter: ActionRateLimiter }>;
 
 export function candidateDependencies(
   overrides: Partial<CandidateDependencies> = {},
@@ -51,6 +53,7 @@ export function candidateDependencies(
   return Object.freeze({
     ...authorizationDependencies(),
     bootstrap: refusingBootstrap,
+    limiter: actionRateLimiter(),
     ...overrides,
   });
 }
@@ -66,6 +69,7 @@ export const candidateRefusals = [
   "OPENING_UNAVAILABLE",
   "OWNER_NOT_ELIGIBLE",
   "COMMAND_KEY_CONFLICT",
+  "RATE_LIMITED",
   "BLOCKED_CASE_NOT_CONFIRMED",
   "BLOCKED_PERSON_NOT_ACTIVE",
   "BLOCKED_TWO_CANDIDATE_ACCOUNTS",

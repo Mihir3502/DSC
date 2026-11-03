@@ -25,6 +25,7 @@ export function candidateDeps(
   return {
     ...authorizationDependencies(h.runtime),
     bootstrap: h.runtime.assignmentHarness,
+    limiter: h.runtime.limiter,
     ...overrides,
   };
 }

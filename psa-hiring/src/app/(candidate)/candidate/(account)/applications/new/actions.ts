@@ -91,7 +91,9 @@ export async function startOwnApplicationAction(
         message:
           result.reason === "OPENING_UNAVAILABLE"
             ? "This position is no longer accepting applications, or your link has expired. Choose a position again."
-            : "Your request could not be completed. Reload the page and try again.",
+            : result.reason === "RATE_LIMITED"
+              ? "Too many attempts. Wait a few minutes, then try again."
+              : "Your request could not be completed. Reload the page and try again.",
         values: echo,
         attempt,
       };
