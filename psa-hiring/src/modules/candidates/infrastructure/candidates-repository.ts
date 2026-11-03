@@ -24,6 +24,7 @@ import {
   duplicateCandidateMatch,
   person,
   personMergeRecord,
+  workItem,
 } from "./candidates-schema";
 
 // Candidates-module repository (packet M2.2 §17, §21–§22). Narrow named
@@ -666,4 +667,103 @@ export async function accountOwnsRecord(
     .where(eq(candidacy.id, resourceId));
   if (c) return c.owner === accountId;
   return null;
+}
+
+// --------------------------------------------------------- portal reads
+
+export type WorkItemRow = typeof workItem.$inferSelect;
+
+/** An owner's candidacies, newest first; bounded. */
+export async function listCandidaciesOfPerson(
+  db: Executor,
+  personId: string,
+  limit = 50,
+): Promise<CandidacyRow[]> {
+  return db
+    .select()
+    .from(candidacy)
+    .where(eq(candidacy.personId, personId))
+    .orderBy(desc(candidacy.updatedAt), asc(candidacy.publicId))
+    .limit(limit);
+}
+
+/** Candidate-action tasks on candidacies the caller already owns; bounded. */
+export async function listCandidateWorkItems(
+  db: Executor,
+  candidacyIds: readonly string[],
+  limit = 200,
+): Promise<WorkItemRow[]> {
+  if (candidacyIds.length === 0) return [];
+  return db
+    .select()
+    .from(workItem)
+    .where(
+      and(
+        inArray(workItem.candidacyId, [...candidacyIds]),
+        eq(workItem.candidateActionRequired, true),
+      ),
+    )
+    .orderBy(asc(workItem.createdAt), asc(workItem.id))
+    .limit(limit);
+}
+
+// ----------------------------------------------------- work-item writes
+
+/** Opens the one COMPLETE_APPLICATION task; safe if it already exists. */
+export async function ensureCompleteApplicationTask(
+  db: Executor,
+  candidacyId: string,
+  sourceCode: "CANDIDACY_TRANSITION" | "RECONCILIATION",
+): Promise<void> {
+  await db
+    .insert(workItem)
+    .values({
+      candidacyId,
+      workTypeCode: "COMPLETE_APPLICATION",
+      targetRecordType: "CANDIDACY",
+      targetRecordId: candidacyId,
+      candidateActionRequired: true,
+      sourceCode,
+    })
+    .onConflictDoNothing();
+}
+
+/**
+ * Bounded reconciliation: opens the missing task for owned active
+ * APPLICATION_INCOMPLETE candidacies, and cancels active tasks whose candidacy
+ * no longer qualifies. Candidacy state is never changed. Returns counts only.
+ */
+export async function reconcileWorkItems(
+  db: Executor,
+  limit: number,
+): Promise<Readonly<{ opened: number; canceled: number }>> {
+  const opened = await db.execute(sql`
+    INSERT INTO app.work_item (candidacy_id, work_type_code, target_record_type, target_record_id, candidate_action_required, source_code)
+    SELECT c.id, 'COMPLETE_APPLICATION', 'CANDIDACY', c.id, true, 'RECONCILIATION'
+      FROM app.candidacy c
+      JOIN app.person p ON p.id = c.person_id
+     WHERE c.status = 'ACTIVE' AND c.current_stage = 'APPLICATION_INCOMPLETE'
+       AND p.candidate_account_id IS NOT NULL
+       AND NOT EXISTS (
+         SELECT 1 FROM app.work_item w
+          WHERE w.candidacy_id = c.id AND w.work_type_code = 'COMPLETE_APPLICATION'
+            AND w.status IN ('OPEN', 'IN_PROGRESS', 'BLOCKED'))
+     ORDER BY c.id
+     LIMIT ${limit}
+    ON CONFLICT DO NOTHING
+  `);
+  const canceled = await db.execute(sql`
+    UPDATE app.work_item w
+       SET status = 'CANCELED', version = w.version + 1, updated_at = now()
+     WHERE w.id IN (
+       SELECT w2.id FROM app.work_item w2
+         JOIN app.candidacy c ON c.id = w2.candidacy_id
+        WHERE w2.status IN ('OPEN', 'IN_PROGRESS', 'BLOCKED')
+          AND w2.work_type_code = 'COMPLETE_APPLICATION'
+          AND NOT (c.status = 'ACTIVE' AND c.current_stage = 'APPLICATION_INCOMPLETE')
+        ORDER BY w2.id
+        LIMIT ${limit})
+  `);
+  const count = (r: unknown) => (r as { rowCount?: number }).rowCount ?? 0;
+  return { opened: count(opened), canceled: count(canceled) };
 }

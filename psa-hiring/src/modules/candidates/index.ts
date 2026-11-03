@@ -39,12 +39,23 @@ export {
 } from "./application/candidate-queries";
 export { candidateProjectionNames } from "./presentation/candidate-views";
 export {
+  queryCandidateHelp,
+  queryCandidateHome,
+  queryCandidateShell,
+  queryCandidateTasks,
+} from "./application/candidate-portal-queries";
+export {
+  candidateStatusCode,
+  candidateStatusWording,
+  taskFilters,
+  type TaskFilter,
+} from "./domain/candidate-portal";
+export {
   candidateVisibleStatus,
   isCandidacyPublicId,
   mergeReasons,
   prospectCloseReasons,
   reviewReasons,
-  visibleStatusLabels,
   type CandidacyStage,
   type CandidacyStatus,
 } from "./domain/candidacy-policy";

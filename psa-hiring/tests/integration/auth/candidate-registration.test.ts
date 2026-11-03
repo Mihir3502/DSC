@@ -586,7 +586,7 @@ describe("candidate sign-in and sign-out", () => {
     );
     expect(result).toMatchObject({
       kind: "SIGNED_IN",
-      destination: "/candidate/security",
+      destination: "/candidate",
     });
     expect(cookie).toMatch(/^psa\.session_token=/);
     const row = await userRow(email);

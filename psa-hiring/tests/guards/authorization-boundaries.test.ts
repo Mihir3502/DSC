@@ -322,9 +322,7 @@ describe("route and entry-point manifest", () => {
           !read(entry.file).includes(
             'export const dynamic = "force-dynamic"',
           ) &&
-          !["public.candidate_landing", "public.staff_landing"].includes(
-            entry.id,
-          )
+          !["public.staff_landing"].includes(entry.id)
         ) {
           problems.push(`${entry.id}: page is not force-dynamic`);
         }

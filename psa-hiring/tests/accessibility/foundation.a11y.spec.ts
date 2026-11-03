@@ -7,7 +7,7 @@ import { expect, test } from "../e2e/support/fixtures";
 
 const blocking = new Set(["serious", "critical"]);
 
-for (const path of ["/", "/candidate", "/staff"]) {
+for (const path of ["/", "/sign-in", "/staff"]) {
   test(
     `${path} has no serious or critical axe violations`,
     { tag: "@critical" },

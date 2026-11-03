@@ -5,7 +5,7 @@ import {
   signIn,
   useDistinctClient,
 } from "./support/candidate-auth";
-import { expect, test } from "./support/fixtures";
+import { acceptExpectedNotFound, expect, test } from "./support/fixtures";
 import { orgHarness, type Tree } from "./support/organization";
 
 // M2.4 application draft journey (packet M2.4 §15, §18; AC-M2.4-02/03/04/X1).
@@ -106,6 +106,7 @@ test.describe("application draft @critical", () => {
   test("another candidate and an unknown reference get the same safe not-found @critical", async ({
     page,
     browser,
+    browserName,
     guards,
   }) => {
     test.setTimeout(90_000);
@@ -123,10 +124,8 @@ test.describe("application draft @critical", () => {
     const other = await context.newPage();
     await useDistinctClient(other);
     const otherEmail = await readyCandidate(other, "draft-other");
-    await other.goto("/candidate/security");
-    if (other.url().includes("/sign-in")) await signIn(other, otherEmail);
-    await expect(other).toHaveURL("/candidate/security");
-    guards.pageErrors.length = 0;
+    await signIn(other, otherEmail);
+    await expect(other).toHaveURL("/candidate");
     for (const path of [
       overview,
       `${overview}/availability`,
@@ -138,7 +137,6 @@ test.describe("application draft @critical", () => {
       await expect(other.getByRole("main")).not.toContainText("TEST Hidden");
     }
     await context.close();
-    // The browser logs each expected 404 as a console error.
-    guards.pageErrors.length = 0;
+    acceptExpectedNotFound(guards, browserName === "firefox" ? 0 : 4);
   });
 });

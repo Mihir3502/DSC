@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   foreignKey,
   index,
@@ -480,5 +481,80 @@ export const candidateCommandReceipt = appSchema.table(
       "candidate_command_receipt_outcome_check",
       sql`${table.outcomeCode} ~ '^[A-Z][A-Z_]{1,31}$'`,
     ),
+  ],
+);
+
+// A candidate or staff task (packet M2.3 §10; DATA_MODEL §17.1). It only
+// coordinates action and never decides candidacy state. It stores no text or
+// URL: wording and routes come from the code-owned work-type registry.
+// Candidate ownership comes from candidacy -> person -> account.
+export const workItem = appSchema.table(
+  "work_item",
+  {
+    id: uuid("id")
+      .default(sql`pg_catalog.gen_random_uuid()`)
+      .primaryKey(),
+    candidacyId: uuid("candidacy_id").notNull(),
+    workTypeCode: varchar("work_type_code", { length: 64 }).notNull(),
+    targetRecordType: varchar("target_record_type", { length: 32 }).notNull(),
+    targetRecordId: uuid("target_record_id").notNull(),
+    candidateActionRequired: boolean("candidate_action_required").notNull(),
+    status: varchar("status", { length: 16 }).default("OPEN").notNull(),
+    priority: varchar("priority", { length: 16 }).default("NORMAL").notNull(),
+    dueAt: timestamp("due_at", tz),
+    completedAt: timestamp("completed_at", tz),
+    sourceCode: varchar("source_code", { length: 32 }).notNull(),
+    version: integer("version").default(1).notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    foreignKey({
+      name: "work_item_candidacy_fk",
+      columns: [table.candidacyId],
+      foreignColumns: [candidacy.id],
+    }),
+    uniqueIndex("work_item_active_unique")
+      .on(
+        table.candidacyId,
+        table.workTypeCode,
+        table.targetRecordType,
+        table.targetRecordId,
+      )
+      .where(sql`${table.status} IN ('OPEN', 'IN_PROGRESS', 'BLOCKED')`),
+    index("work_item_candidate_task_idx").on(
+      table.candidacyId,
+      table.candidateActionRequired,
+      table.status,
+      table.dueAt,
+      table.priority,
+      table.createdAt,
+      table.id,
+    ),
+    index("work_item_source_idx").on(table.sourceCode, table.workTypeCode),
+    check(
+      "work_item_type_check",
+      sql`${table.workTypeCode} = 'COMPLETE_APPLICATION'`,
+    ),
+    check(
+      "work_item_target_check",
+      sql`${table.targetRecordType} = 'CANDIDACY' AND ${table.targetRecordId} = ${table.candidacyId} AND ${table.candidateActionRequired}`,
+    ),
+    check(
+      "work_item_status_check",
+      sql`${table.status} IN ('OPEN', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED', 'CANCELED')`,
+    ),
+    check(
+      "work_item_priority_check",
+      sql`${table.priority} IN ('NORMAL', 'HIGH')`,
+    ),
+    check(
+      "work_item_completed_check",
+      sql`(${table.status} = 'COMPLETED') = (${table.completedAt} IS NOT NULL)`,
+    ),
+    check(
+      "work_item_source_check",
+      sql`${table.sourceCode} IN ('CANDIDACY_TRANSITION', 'BACKFILL', 'RECONCILIATION')`,
+    ),
+    check("work_item_version_check", sql`${table.version} >= 1`),
   ],
 );

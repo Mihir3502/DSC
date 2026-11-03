@@ -53,12 +53,13 @@ export type RegistrationSource = (typeof registrationSources)[number];
  * add position/application continuations here.
  */
 const continuationDestinations = Object.freeze({
+  CANDIDATE_HOME: "/candidate",
   CANDIDATE_SECURITY: "/candidate/security",
   /** M2.1 start-application handoff boundary (M2.2 creates the candidacy). */
   APPLICATION_START: "/candidate/applications/new",
 } as const);
 export type ContinuationKey = keyof typeof continuationDestinations;
-export const DEFAULT_CONTINUATION: ContinuationKey = "CANDIDATE_SECURITY";
+export const DEFAULT_CONTINUATION: ContinuationKey = "CANDIDATE_HOME";
 
 export function isContinuationKey(value: unknown): value is ContinuationKey {
   return (

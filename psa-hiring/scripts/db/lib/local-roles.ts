@@ -272,6 +272,8 @@ export const applicationTemplateTables = [
 export const applicationDraftTables = [
   "application_version",
   "application_draft_section",
+  // M2.3 tasks: read, opened, and updated only by trusted commands.
+  "work_item",
 ] as const;
 
 /** Assignment columns the runtime role may update (lifecycle only). */

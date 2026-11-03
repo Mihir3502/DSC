@@ -86,7 +86,8 @@ test.describe("security states", { tag: "@critical" }, () => {
   }, testInfo) => {
     const email = await readyCandidate(page, "a11y-hidden");
     await signIn(page, email);
-    await expect(page).toHaveURL("/candidate/security");
+    await expect(page).toHaveURL("/candidate");
+    await page.goto("/candidate/security");
     await page.goto("/staff/security");
     await expect(
       page.getByRole("heading", { level: 1, name: "Page not found" }),

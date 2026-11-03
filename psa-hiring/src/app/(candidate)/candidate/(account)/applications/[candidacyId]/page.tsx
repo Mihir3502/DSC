@@ -75,6 +75,7 @@ export default async function ApplicationOverviewPage({
               <li key={section.code} className="rounded-lg border p-4">
                 <h2 className="font-semibold">
                   <Link
+                    prefetch={false}
                     href={`${base}/${section.code}`}
                     className="underline underline-offset-4"
                   >

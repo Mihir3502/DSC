@@ -49,7 +49,8 @@ test.describe("candidate authentication", { tag: "@critical" }, () => {
     expect(page.url()).not.toContain(code);
 
     await signIn(page, email);
-    await expect(page).toHaveURL("/candidate/security");
+    await expect(page).toHaveURL("/candidate");
+    await page.goto("/candidate/security");
     await expect(
       page.getByRole("heading", { level: 1, name: "Account security" }),
     ).toBeVisible();
@@ -98,7 +99,8 @@ test.describe("candidate authentication", { tag: "@critical" }, () => {
   }) => {
     const email = await readyCandidate(page, "reset");
     await signIn(page, email);
-    await expect(page).toHaveURL("/candidate/security");
+    await expect(page).toHaveURL("/candidate");
+    await page.goto("/candidate/security");
 
     const other = await browser.newContext();
     const recoverPage = await other.newPage();
@@ -155,7 +157,8 @@ test.describe("candidate authentication", { tag: "@critical" }, () => {
     await signIn(page, email, PASSWORD);
     await expect(page.getByRole("main").getByRole("alert")).toBeVisible();
     await signIn(page, email, NEW_PASSWORD);
-    await expect(page).toHaveURL("/candidate/security");
+    await expect(page).toHaveURL("/candidate");
+    await page.goto("/candidate/security");
   });
 
   test("changes the password and signs out other sessions", async ({
@@ -167,7 +170,8 @@ test.describe("candidate authentication", { tag: "@critical" }, () => {
     const other = await browser.newContext();
     const otherPage = await other.newPage();
     await signIn(otherPage, email);
-    await expect(otherPage).toHaveURL("/candidate/security");
+    await expect(otherPage).toHaveURL("/candidate");
+    await otherPage.goto("/candidate/security");
 
     await page.goto("/candidate/security");
     await page.getByLabel("Current password").fill(PASSWORD);
@@ -193,7 +197,8 @@ test.describe("candidate authentication", { tag: "@critical" }, () => {
     const other = await browser.newContext();
     const otherPage = await other.newPage();
     await signIn(otherPage, email);
-    await expect(otherPage).toHaveURL("/candidate/security");
+    await expect(otherPage).toHaveURL("/candidate");
+    await otherPage.goto("/candidate/security");
 
     await page.goto("/candidate/security");
     const items = page.getByRole("listitem");
@@ -218,7 +223,8 @@ test.describe("candidate authentication", { tag: "@critical" }, () => {
   }) => {
     const email = await readyCandidate(page, "signout");
     await signIn(page, email);
-    await expect(page).toHaveURL("/candidate/security");
+    await expect(page).toHaveURL("/candidate");
+    await page.goto("/candidate/security");
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await expect(page).toHaveURL("/sign-in");
     await page.goto("/candidate/security");
@@ -295,7 +301,8 @@ test.describe("candidate authentication", { tag: "@critical" }, () => {
     await page.getByLabel("Email address").fill(email);
     await page.getByLabel("Password").fill(PASSWORD);
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page).toHaveURL("/candidate/security");
+    await expect(page).toHaveURL("/candidate");
+    await page.goto("/candidate/security");
   });
 
   test("rejects a cross-origin server action submission", async ({

@@ -68,7 +68,8 @@ test.describe("route and field authorization", { tag: "@critical" }, () => {
   }) => {
     const email = await readyCandidate(page, "hidden");
     await signIn(page, email);
-    await expect(page).toHaveURL("/candidate/security");
+    await expect(page).toHaveURL("/candidate");
+    await page.goto("/candidate/security");
     const hidden = await page.goto("/staff/security");
     const hiddenText = await page.getByRole("main").innerText();
     const unknown = await page.goto("/staff/does-not-exist");
@@ -102,7 +103,8 @@ test.describe("route and field authorization", { tag: "@critical" }, () => {
     await useDistinctClient(candidatePage);
     const email = await readyCandidate(candidatePage, "projection");
     await signIn(candidatePage, email);
-    await expect(candidatePage).toHaveURL("/candidate/security");
+    await expect(candidatePage).toHaveURL("/candidate");
+    await candidatePage.goto("/candidate/security");
     const html = await candidatePage.content();
     const rsc = await candidatePage.evaluate(async () => {
       const r = await fetch("/candidate/security", { headers: { RSC: "1" } });
@@ -144,7 +146,8 @@ test.describe("route and field authorization", { tag: "@critical" }, () => {
   }) => {
     const first = await readyCandidate(page, "cache-a");
     await signIn(page, first);
-    await expect(page).toHaveURL("/candidate/security");
+    await expect(page).toHaveURL("/candidate");
+    await page.goto("/candidate/security");
     const firstResponse = await page.goto("/candidate/security");
     // The privacy control: no browser, proxy, or CDN may store the page.
     // (Next.js owns `Vary` on App Router pages; it is defense in depth only,
@@ -159,7 +162,8 @@ test.describe("route and field authorization", { tag: "@critical" }, () => {
     await useDistinctClient(other);
     const second = await readyCandidate(other, "cache-b");
     await signIn(other, second);
-    await expect(other).toHaveURL("/candidate/security");
+    await expect(other).toHaveURL("/candidate");
+    await other.goto("/candidate/security");
     await other.reload();
     const otherSessions = other.getByRole("heading", {
       name: "Signed-in sessions",
@@ -177,7 +181,8 @@ test.describe("route and field authorization", { tag: "@critical" }, () => {
   }) => {
     const email = await readyCandidate(page, "mass-assign");
     await signIn(page, email);
-    await expect(page).toHaveURL("/candidate/security");
+    await expect(page).toHaveURL("/candidate");
+    await page.goto("/candidate/security");
     const form = page.locator("form", {
       has: page.getByLabel("Current password"),
     });
@@ -213,7 +218,8 @@ test.describe("route and field authorization", { tag: "@critical" }, () => {
     // The password did not change: the original still signs in.
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await signIn(page, email, PASSWORD);
-    await expect(page).toHaveURL("/candidate/security");
+    await expect(page).toHaveURL("/candidate");
+    await page.goto("/candidate/security");
   });
 
   test("malicious continuation values never reach the page or the redirect", async ({
@@ -237,7 +243,8 @@ test.describe("route and field authorization", { tag: "@critical" }, () => {
     await page.getByLabel("Email address").fill(email);
     await page.getByLabel("Password").fill(PASSWORD);
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page).toHaveURL("/candidate/security");
+    await expect(page).toHaveURL("/candidate");
+    await page.goto("/candidate/security");
   });
 
   test("the auth HTTP surface is closed: no session object, no GET side effects", async ({
@@ -246,7 +253,8 @@ test.describe("route and field authorization", { tag: "@critical" }, () => {
   }) => {
     const email = await readyCandidate(page, "auth-http");
     await signIn(page, email);
-    await expect(page).toHaveURL("/candidate/security");
+    await expect(page).toHaveURL("/candidate");
+    await page.goto("/candidate/security");
     for (const path of [
       "/api/auth/get-session",
       "/api/auth/sign-out",

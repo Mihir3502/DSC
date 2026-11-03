@@ -29,18 +29,12 @@ test.describe("foundation routes", { tag: "@critical" }, () => {
     const link = await tabToLink(page, "Candidate Portal");
     await expect(link).toBeFocused();
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL("/candidate");
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Candidate Portal" }),
-    ).toBeVisible();
+    // The portal is authenticated, so an anonymous visitor is asked to sign in.
+    await expect(page).toHaveURL("/sign-in");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
   for (const route of [
-    {
-      path: "/candidate",
-      heading: "Candidate Portal",
-      note: /Create a candidate account or sign in/,
-    },
     {
       path: "/staff",
       heading: "Staff Portal",
@@ -92,7 +86,7 @@ test.describe("foundation routes", { tag: "@critical" }, () => {
     const uuid =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
     const seen = new Set<string>();
-    for (const path of ["/", "/candidate", "/staff"]) {
+    for (const path of ["/", "/sign-in", "/staff"]) {
       const response = await page.goto(path);
       const id = response?.headers()["x-correlation-id"] ?? "";
       expect(id, `${path} correlation header`).toMatch(uuid);

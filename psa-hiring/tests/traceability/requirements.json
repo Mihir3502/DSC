@@ -3031,6 +3031,238 @@
       ]
     },
     {
+      "id": "AC-M2.3-01",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/portal.test.ts",
+          "title": "refuses an anonymous visitor, a staff session, and a disabled account on every portal query"
+        },
+        {
+          "file": "tests/e2e/candidate-portal.spec.ts",
+          "title": "a returning candidate reaches their application from home, and sign-out leaves nothing behind"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.3-02",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/portal.test.ts",
+          "title": "selects a single candidacy automatically, with one next action and exact fields"
+        },
+        {
+          "file": "tests/integration/candidates/portal.test.ts",
+          "title": "offers an owned-only switcher and treats another person's or an unknown reference the same"
+        },
+        {
+          "file": "src/modules/candidates/domain/candidate-portal.test.ts",
+          "title": "selects by action, due date, recency, closure, then stable ID"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.3-03",
+      "tests": [
+        {
+          "file": "src/modules/candidates/domain/candidate-portal.test.ts",
+          "title": "maps every accepted stage and status to reviewed wording, with no internal code"
+        },
+        {
+          "file": "src/modules/candidates/domain/candidate-portal.test.ts",
+          "title": "fails closed for an unknown stage or status"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.3-04",
+      "tests": [
+        {
+          "file": "src/modules/candidates/domain/candidate-portal.test.ts",
+          "title": "returns one action, ranked by priority, due date, age, and stable ID"
+        },
+        {
+          "file": "src/modules/candidates/domain/candidate-portal.test.ts",
+          "title": "falls back to the stage when no task row exists, with no invented due date"
+        },
+        {
+          "file": "src/modules/candidates/domain/candidate-portal.test.ts",
+          "title": "offers no action for a stale, unknown, or finished item, or an ineligible candidacy"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.3-05",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/portal.test.ts",
+          "title": "enforces one active task, immutable identity, final history, and no delete for the runtime role"
+        },
+        {
+          "file": "tests/integration/candidates/migration.test.ts",
+          "title": "applies 0008 over M2.4, inventing no task and granting no delete"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.3-06",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/portal.test.ts",
+          "title": "opens exactly one task when a candidate starts, and shows no staff or internal field"
+        },
+        {
+          "file": "tests/integration/candidates/portal.test.ts",
+          "title": "hides a stale task on read without changing it, then reconciliation cancels it, repeatably"
+        },
+        {
+          "file": "tests/integration/candidates/portal.test.ts",
+          "title": "gives an unowned staff candidacy no task until reconciliation sees an owner"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.3-07",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/portal.test.ts",
+          "title": "shows a truthful empty state and creates nothing for a candidate with no person"
+        },
+        {
+          "file": "tests/e2e/candidate-portal.spec.ts",
+          "title": "a returning candidate reaches their application from home, and sign-out leaves nothing behind"
+        },
+        {
+          "file": "tests/e2e/candidate-portal.spec.ts",
+          "title": "a new candidate sees an empty home, and another candidate's reference is a safe not-found"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.3-08",
+      "tests": [
+        {
+          "file": "src/modules/candidates/domain/candidate-portal.test.ts",
+          "title": "lists only implemented destinations, and Application only with a candidacy"
+        },
+        {
+          "file": "tests/e2e/candidate-portal.spec.ts",
+          "title": "a returning candidate reaches their application from home, and sign-out leaves nothing behind"
+        },
+        {
+          "file": "tests/accessibility/candidate-portal.a11y.spec.ts",
+          "title": "home, tasks, help, and the mobile menu are accessible and reflow"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.3-09",
+      "tests": [
+        {
+          "file": "tests/e2e/application-draft.spec.ts",
+          "title": "a candidate begins a draft, autosaves, fixes an error, and resumes"
+        },
+        {
+          "file": "tests/e2e/candidate-portal.spec.ts",
+          "title": "a returning candidate reaches their application from home, and sign-out leaves nothing behind"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.3-10",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/portal.test.ts",
+          "title": "opens exactly one task when a candidate starts, and shows no staff or internal field"
+        },
+        {
+          "file": "src/modules/candidates/domain/candidate-portal.test.ts",
+          "title": "allowlists filters and defaults to action needed"
+        },
+        {
+          "file": "src/modules/candidates/domain/candidate-portal.test.ts",
+          "title": "keeps finished tasks as history and hides stale active ones"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.3-11",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/portal.test.ts",
+          "title": "offers an owned-only switcher and treats another person's or an unknown reference the same"
+        },
+        {
+          "file": "tests/e2e/candidate-portal.spec.ts",
+          "title": "a new candidate sees an empty home, and another candidate's reference is a safe not-found"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.3-12",
+      "tests": [
+        {
+          "file": "tests/e2e/candidate-portal.spec.ts",
+          "title": "a returning candidate reaches their application from home, and sign-out leaves nothing behind"
+        },
+        {
+          "file": "tests/integration/candidates/portal.test.ts",
+          "title": "refuses an anonymous visitor, a staff session, and a disabled account on every portal query"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.3-13",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/portal.test.ts",
+          "title": "selects a single candidacy automatically, with one next action and exact fields"
+        },
+        {
+          "file": "tests/e2e/candidate-portal.spec.ts",
+          "title": "a returning candidate reaches their application from home, and sign-out leaves nothing behind"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.3-14",
+      "tests": [
+        {
+          "file": "tests/accessibility/candidate-portal.a11y.spec.ts",
+          "title": "home, tasks, help, and the mobile menu are accessible and reflow"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.3-15",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/portal.test.ts",
+          "title": "keeps every audit chain verifiable"
+        },
+        {
+          "file": "tests/integration/candidates/portal.test.ts",
+          "title": "never writes on a read: portal queries change no task, candidacy, or audit row"
+        },
+        {
+          "file": "tests/e2e/candidate-portal.spec.ts",
+          "title": "a returning candidate reaches their application from home, and sign-out leaves nothing behind"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.3-16",
+      "tests": [
+        {
+          "file": "src/modules/candidates/domain/candidate-portal.test.ts",
+          "title": "registers only the M2.3 work type"
+        },
+        {
+          "file": "src/modules/candidates/domain/candidate-portal.test.ts",
+          "title": "lists only implemented destinations, and Application only with a candidacy"
+        }
+      ]
+    },
+    {
       "id": "AC-M2.4-01",
       "tests": [
         {

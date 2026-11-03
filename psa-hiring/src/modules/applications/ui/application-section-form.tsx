@@ -281,6 +281,7 @@ export function ApplicationSectionForm({
       </div>
       <p>
         <Link
+          prefetch={false}
           href={overviewPath}
           className={buttonVariants({ variant: "link" })}
           onClick={(event) => {

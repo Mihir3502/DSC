@@ -103,12 +103,6 @@ export function candidateVisibleStatus(
     : "NOT_STARTED";
 }
 
-export const visibleStatusLabels = {
-  NOT_STARTED: "Not started",
-  APPLICATION_STARTED: "Application started",
-  CLOSED: "Closed",
-} as const;
-
 // ---------------------------------------------------- duplicate rules DUP-1
 
 export const DUPLICATE_RULESET = "DUP-1";

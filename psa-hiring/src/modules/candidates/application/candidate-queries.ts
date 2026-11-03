@@ -18,14 +18,14 @@ import {
   cycleForCandidacy,
 } from "@/modules/organization";
 import {
-  candidateVisibleStatus,
   decideMerge,
   isCandidacyPublicId,
-  visibleStatusLabels,
-  type CandidacyStage,
-  type CandidacyStatus,
   type MergeSide,
 } from "../domain/candidacy-policy";
+import {
+  candidateStatusCode,
+  candidateStatusWording,
+} from "../domain/candidate-portal";
 import { maskEmail, maskPhone } from "../domain/normalization";
 import { candidacy } from "../infrastructure/candidates-schema";
 import {
@@ -119,9 +119,7 @@ function render<V extends object>(
 }
 
 const statusLabel = (stage: string, status: string) =>
-  visibleStatusLabels[
-    candidateVisibleStatus(stage as CandidacyStage, status as CandidacyStatus)
-  ];
+  candidateStatusWording[candidateStatusCode(stage, status)].label;
 
 async function openingSummary(deps: CandidateDependencies, cycleId: string) {
   const found = await cycleForCandidacy(db(deps), { cycleId }, deps.clock());

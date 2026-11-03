@@ -648,7 +648,7 @@ describe("candidate self-start (AC-M2.2-01/02/03/04/06/07)", () => {
       deps,
     );
     expect(after.kind === "OK" && after.view.own?.status).toBe(
-      "Application started",
+      "Application in progress",
     );
     expect(Object.keys(after.kind === "OK" ? after.view : {}).sort()).toEqual([
       "needsPersonDetails",

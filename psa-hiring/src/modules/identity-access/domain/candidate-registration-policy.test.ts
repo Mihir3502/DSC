@@ -64,7 +64,7 @@ describe("post-authentication destinations", () => {
     "__proto__",
     "constructor",
   ])("falls back to the candidate default for %j", (key) => {
-    expect(resolvePostAuthDestination(key)).toBe("/candidate/security");
+    expect(resolvePostAuthDestination(key)).toBe("/candidate");
     expect(isContinuationKey(key)).toBe(false);
   });
 });

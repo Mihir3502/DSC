@@ -175,7 +175,8 @@ test.describe("M1 gate delivery boundaries", { tag: "@critical" }, () => {
     // Candidate: hidden, the same not-found as an unknown route.
     const email = await readyCandidate(page, "gate-candidate");
     await signIn(page, email);
-    await expect(page).toHaveURL("/candidate/security");
+    await expect(page).toHaveURL("/candidate");
+    await page.goto("/candidate/security");
     const hidden = await page.goto("/staff/security");
     expect(hidden?.status()).toBe(404);
     acceptExpectedNotFound(guards, 1);

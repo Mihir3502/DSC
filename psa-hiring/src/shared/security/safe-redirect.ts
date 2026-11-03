@@ -38,6 +38,7 @@ export const registeredDestinations: readonly string[] = Object.freeze([
   SAFE_DEFAULT_DESTINATION,
   // Candidate authentication and self-service.
   "/sign-in",
+  "/candidate",
   ...withNotices("/candidate/security", [
     "revoked",
     "others-revoked",

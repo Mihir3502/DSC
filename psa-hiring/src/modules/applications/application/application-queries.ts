@@ -9,13 +9,11 @@ import {
 } from "@/modules/identity-access";
 import {
   candidateDependencies,
-  candidateVisibleStatus,
+  candidateStatusCode,
+  candidateStatusWording,
   findCandidacyByPublicId,
   isCandidacyPublicId,
-  visibleStatusLabels,
   type CandidacyRow,
-  type CandidacyStage,
-  type CandidacyStatus,
   type CandidateDependencies,
   type CandidateExecutor,
 } from "@/modules/candidates";
@@ -174,12 +172,9 @@ export async function queryApplicationOverview(
       title: found?.cycle.publicTitle ?? "",
       location: found?.cycle.locationLabel ?? "",
       status:
-        visibleStatusLabels[
-          candidateVisibleStatus(
-            row.currentStage as CandidacyStage,
-            row.status as CandidacyStatus,
-          )
-        ],
+        candidateStatusWording[
+          candidateStatusCode(row.currentStage, row.status)
+        ].label,
       started: draft !== null,
       editable: isEditable(row) && template !== null,
       sections,

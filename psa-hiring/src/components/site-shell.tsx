@@ -15,7 +15,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
 
       <header className="border-b">
         <div className="mx-auto w-full max-w-3xl px-4 py-4">
-          <Link href="/" className="font-semibold">
+          <Link prefetch={false} href="/" className="font-semibold">
             {productName}
           </Link>
         </div>

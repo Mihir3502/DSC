@@ -63,6 +63,7 @@ export default async function ApplicationStartPage({
           <p>Nothing has been submitted yet.</p>
         </div>
         <Link
+          prefetch={false}
           href={`/candidate/applications/${view.own.candidacyId}`}
           className={buttonVariants({ size: "lg" })}
         >
@@ -83,7 +84,11 @@ export default async function ApplicationStartPage({
           followed a link, it may have expired or the position may no longer be
           accepting applications.
         </p>
-        <Link href="/positions" className="underline underline-offset-4">
+        <Link
+          prefetch={false}
+          href="/positions"
+          className="underline underline-offset-4"
+        >
           See open positions
         </Link>
       </div>
@@ -110,6 +115,7 @@ export default async function ApplicationStartPage({
           </p>
         </div>
         <Link
+          prefetch={false}
           href={`/candidate/applications/${view.own.candidacyId}`}
           className={buttonVariants({ size: "lg" })}
         >

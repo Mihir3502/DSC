@@ -310,7 +310,7 @@ test.describe("position administration and public positions @critical", () => {
       "Application started",
     );
     await expect(page.getByRole("main").getByRole("status")).toContainText(
-      /Your reference is C-[0-9A-HJKMNP-TV-Z]{8}\. Status: Application started\./,
+      /Your reference is C-[0-9A-HJKMNP-TV-Z]{8}\. Status: Application in progress\./,
     );
     // Returning through the same opening shows the same one candidacy.
     await page.goto(`/apply/${ref}`);

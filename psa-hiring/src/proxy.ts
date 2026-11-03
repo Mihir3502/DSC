@@ -45,6 +45,8 @@ const knownRoutes = new Set([
   "/staff/admin/positions/new",
   "/staff/admin/positions/hierarchy",
   "/candidate/applications/new",
+  "/candidate/tasks",
+  "/candidate/help",
   // M2.2 (record ids are labelled by template, never raw).
   "/staff/candidates/new",
   "/staff/candidates/duplicates",

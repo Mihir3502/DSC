@@ -14,6 +14,10 @@ import {
 
 export const candidateProjectionNames = [
   "candidate.application_start.v1",
+  "candidate.portal_shell.v1",
+  "candidate.portal_home.v1",
+  "candidate.task_list.v1",
+  "candidate.help.v1",
   "staff.prospect_form.v1",
   "staff.prospect_detail.v1",
   "staff.duplicate_queue.v1",
@@ -62,7 +66,7 @@ const startSchema = z.strictObject({
     .strictObject({
       candidacyId: publicId,
       reference,
-      status: z.enum(["Not started", "Application started", "Closed"]),
+      status: label,
       title: label,
     })
     .nullable(),
@@ -81,6 +85,155 @@ export const candidateStartContract = defineProjection<
     "candidate.candidacy.read_own",
   ),
   schema: startSchema,
+});
+
+// ------------------------------------------------------ candidate portal
+
+const navigationEntry = z.strictObject({
+  key: z.string().regex(/^[a-z]+$/),
+  label,
+  href: z.string().regex(/^\/candidate(?:\/[a-z0-9-]+)*$/),
+});
+const candidatePath = z
+  .string()
+  .regex(/^\/candidate\/applications\/[0-9a-hjkmnp-tv-z]{12}$/);
+
+const shellSchema = z.strictObject({
+  displayName: label.nullable(),
+  agencyName: label.nullable(),
+  navigation: z.array(navigationEntry).max(12),
+});
+export type CandidateShellView = z.infer<typeof shellSchema>;
+export const candidateShellContract = defineProjection<
+  CandidateShellView,
+  CandidateShellView
+>({
+  name: "candidate.portal_shell.v1",
+  audience: "CANDIDATE",
+  purpose: "STATUS",
+  fields: fieldsFor<CandidateShellView>(
+    ["displayName", "agencyName", "navigation"],
+    "candidate.candidacy.read_own",
+  ),
+  schema: shellSchema,
+});
+
+const taskCounts = z.strictObject({
+  actionNeeded: z.number().int().min(0),
+  upcoming: z.number().int().min(0),
+  underReview: z.number().int().min(0),
+  completed: z.number().int().min(0),
+});
+
+const homeSchema = z.strictObject({
+  current: z
+    .strictObject({
+      candidacyId: publicId,
+      reference,
+      title: label,
+      location: label,
+      status: z.strictObject({
+        code: z.enum([
+          "UNDER_REVIEW",
+          "APPLICATION_IN_PROGRESS",
+          "NOT_CONTINUING",
+          "UNAVAILABLE",
+        ]),
+        label,
+        explanation: label,
+      }),
+    })
+    .nullable(),
+  candidacies: z
+    .array(
+      z.strictObject({
+        candidacyId: publicId,
+        reference,
+        title: label,
+        location: label,
+        status: label,
+        selected: z.boolean(),
+      }),
+    )
+    .max(50),
+  nextAction: z
+    .strictObject({
+      title: label,
+      instruction: label,
+      actionLabel: label,
+      href: candidatePath,
+      due: label.nullable(),
+    })
+    .nullable(),
+  taskCounts,
+});
+export type CandidateHomeView = z.infer<typeof homeSchema>;
+export const candidateHomeContract = defineProjection<
+  CandidateHomeView,
+  CandidateHomeView
+>({
+  name: "candidate.portal_home.v1",
+  audience: "CANDIDATE",
+  purpose: "STATUS",
+  fields: fieldsFor<CandidateHomeView>(
+    ["current", "candidacies", "nextAction", "taskCounts"],
+    "candidate.candidacy.read_own",
+  ),
+  schema: homeSchema,
+});
+
+const tasksSchema = z.strictObject({
+  filter: z.enum(["action_needed", "upcoming", "under_review", "completed"]),
+  tasks: z
+    .array(
+      z.strictObject({
+        key: z.string().max(40),
+        title: label,
+        instruction: label.nullable(),
+        status: label,
+        due: label.nullable(),
+        reference,
+        opening: label,
+        actionLabel: label.nullable(),
+        href: candidatePath.nullable(),
+      }),
+    )
+    .max(50),
+  counts: taskCounts,
+});
+export type CandidateTasksView = z.infer<typeof tasksSchema>;
+export const candidateTasksContract = defineProjection<
+  CandidateTasksView,
+  CandidateTasksView
+>({
+  name: "candidate.task_list.v1",
+  audience: "CANDIDATE",
+  purpose: "LIST",
+  fields: fieldsFor<CandidateTasksView>(
+    ["filter", "tasks", "counts"],
+    "candidate.candidacy.read_own",
+  ),
+  schema: tasksSchema,
+});
+
+const helpSchema = z.strictObject({
+  agencyName: label.nullable(),
+  email: label.nullable(),
+  phone: label.nullable(),
+});
+export type CandidateHelpView = z.infer<typeof helpSchema>;
+export const candidateHelpContract = defineProjection<
+  CandidateHelpView,
+  CandidateHelpView
+>({
+  name: "candidate.help.v1",
+  audience: "CANDIDATE",
+  purpose: "DETAIL",
+  fields: fieldsFor<CandidateHelpView>(
+    ["agencyName", "email", "phone"],
+    "candidate.candidacy.read_own",
+  ),
+  schema: helpSchema,
 });
 
 // ------------------------------------------------------------------ staff

@@ -95,7 +95,8 @@ test(
   async ({ page }, testInfo) => {
     const email = await readyCandidate(page, "a11y");
     await signIn(page, email, PASSWORD);
-    await expect(page).toHaveURL("/candidate/security");
+    await expect(page).toHaveURL("/candidate");
+    await page.goto("/candidate/security");
     await expectNoBlockingViolations(page, testInfo);
   },
 );

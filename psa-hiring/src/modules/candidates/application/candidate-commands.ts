@@ -28,6 +28,7 @@ import {
   type FieldProblem,
 } from "../domain/normalization";
 import {
+  ensureCompleteApplicationTask,
   findActiveCandidacy,
   findCandidacyByPublicId,
   findMatchByPublicId,
@@ -422,6 +423,11 @@ export async function startOwnCandidacy(
           );
           newCandidacyEvents(ctx, row);
           await recordStage(ctx, row, "start_application", null, null);
+          await ensureCompleteApplicationTask(
+            ctx.tx,
+            row.id,
+            "CANDIDACY_TRANSITION",
+          );
           await evaluateDuplicates(ctx, owner, cycle.organizationId);
           return { outcome: "CREATED", targetId: row.id, version: row.version };
         },
@@ -707,6 +713,16 @@ export async function startApplicationFromProspect(
           },
           null,
         );
+        // The candidate's task needs an owner to act on it; an unowned
+        // candidacy gets one by reconciliation once it's linked.
+        const owner = await findPerson(ctx.tx, updated.personId, null);
+        if (owner?.candidateAccountId) {
+          await ensureCompleteApplicationTask(
+            ctx.tx,
+            updated.id,
+            "CANDIDACY_TRANSITION",
+          );
+        }
         return {
           outcome: "UPDATED",
           targetId: row.id,

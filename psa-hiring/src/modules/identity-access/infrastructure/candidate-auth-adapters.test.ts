@@ -243,7 +243,7 @@ describe("RegistrationIntentRepository", () => {
     const intent = await repo.peek(token);
     expect(intent).toMatchObject({
       source: "PUBLIC_POSITION",
-      continuationKey: "CANDIDATE_SECURITY",
+      continuationKey: "CANDIDATE_HOME",
     });
     expect(intent?.boundEmail).toBeUndefined();
     expect(await repo.consume(token)).toBe(true);

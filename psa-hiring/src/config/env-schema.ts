@@ -46,6 +46,16 @@ const boundedInt = (min: number, max: number, fallback: number) => {
 
 const connectionTimeout = boundedInt(500, 30_000, 5_000);
 
+// Optional candidate-facing contact details. Blank is the same as unset, and
+// the portal then shows no contact details rather than a placeholder.
+const blankAsUnset = (value: unknown) =>
+  typeof value === "string" && value.trim() === "" ? undefined : value;
+const optionalText = (pattern: RegExp, message: string) =>
+  z.preprocess(
+    blankAsUnset,
+    z.string().trim().regex(pattern, { error: message }).optional(),
+  );
+
 const serverEnvSchema = z
   .object({
     APP_ENV: appEnv,
@@ -70,6 +80,18 @@ const serverEnvSchema = z
     PROVIDER_MODE: z.enum(providerModes, {
       error: `must be one of: ${providerModes.join(", ")}`,
     }),
+    AGENCY_DISPLAY_NAME: optionalText(
+      /^[\p{L}\p{M}\p{N} '’&.,-]{1,100}$/u,
+      "must be 1 to 100 letters, numbers, spaces, or basic punctuation",
+    ),
+    CANDIDATE_HELP_EMAIL: z.preprocess(
+      blankAsUnset,
+      z.email({ error: "must be a valid email address" }).optional(),
+    ),
+    CANDIDATE_HELP_PHONE: optionalText(
+      /^[0-9+() .-]{7,30}$/,
+      "must be 7 to 30 digits, spaces, or phone punctuation",
+    ),
   })
   .superRefine((env, ctx) => {
     const fail = (path: keyof typeof env, message: string) =>
