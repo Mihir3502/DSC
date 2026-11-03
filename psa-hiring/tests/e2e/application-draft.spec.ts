@@ -113,30 +113,31 @@ test.describe("application draft @critical", () => {
     const id = suffix();
     const tree = await orgHarness<Tree>("provision", id);
     const ref = await openCycle(tree, id, `TEST Hidden Draft ${id}`);
-    await useDistinctClient(page);
-    const overview = await startDraft(page, ref, "draft-owner");
-    await page.getByRole("button", { name: "Begin application" }).click();
-    await expect(
-      page.getByRole("link", { name: "Availability" }),
-    ).toBeVisible();
-
     const context = await browser.newContext();
-    const other = await context.newPage();
-    await useDistinctClient(other);
-    const otherEmail = await readyCandidate(other, "draft-other");
-    await signIn(other, otherEmail);
-    await expect(other).toHaveURL("/candidate");
+    const owner = await context.newPage();
+    await useDistinctClient(owner);
+    const overview = await startDraft(owner, ref, "draft-owner");
+    await owner.getByRole("button", { name: "Begin application" }).click();
+    await expect(
+      owner.getByRole("link", { name: "Availability" }),
+    ).toBeVisible();
+    await context.close();
+
+    // The outsider uses the guarded page, so the 404s are accounted for.
+    await useDistinctClient(page);
+    const otherEmail = await readyCandidate(page, "draft-other");
+    await signIn(page, otherEmail);
+    await expect(page).toHaveURL("/candidate");
     for (const path of [
       overview,
       `${overview}/availability`,
       "/candidate/applications/abcdefghjkmn",
       "/candidate/applications/abcdefghjkmn/availability",
     ]) {
-      const response = await other.goto(path);
+      const response = await page.goto(path);
       expect(response!.status(), path).toBe(404);
-      await expect(other.getByRole("main")).not.toContainText("TEST Hidden");
+      await expect(page.getByRole("main")).not.toContainText("TEST Hidden");
     }
-    await context.close();
     acceptExpectedNotFound(guards, browserName === "firefox" ? 0 : 4);
   });
 });

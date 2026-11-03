@@ -444,7 +444,7 @@ export function StaffSignInForm({
           </Link>
         </li>
         <li>
-          <Link href="/sign-in" className={linkClass}>
+          <Link prefetch={false} href="/sign-in" className={linkClass}>
             Candidate sign-in
           </Link>
         </li>

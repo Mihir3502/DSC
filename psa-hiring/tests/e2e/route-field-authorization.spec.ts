@@ -170,8 +170,16 @@ test.describe("route and field authorization", { tag: "@critical" }, () => {
     });
     await expect(otherSessions).toBeVisible();
     // Each sees only its own sessions (one each) and masked email.
-    await expect(page.getByRole("listitem")).toHaveCount(1);
-    await expect(other.getByRole("listitem")).toHaveCount(1);
+    await expect(
+      page
+        .getByRole("list", { name: "Signed-in sessions" })
+        .getByRole("listitem"),
+    ).toHaveCount(1);
+    await expect(
+      other
+        .getByRole("list", { name: "Signed-in sessions" })
+        .getByRole("listitem"),
+    ).toHaveCount(1);
     expect(await other.content()).not.toContain(first);
     await context.close();
   });

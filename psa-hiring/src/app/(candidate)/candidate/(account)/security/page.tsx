@@ -8,7 +8,6 @@ import {
   changePasswordAction,
   revokeOtherSessionsAction,
   revokeSessionAction,
-  signOutAction,
   signOutEverywhereAction,
 } from "./actions";
 
@@ -62,11 +61,6 @@ export default async function CandidateSecurityPage({
             Signed in as {overview.maskedEmail}
           </p>
         </div>
-        <form action={signOutAction}>
-          <Button type="submit" variant="outline" size="lg">
-            Sign out
-          </Button>
-        </form>
       </div>
 
       {noticeText ? (
@@ -107,7 +101,7 @@ export default async function CandidateSecurityPage({
         <h2 id="sessions-heading" className="text-xl font-semibold">
           Signed-in sessions
         </h2>
-        <ul className="flex flex-col gap-3">
+        <ul aria-labelledby="sessions-heading" className="flex flex-col gap-3">
           {overview.sessions.map((session) => (
             <li
               key={session.ref}

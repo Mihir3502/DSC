@@ -59,7 +59,7 @@ export function RegisterForm({
     return (
       <SuccessPanel state={state} title="Check your email">
         <p>
-          <Link href="/verify-email" className={linkClass}>
+          <Link prefetch={false} href="/verify-email" className={linkClass}>
             Enter your verification code
           </Link>
         </p>
@@ -112,7 +112,7 @@ export function RegisterForm({
       </div>
       <p>
         Already registered?{" "}
-        <Link href="/sign-in" className={linkClass}>
+        <Link prefetch={false} href="/sign-in" className={linkClass}>
           Sign in
         </Link>
       </p>
@@ -158,17 +158,17 @@ export function SignInForm({
       </div>
       <ul className="flex flex-col gap-2">
         <li>
-          <Link href="/recover" className={linkClass}>
+          <Link prefetch={false} href="/recover" className={linkClass}>
             Forgot your password?
           </Link>
         </li>
         <li>
-          <Link href="/verify-email" className={linkClass}>
+          <Link prefetch={false} href="/verify-email" className={linkClass}>
             Verify your email address
           </Link>
         </li>
         <li>
-          <Link href="/register" className={linkClass}>
+          <Link prefetch={false} href="/register" className={linkClass}>
             Create a candidate account
           </Link>
         </li>
@@ -198,7 +198,7 @@ export function VerifyEmailForm({
     return (
       <SuccessPanel state={state} title="Email verified">
         <p>
-          <Link href="/sign-in" className={linkClass}>
+          <Link prefetch={false} href="/sign-in" className={linkClass}>
             Sign in
           </Link>
         </p>
@@ -260,7 +260,7 @@ export function RecoverForm({ action }: { action: AuthFormAction }) {
     return (
       <SuccessPanel state={state} title="Check your email">
         <p>
-          <Link href="/sign-in" className={linkClass}>
+          <Link prefetch={false} href="/sign-in" className={linkClass}>
             Return to sign in
           </Link>
         </p>
@@ -299,7 +299,7 @@ export function ResetPasswordForm({ action }: { action: AuthFormAction }) {
     return (
       <SuccessPanel state={state} title="Password changed">
         <p>
-          <Link href="/sign-in" className={linkClass}>
+          <Link prefetch={false} href="/sign-in" className={linkClass}>
             Sign in with your new password
           </Link>
         </p>
@@ -315,7 +315,7 @@ export function ResetPasswordForm({ action }: { action: AuthFormAction }) {
           a new one.
         </p>
         <p>
-          <Link href="/recover" className={linkClass}>
+          <Link prefetch={false} href="/recover" className={linkClass}>
             Request a new reset link
           </Link>
         </p>
@@ -327,7 +327,7 @@ export function ResetPasswordForm({ action }: { action: AuthFormAction }) {
       <ErrorSummary state={state} />
       {state.status === "error" && !state.fieldErrors ? (
         <p>
-          <Link href="/recover" className={linkClass}>
+          <Link prefetch={false} href="/recover" className={linkClass}>
             Request a new reset link
           </Link>
         </p>

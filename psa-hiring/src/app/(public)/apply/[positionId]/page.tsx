@@ -61,7 +61,11 @@ export default async function StartApplicationPage({
       />
       <p className="text-sm">
         No account yet?{" "}
-        <Link href="/register" className="underline underline-offset-4">
+        <Link
+          prefetch={false}
+          href="/register"
+          className="underline underline-offset-4"
+        >
           Create a candidate account
         </Link>
         , then sign in to continue.

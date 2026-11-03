@@ -271,7 +271,7 @@ test.describe("staff authentication", { tag: "@critical" }, () => {
       "cannot use staff sign-in",
     );
     await signIn(page, email);
-    await expect(page).toHaveURL("/candidate/security");
+    await expect(page).toHaveURL("/candidate");
     // M1.5: a signed-in candidate sees the same safe not-found as an
     // unknown page on staff-only routes (packet §25: hidden, not
     // redirected). The public MFA step still requires a staff challenge.

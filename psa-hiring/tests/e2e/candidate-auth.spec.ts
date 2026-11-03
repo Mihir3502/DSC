@@ -201,7 +201,9 @@ test.describe("candidate authentication", { tag: "@critical" }, () => {
     await otherPage.goto("/candidate/security");
 
     await page.goto("/candidate/security");
-    const items = page.getByRole("listitem");
+    const items = page
+      .getByRole("list", { name: "Signed-in sessions" })
+      .getByRole("listitem");
     await expect(items).toHaveCount(2);
     await page
       .getByRole("button", { name: /^Sign out .* session$/ })
@@ -211,7 +213,11 @@ test.describe("candidate authentication", { tag: "@critical" }, () => {
     await expect(page.getByRole("main").getByRole("status")).toContainText(
       "The session was signed out",
     );
-    await expect(page.getByRole("listitem")).toHaveCount(1);
+    await expect(
+      page
+        .getByRole("list", { name: "Signed-in sessions" })
+        .getByRole("listitem"),
+    ).toHaveCount(1);
     await otherPage.reload();
     await expect(otherPage).toHaveURL("/sign-in");
     await other.close();
