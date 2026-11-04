@@ -88,6 +88,10 @@ test.describe("staff work queue @critical", () => {
       hasText: "Review the submitted",
     });
     await row.first().getByRole("link").first().click();
+    await expect(recruiterPage).toHaveURL(`/staff/candidates/${candidacy}`);
+    await recruiterPage
+      .getByRole("link", { name: "Manage owner and due date" })
+      .click();
     await expect(recruiterPage).toHaveURL(`/staff/work/${candidacy}`);
     const main = recruiterPage.getByRole("main");
     await expect(main).toContainText("Unassigned");

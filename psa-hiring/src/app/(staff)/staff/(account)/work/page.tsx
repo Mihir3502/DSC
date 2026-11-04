@@ -224,7 +224,7 @@ export default async function WorkQueuePage({
                 <h2 className="text-lg font-semibold [overflow-wrap:anywhere]">
                   <Link
                     prefetch={false}
-                    href={`/staff/work/${item.id}`}
+                    href={`/staff/candidates/${item.id}`}
                     className="underline underline-offset-4"
                   >
                     {item.displayName}

@@ -30,9 +30,9 @@ export default async function StaffApplicationPage({
   const view = result.view;
   return (
     <div className="flex max-w-3xl flex-col gap-6">
-      <h1 className="text-3xl font-semibold tracking-tight">
+      <h2 className="text-2xl font-semibold tracking-tight">
         Submitted application
-      </h1>
+      </h2>
       <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1 [overflow-wrap:anywhere]">
         <dt className="font-medium">Reference</dt>
         <dd className="font-mono">{view.reference}</dd>
@@ -54,9 +54,9 @@ export default async function StaffApplicationPage({
           aria-labelledby={`frozen-${section.code}`}
           className="flex flex-col gap-2 rounded-lg border p-4 [overflow-wrap:anywhere]"
         >
-          <h2 id={`frozen-${section.code}`} className="text-xl font-semibold">
+          <h3 id={`frozen-${section.code}`} className="text-xl font-semibold">
             {section.title}
-          </h2>
+          </h3>
           <dl className="flex flex-col gap-2">
             {section.fields.map((field) => (
               <div key={field.code}>
@@ -74,9 +74,9 @@ export default async function StaffApplicationPage({
         aria-labelledby="frozen-attachments"
         className="flex flex-col gap-2 rounded-lg border p-4 [overflow-wrap:anywhere]"
       >
-        <h2 id="frozen-attachments" className="text-xl font-semibold">
+        <h3 id="frozen-attachments" className="text-xl font-semibold">
           Attachments
-        </h2>
+        </h3>
         {view.attachments.length === 0 ? (
           <p>No files were included.</p>
         ) : (
@@ -95,9 +95,9 @@ export default async function StaffApplicationPage({
           aria-labelledby="earlier-returns"
           className="flex flex-col gap-2"
         >
-          <h2 id="earlier-returns" className="text-xl font-semibold">
+          <h3 id="earlier-returns" className="text-xl font-semibold">
             Earlier returns
-          </h2>
+          </h3>
           <ul className="flex flex-col gap-2">
             {view.earlierReturns.map((item) => (
               <li

@@ -4102,6 +4102,125 @@
           "title": "refuses bad dates, wrong roles, stale versions, and records with no staff item"
         }
       ]
+    },
+    {
+      "id": "AC-M3.2-01",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/workspace.test.ts",
+          "title": "shows exact safe fields, with no hold and a proposal-only worker path"
+        },
+        {
+          "file": "tests/integration/candidates/workspace.test.ts",
+          "title": "stays stable across tabs' states and shows the owner and due date"
+        },
+        {
+          "file": "tests/integration/candidates/workspace.test.ts",
+          "title": "shows a closed record as closed, with no next action"
+        },
+        {
+          "file": "tests/e2e/candidate-workspace.spec.ts",
+          "title": "staff open the workspace from the queue, and each role sees only its own view @critical"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.2-02",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/workspace.test.ts",
+          "title": "offers Application only after a submission, to everyone who may read it"
+        },
+        {
+          "file": "src/modules/candidates/domain/candidate-workspace.test.ts",
+          "title": "offers Application only with permission and a submission, and never a count"
+        },
+        {
+          "file": "tests/e2e/candidate-workspace.spec.ts",
+          "title": "staff open the workspace from the queue, and each role sees only its own view @critical"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.2-03",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/workspace.test.ts",
+          "title": "derives blockers from stored facts at each stage"
+        },
+        {
+          "file": "tests/integration/candidates/workspace.test.ts",
+          "title": "merges history newest first, keeps it bounded, and limits who and why"
+        },
+        {
+          "file": "src/modules/candidates/ui/hold-indicator.test.tsx",
+          "title": "states an active hold in words"
+        },
+        {
+          "file": "src/modules/candidates/ui/hold-indicator.test.tsx",
+          "title": "shows nothing without a hold"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.2-04",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/workspace.test.ts",
+          "title": "gives every reader the same fields and no tab counts, however many records sit behind a tab"
+        },
+        {
+          "file": "src/modules/candidates/domain/candidate-workspace.test.ts",
+          "title": "offers Application only with permission and a submission, and never a count"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.2-X1",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/workspace.test.ts",
+          "title": "gives one identical not-found for every outsider and a missing record"
+        },
+        {
+          "file": "tests/integration/candidates/workspace.test.ts",
+          "title": "shows a possible duplicate only to readers who could already see it"
+        },
+        {
+          "file": "tests/e2e/candidate-workspace.spec.ts",
+          "title": "staff open the workspace from the queue, and each role sees only its own view @critical"
+        },
+        {
+          "file": "tests/integration/candidates/workspace.test.ts",
+          "title": "denies an auditor, because no real audit assignment can cover a candidate yet"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.2-X2",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/workspace.test.ts",
+          "title": "reads write nothing"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.2-X3",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/workspace.test.ts",
+          "title": "keeps answers, contact details, and ids out of every workspace view"
+        },
+        {
+          "file": "tests/accessibility/candidate-workspace.a11y.spec.ts",
+          "title": "Overview and Application are accessible and reflow"
+        },
+        {
+          "file": "src/modules/candidates/domain/candidate-workspace.test.ts",
+          "title": "never words a blocker as a compliance result"
+        }
+      ]
     }
   ]
 }

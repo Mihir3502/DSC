@@ -1,5 +1,4 @@
 import "server-only";
-import { and, eq, inArray } from "drizzle-orm";
 import {
   authorize,
   authorizeQueryScope,
@@ -34,13 +33,13 @@ import {
   findOpenStaffWorkItem,
   findPerson,
   findPlacementLabels,
+  hasActiveCorrection,
   listResponsibilityHistory,
   listWorkQueueFilterOptions,
   listWorkQueuePage,
   type Executor,
   type WorkQueueContext,
 } from "../infrastructure/candidates-repository";
-import { workItem } from "../infrastructure/candidates-schema";
 import {
   staffDashboardContract,
   staffShellContract,
@@ -353,18 +352,7 @@ export async function queryWorkItem(
     row.positionId,
   );
   const history = await listResponsibilityHistory(db(deps), row.id);
-  const [correction] = await db(deps)
-    .select({ id: workItem.id })
-    .from(workItem)
-    .where(
-      and(
-        eq(workItem.candidacyId, row.id),
-        eq(workItem.workTypeCode, "CORRECT_APPLICATION"),
-        inArray(workItem.status, ["OPEN", "IN_PROGRESS", "BLOCKED"]),
-      ),
-    )
-    .limit(1);
-  const returned = correction !== undefined;
+  const returned = await hasActiveCorrection(db(deps), row.id);
   return render(
     workItemContract,
     {

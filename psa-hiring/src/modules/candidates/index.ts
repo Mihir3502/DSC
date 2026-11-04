@@ -45,6 +45,11 @@ export {
   querySubmittedQueue,
 } from "./application/candidate-queries";
 export {
+  queryCandidateOverview,
+  queryCandidateWorkspaceShell,
+} from "./application/candidate-workspace-queries";
+export { NO_BLOCKERS_MESSAGE } from "./domain/candidate-workspace";
+export {
   queryStaffDashboard,
   queryStaffShell,
   queryWorkItem,

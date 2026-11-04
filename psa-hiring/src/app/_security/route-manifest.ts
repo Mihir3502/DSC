@@ -1682,13 +1682,24 @@ export const routeManifest: readonly ManifestEntry[] = Object.freeze([
     ["candidate.prospect.read"],
   ),
   candidatePage(
-    "staff.prospect_detail",
+    "staff.candidate_overview",
     `${staffCandidates}/[candidacyId]/page.tsx`,
     "/staff/candidates/[candidacyId]",
-    "queryProspectDetail",
-    "staff.prospect_detail.v1",
-    ["candidate.prospect.read"],
+    "queryCandidateOverview",
+    "staff.candidate_overview.v1",
+    ["candidate.read.assigned", "candidate.prospect.read"],
   ),
+  {
+    ...candidatePage(
+      "staff.candidate_workspace",
+      `${staffCandidates}/[candidacyId]/layout.tsx`,
+      "/staff/candidates/[candidacyId]",
+      "queryCandidateWorkspaceShell",
+      "staff.candidate_workspace.v1",
+      ["candidate.read.assigned"],
+    ),
+    kind: "LAYOUT",
+  },
   candidatePage(
     "staff.duplicate_queue",
     `${staffCandidates}/duplicates/page.tsx`,

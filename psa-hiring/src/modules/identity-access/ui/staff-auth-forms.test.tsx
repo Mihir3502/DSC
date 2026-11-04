@@ -81,7 +81,7 @@ describe("StaffActivationFlow", () => {
     const heading = await screen.findByRole("heading", { name: /Step 1 of 3/ });
     expect(window.location.hash).toBe("");
     expect(window.location.href).not.toContain(invite);
-    expect(heading).toHaveFocus();
+    await waitFor(() => expect(heading).toHaveFocus());
     expect(document.querySelector('input[name="invite"]')).toHaveValue(invite);
     // The bound email is not editable here.
     expect(screen.queryByLabelText(/email/i)).toBeNull();
@@ -98,7 +98,7 @@ describe("StaffActivationFlow", () => {
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
     const step2 = await screen.findByRole("heading", { name: /Step 2 of 3/ });
-    expect(step2).toHaveFocus();
+    await waitFor(() => expect(step2).toHaveFocus());
     // QR is never the only path: a text setup key is shown with it.
     expect(
       screen.getByRole("img", { name: /use the setup key instead/ }),
@@ -119,9 +119,10 @@ describe("StaffActivationFlow", () => {
     );
     await user.click(screen.getByRole("button", { name: "Verify code" }));
 
-    expect(
-      await screen.findByRole("heading", { name: /Step 3 of 3/ }),
-    ).toHaveFocus();
+    const stepHeading = await screen.findByRole("heading", {
+      name: /Step 3 of 3/,
+    });
+    await waitFor(() => expect(stepHeading).toHaveFocus());
     // The setup key is gone once the code is verified.
     expect(screen.queryByText("TEST SEED ABCD EFGH")).toBeNull();
     expect(screen.queryByRole("img")).toBeNull();
@@ -130,7 +131,8 @@ describe("StaffActivationFlow", () => {
 
     // Explicit confirmation: the server rejects an unchecked submission.
     await user.click(screen.getByRole("button", { name: "Finish activation" }));
-    expect(await screen.findByRole("alert")).toHaveFocus();
+    const problem = await screen.findByRole("alert");
+    await waitFor(() => expect(problem).toHaveFocus());
     expect(screen.getByRole("alert")).toHaveTextContent(
       /saved your backup codes/,
     );
@@ -197,7 +199,8 @@ describe("StaffSignInForm and StaffMfaForm", () => {
     expect(screen.queryByRole("checkbox")).toBeNull();
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Continue" }));
-    expect(await screen.findByRole("alert")).toHaveFocus();
+    const problem = await screen.findByRole("alert");
+    await waitFor(() => expect(problem).toHaveFocus());
   });
 
   it("switches between TOTP and a backup code, keeping the selection consistent after errors", async () => {

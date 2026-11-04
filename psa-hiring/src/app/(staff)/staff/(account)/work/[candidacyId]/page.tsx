@@ -62,10 +62,10 @@ export default async function WorkItemPage({
         <p>
           <Link
             prefetch={false}
-            href="/staff/work"
+            href={`/staff/candidates/${view.id}`}
             className="font-medium underline underline-offset-4"
           >
-            Back to the work queue
+            Back to the candidate
           </Link>
         </p>
         <h1 className="text-3xl font-semibold tracking-tight [overflow-wrap:anywhere]">

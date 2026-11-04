@@ -147,7 +147,9 @@ test.describe("person and candidacy @critical", () => {
     await r.getByRole("button", { name: "Create prospect" }).click();
     await expect(r).toHaveURL(/\/staff\/candidates\/[0-9a-hjkmnp-tv-z]{12}$/);
     const prospectUrl = new URL(r.url()).pathname;
-    await expect(r.getByText("Possible duplicate:")).toBeVisible();
+    await expect(
+      r.getByText("A possible duplicate is under review"),
+    ).toBeVisible();
     await expect(r.getByRole("main")).toContainText("Prospect");
     // Recruiter has no duplicate-review authority.
     const queue = await r.goto("/staff/candidates/duplicates");

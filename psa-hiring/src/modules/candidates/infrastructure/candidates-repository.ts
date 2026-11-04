@@ -1206,3 +1206,22 @@ export async function findPlacementLabels(
     .where(eq(branch.id, branchId));
   return row ?? null;
 }
+
+/** Whether the candidate has a correction open on this record. */
+export async function hasActiveCorrection(
+  db: Executor,
+  candidacyId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: workItem.id })
+    .from(workItem)
+    .where(
+      and(
+        eq(workItem.candidacyId, candidacyId),
+        eq(workItem.workTypeCode, "CORRECT_APPLICATION"),
+        inArray(workItem.status, activeWorkStatuses),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
+}

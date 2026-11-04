@@ -27,6 +27,8 @@ export const candidateProjectionNames = [
   "staff.dashboard.v1",
   "staff.work_queue.v1",
   "staff.work_item.v1",
+  "staff.candidate_workspace.v1",
+  "staff.candidate_overview.v1",
 ] as const;
 
 const requires = (permission: string): FieldRule => ({
@@ -598,4 +600,99 @@ export const workItemContract = defineProjection<WorkItemView, WorkItemView>({
     QUEUE_PERMISSION,
   ),
   schema: workItemSchema,
+});
+
+// ------------------------------------------------- M3.2 candidate workspace
+//
+// Header and tabs, then the Overview's blockers and timeline. No contact
+// details, answers, internal ids, or account ids. A tab holds a label and a
+// link, never a count. A worker path is a proposal label, never a decision.
+
+const WORKSPACE_PERMISSION = "candidate.read.assigned";
+
+const candidateWorkspaceSchema = z.strictObject({
+  id: publicId,
+  reference,
+  displayName: label,
+  position: label,
+  branch: label,
+  stage: label,
+  status: label,
+  closed: z.boolean(),
+  workerPath: label,
+  owner: label,
+  nextAction: label,
+  dueDate: dayOnly.nullable(),
+  hold: z.strictObject({ label }).nullable(),
+  tabs: z
+    .array(
+      z.strictObject({
+        key: z.enum(["overview", "application"]),
+        label,
+        href: z
+          .string()
+          .regex(/^\/staff\/candidates\/[0-9a-z]{12}(\/[a-z]+)?$/),
+      }),
+    )
+    .min(1)
+    .max(13),
+});
+export type CandidateWorkspaceView = z.infer<typeof candidateWorkspaceSchema>;
+export const candidateWorkspaceContract = defineProjection<
+  CandidateWorkspaceView,
+  CandidateWorkspaceView
+>({
+  name: "staff.candidate_workspace.v1",
+  audience: "STAFF",
+  purpose: "DETAIL",
+  fields: fieldsFor<CandidateWorkspaceView>(
+    [
+      "id",
+      "reference",
+      "displayName",
+      "position",
+      "branch",
+      "stage",
+      "status",
+      "closed",
+      "workerPath",
+      "owner",
+      "nextAction",
+      "dueDate",
+      "hold",
+      "tabs",
+    ],
+    WORKSPACE_PERMISSION,
+  ),
+  schema: candidateWorkspaceSchema,
+});
+
+const candidateOverviewSchema = z.strictObject({
+  blockers: z
+    .array(z.strictObject({ code: z.string().regex(/^[A-Z_]+$/), label }))
+    .max(5),
+  timeline: z
+    .array(
+      z.strictObject({
+        event: label,
+        detail: label.nullable(),
+        when: z.string().max(40),
+      }),
+    )
+    .max(50),
+  canManageWork: z.boolean(),
+});
+export type CandidateOverviewView = z.infer<typeof candidateOverviewSchema>;
+export const candidateOverviewContract = defineProjection<
+  CandidateOverviewView,
+  CandidateOverviewView
+>({
+  name: "staff.candidate_overview.v1",
+  audience: "STAFF",
+  purpose: "DETAIL",
+  fields: fieldsFor<CandidateOverviewView>(
+    ["blockers", "timeline", "canManageWork"],
+    WORKSPACE_PERMISSION,
+  ),
+  schema: candidateOverviewSchema,
 });

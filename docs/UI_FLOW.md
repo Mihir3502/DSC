@@ -524,6 +524,13 @@ The candidate workspace uses a stable summary header and permission-aware tabs.
 
 Controlled statuses are labels, not editable dropdowns.
 
+### M3.2 implementation
+
+- **Access:** `candidate.read.assigned` in scope (Recruiter, HR, PSA Manager, Compliance Reviewer, Classification Reviewer, and Auditor). Auditors are denied in practice until audit assignments can cover candidate records. Administrators and Trainers don't get the workspace.
+- **Header differences from the list below:** it shows the proposed worker path, because final classification isn't built yet. The hold indicator is built but shows nothing, because holds can't exist yet.
+- **Tabs shipped:** Overview and Application only. The others appear with their milestones, so there are no dead links. Application needs `application.read` and a submission. Tabs never carry a count or badge.
+- **Overview:** next action (in the header), blockers derived from stored facts only (returned, waiting for the candidate, overdue staff work, no owner, possible duplicate), and a timeline of stage and responsibility changes, limited to the latest 50. Requirement sets don't exist yet, so "no blockers" says compliance isn't tracked here. Who and why appear only for readers with `candidate.work_queue.read`.
+
 ### Workspace tabs
 
 | Tab            | Purpose                                          | Typical roles                                      |
@@ -560,10 +567,8 @@ M2.2 implementation:
   - optional "make me the owner" (requires `candidate.owner.assign`).
   - A possible duplicate returns one generic warning. Creating anyway needs an explicit confirmation, and input is preserved.
   - Invitations (`/staff/invitations/new`) are deferred.
-- **`/staff/candidates/[candidacyId]`** is a bounded prospect detail, not the §10 workspace. It shows:
-  - name and contact, opening, stage, status, source, and owner;
-  - a generic possible-duplicate note;
-  - stage history;
+- **`/staff/candidates/[candidacyId]`** is the §10 workspace Overview since M3.2. Readers with `candidate.prospect.read` also get:
+  - contact details, opening, and source;
   - confirmation dialogs for "Start application", "Assign to me", and "Close prospect" (with a reason).
 - **`/staff/candidates/duplicates`** and **`/staff/candidates/duplicates/[matchId]`** (PSA Manager only):
   - Both sit behind the `CANDIDATE_IDENTITY_REVIEW` step-up.
