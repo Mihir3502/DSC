@@ -30,22 +30,22 @@ Release 1 ends at **Ready for Assignment**. The interface must not include clien
 
 The candidate sees a simplified status projection rather than internal workflow details.
 
-| Candidate status | Meaning shown to candidate |
-|---|---|
-| Application started | Finish and submit your application. |
-| Application received | Your application was submitted successfully. |
-| Under review | The agency is reviewing your application. |
-| Action needed | Complete the listed item to keep moving forward. |
-| Interview | Review or schedule your interview. |
-| Offer available | Review and respond to your conditional offer or agreement. |
-| Screening in progress | Required checks are being completed. |
-| Onboarding | Complete your assigned forms and documents. |
-| Training | Complete the assigned orientation or training. |
-| Competency evaluation | An evaluator must complete required task assessments. |
-| Final review | The agency is completing a final compliance review. |
-| Ready for Assignment | You completed the Release 1 hiring requirements. |
-| On hold | Progress is temporarily paused; follow the displayed instructions. |
-| No longer active | The application has ended. Contact information is shown when appropriate. |
+| Candidate status      | Meaning shown to candidate                                                |
+| --------------------- | ------------------------------------------------------------------------- |
+| Application started   | Finish and submit your application.                                       |
+| Application received  | Your application was submitted successfully.                              |
+| Under review          | The agency is reviewing your application.                                 |
+| Action needed         | Complete the listed item to keep moving forward.                          |
+| Interview             | Review or schedule your interview.                                        |
+| Offer available       | Review and respond to your conditional offer or agreement.                |
+| Screening in progress | Required checks are being completed.                                      |
+| Onboarding            | Complete your assigned forms and documents.                               |
+| Training              | Complete the assigned orientation or training.                            |
+| Competency evaluation | An evaluator must complete required task assessments.                     |
+| Final review          | The agency is completing a final compliance review.                       |
+| Ready for Assignment  | You completed the Release 1 hiring requirements.                          |
+| On hold               | Progress is temporarily paused; follow the displayed instructions.        |
+| No longer active      | The application has ended. Contact information is shown when appropriate. |
 
 Candidate pages must not reveal classification analysis, interview scores, screening-report contents, internal denial reasons, reviewer identities, or staff-only notes.
 
@@ -91,21 +91,22 @@ flowchart TD
 
 ## 5. Public and Authentication Screens
 
-| Route | Screen | Main actions | Important states |
-|---|---|---|---|
-| `/` | Public landing page | Start application, candidate sign in, staff sign in | Normal, service notice |
-| `/positions` | Open positions | Filter and open a position | Loading, no positions, error |
-| `/positions/[positionId]` | Position detail | Start application | Open, closed, no longer accepting |
-| `/apply/[positionId]` | Start-application handoff (M2.1) | Confirm and continue to candidate sign-in | Accepting, no longer accepting, not found |
-| `/apply/invite/[token]` | Invitation acceptance | Verify invitation, create/sign into account | Valid, expired, already used, revoked |
-| `/sign-in` | Candidate sign in | Sign in, recover access | Invalid credentials, locked, verification needed |
-| `/staff/sign-in` | Staff sign in | Sign in, complete MFA | Invitation required, MFA challenge, locked |
-| `/verify-email` | Email verification | Verify or resend | Sent, verified, expired token |
-| `/recover` | Account recovery | Request secure recovery | Generic confirmation only |
-| `/reset-password/[token]` | Password reset | Create new password | Valid, expired, used |
-| `/access-denied` | Safe denial page | Return to dashboard, contact support | No record details |
+| Route                     | Screen                           | Main actions                                        | Important states                                 |
+| ------------------------- | -------------------------------- | --------------------------------------------------- | ------------------------------------------------ |
+| `/`                       | Public landing page              | Start application, candidate sign in, staff sign in | Normal, service notice                           |
+| `/positions`              | Open positions                   | Filter and open a position                          | Loading, no positions, error                     |
+| `/positions/[positionId]` | Position detail                  | Start application                                   | Open, closed, no longer accepting                |
+| `/apply/[positionId]`     | Start-application handoff (M2.1) | Confirm and continue to candidate sign-in           | Accepting, no longer accepting, not found        |
+| `/apply/invite/[token]`   | Invitation acceptance            | Verify invitation, create/sign into account         | Valid, expired, already used, revoked            |
+| `/sign-in`                | Candidate sign in                | Sign in, recover access                             | Invalid credentials, locked, verification needed |
+| `/staff/sign-in`          | Staff sign in                    | Sign in, complete MFA                               | Invitation required, MFA challenge, locked       |
+| `/verify-email`           | Email verification               | Verify or resend                                    | Sent, verified, expired token                    |
+| `/recover`                | Account recovery                 | Request secure recovery                             | Generic confirmation only                        |
+| `/reset-password/[token]` | Password reset                   | Create new password                                 | Valid, expired, used                             |
+| `/access-denied`          | Safe denial page                 | Return to dashboard, contact support                | No record details                                |
 
 M2.1 notes:
+
 - **The `[positionId]` route parameter** is the nonsequential `public_reference` of a hiring cycle (one opening of a reusable position; `DATA_MODEL.md` §5.0). Draft, cancelled, archived, never-opened, malformed, and unknown references return one indistinguishable not-found page. A closed formerly public reference shows one generic "no longer accepting applications" page.
 - **The list** shows only currently accepting openings. Filters are limited to an allowlisted location and worker-path filter, page size is bounded, and ordering is fixed.
 - **Start application** links to `/apply/[positionId]`. That page re-checks availability without the cache and, on confirmation, sets a short-lived signed handoff cookie, then continues to candidate sign-in or `/candidate/applications/new`. M2.1 rendered only a placeholder there; M2.2 now starts the candidate's own candidacy (§7.2).
@@ -150,6 +151,13 @@ The header includes:
 - Account menu with profile, security, help, and sign out.
 
 No restricted identity values appear in global navigation, page titles, browser tabs, analytics labels, or URLs.
+
+### M2.3 implementation
+
+- **Navigation.** Home, Application (when a candidacy exists), My Tasks, Security, Help, and Sign out. On small screens it collapses behind a Menu button. Documents, Messages, Profile, Training, and a notification indicator appear only when their modules exist.
+- **Landing.** Candidate sign-in now lands on `/candidate`. An anonymous visitor to `/candidate` goes to sign-in.
+- **Agency and help.** The agency name and help contact come from optional server settings (`AGENCY_DISPLAY_NAME`, `CANDIDATE_HELP_EMAIL`, `CANDIDATE_HELP_PHONE`). When unset, no contact details appear.
+- **Shell placement.** The portal navigation sits at the top of the existing page's main content, because the shared site shell owns the header.
 
 ## 7. Candidate Screens
 
@@ -200,7 +208,6 @@ M2.2 implementation:
   - After start: "Application started", with the `C-` reference, at `?notice=started`.
 - **Email.** The email is the account's verified login email; it is never typed.
 - **Safety.** Double submission is idempotent (a server-issued command key). Candidates never see duplicate warnings, other people, or staff fields.
-- **Not yet.** There is no portal shell, dashboard, or application wizard yet (M2.3/M2.4).
 
 ### 7.3 Application wizard
 
@@ -219,6 +226,15 @@ Recommended sections:
 9. Review and certification.
 
 The section navigation shows Not started, In progress, Complete, and Needs correction.
+
+M2.4 implementation:
+
+- **Routes.** `/candidate/applications/[candidacyId]` is an overview with a "Begin application" action and each section's status. `/candidate/applications/[candidacyId]/[section]` is one section's form.
+- **Sections.** Availability, Employment and experience, Education, licenses, and certifications, and References. The other recommended sections arrive with later work items or after approval.
+- **Saving.** Saves about two seconds after typing stops, on "Save draft", and before moving to another section. A status line shows the last saved time in UTC, because no per-user timezone exists yet.
+- **Errors.** An invalid answer blocks that save only, is reported by field, and stays on the page. A version conflict asks the candidate to reload.
+- **Attachments (M2.5).** `/candidate/applications/[candidacyId]/attachments` lets a candidate add, replace, download, and remove a resume or credential. A replacement stays hidden until it passes its checks, and the earlier file stays in place if it doesn't.
+- **Correction (M2.7).** A returned application shows the reason and instructions, and "Start your correction" creates a new version pre-filled from the submission. Only reopened sections open, flagged answers are marked, and sections not reopened return not-found. Field-level comments aren't supported; instructions apply to the whole return.
 
 Required behavior:
 
@@ -243,6 +259,14 @@ The page displays:
 - Attestation checkbox and typed/electronic signature control.
 
 Submission opens a confirmation dialog explaining that the submitted version will be frozen. After success, show a receipt with submission date and candidate reference number.
+
+M2.6 implementation:
+
+- **Review.** Each section's answers and what's still needed, the files that will and won't be included, and the certification. It prints without the action controls.
+- **Certify.** A checkbox and a typed full name, then a confirmation step that explains the application will be frozen.
+- **Receipt.** `/candidate/applications/[candidacyId]/submitted` shows the receipt number, reference, submitted time in UTC, certifier, and certification version. A confirmation email follows.
+- **Staff.** `/staff/candidates/submitted` lists waiting applications, oldest first and unassigned, and links to `/staff/candidates/[candidacyId]/application` (M2.7), which shows the frozen answers and earlier returns and lets permitted staff return it. Neither has a staff navigation link yet. Attachment download, assignment, and the full workspace arrive with M3.
+- **Not built.** Missing items are listed as text rather than as links to each field, and submitted answers aren't re-shown to the candidate after submission.
 
 ### 7.5 Candidate tasks
 
@@ -490,21 +514,21 @@ Controlled statuses are labels, not editable dropdowns.
 
 ### Workspace tabs
 
-| Tab | Purpose | Typical roles |
-|---|---|---|
-| Overview | Timeline, progress, next actions, blockers | Scoped staff |
-| Application | Submitted versions, returned fields, attachments | Recruiter, HR |
-| Recruiting | Prescreen, interviews, scorecards, selection | Recruiter, designated staff |
-| Classification | Proposal, evidence, analysis, decision | Classification reviewer, limited status for others |
-| Offer | Drafts, approvals, issued versions, response | Recruiter, HR, manager |
-| Screening | Cases, provider status, adjudication | Compliance; status-only for others |
-| Onboarding | Requirement checklist and item review | HR, compliance |
-| Training | Assignments, completions, expirations | Trainer, HR, compliance |
-| Competency | Task evaluations, remediation, restrictions | Trainer/evaluator, compliance |
-| Final Review | Readiness calculation and approval | Compliance, designated manager |
-| Documents | Authorized document index | Varies by category and sensitivity |
-| Communications | Candidate-visible communications | Recruiter, HR, compliance |
-| Audit | Authorized business history | Compliance, manager, assigned auditor |
+| Tab            | Purpose                                          | Typical roles                                      |
+| -------------- | ------------------------------------------------ | -------------------------------------------------- |
+| Overview       | Timeline, progress, next actions, blockers       | Scoped staff                                       |
+| Application    | Submitted versions, returned fields, attachments | Recruiter, HR                                      |
+| Recruiting     | Prescreen, interviews, scorecards, selection     | Recruiter, designated staff                        |
+| Classification | Proposal, evidence, analysis, decision           | Classification reviewer, limited status for others |
+| Offer          | Drafts, approvals, issued versions, response     | Recruiter, HR, manager                             |
+| Screening      | Cases, provider status, adjudication             | Compliance; status-only for others                 |
+| Onboarding     | Requirement checklist and item review            | HR, compliance                                     |
+| Training       | Assignments, completions, expirations            | Trainer, HR, compliance                            |
+| Competency     | Task evaluations, remediation, restrictions      | Trainer/evaluator, compliance                      |
+| Final Review   | Readiness calculation and approval               | Compliance, designated manager                     |
+| Documents      | Authorized document index                        | Varies by category and sensitivity                 |
+| Communications | Candidate-visible communications                 | Recruiter, HR, compliance                          |
+| Audit          | Authorized business history                      | Compliance, manager, assigned auditor              |
 
 A user who lacks access to a tab must not infer its record count or content from badges, APIs, exported page data, or error messages.
 
@@ -735,17 +759,17 @@ There is no client-assignment action in Release 1. The only forward message is t
 
 Administration routes are permission-specific:
 
-| Route | Function |
-|---|---|
-| `/staff/admin/users` | Invite, disable, unlock, and inspect staff account status |
-| `/staff/admin/roles` | Assign roles and scopes with approval history |
-| `/staff/admin/positions` | Manage positions and hiring cycles (M2.1; sub-routes below) |
-| `/staff/admin/requirements` | Version requirement definitions and applicability |
-| `/staff/admin/templates` | Version forms, notices, offers, messages, and signatures |
-| `/staff/admin/training` | Manage course and competency catalogs |
-| `/staff/admin/reference-data` | Manage approved configurable lists |
-| `/staff/admin/integrations` | View non-secret provider health and environment status |
-| `/staff/admin/audit-access` | Manage approved auditor assignments |
+| Route                         | Function                                                    |
+| ----------------------------- | ----------------------------------------------------------- |
+| `/staff/admin/users`          | Invite, disable, unlock, and inspect staff account status   |
+| `/staff/admin/roles`          | Assign roles and scopes with approval history               |
+| `/staff/admin/positions`      | Manage positions and hiring cycles (M2.1; sub-routes below) |
+| `/staff/admin/requirements`   | Version requirement definitions and applicability           |
+| `/staff/admin/templates`      | Version forms, notices, offers, messages, and signatures    |
+| `/staff/admin/training`       | Manage course and competency catalogs                       |
+| `/staff/admin/reference-data` | Manage approved configurable lists                          |
+| `/staff/admin/integrations`   | View non-secret provider health and environment status      |
+| `/staff/admin/audit-access`   | Manage approved auditor assignments                         |
 
 System administrators do not receive routine access to candidate business records through these pages. Secret values are write-only or managed outside the UI.
 
@@ -784,19 +808,19 @@ Reports apply the viewer’s current scope and field permissions. Export require
 
 Every screen must define these states where applicable:
 
-| State | Required behavior |
-|---|---|
-| Initial loading | Use accessible progress text or skeletons without exposing stale data |
-| Empty | Explain why there is no content and the permitted next action |
-| Validation error | Place summary at top and link each error to its field |
-| Authorization denied | Show a safe message without confirming restricted record existence |
-| Not found | Offer a safe return path |
-| Stale version | Preserve user input, show what changed, and require reload/review |
-| Provider unavailable | Keep local state safe and show retry or staff follow-up path |
-| Upload scanning | Mark file unavailable until checks finish |
-| Partial completion | Identify complete and remaining items |
-| Success | Confirm the action, timestamp, resulting status, and next step |
-| System error | Provide correlation/reference number without technical or sensitive detail |
+| State                | Required behavior                                                          |
+| -------------------- | -------------------------------------------------------------------------- |
+| Initial loading      | Use accessible progress text or skeletons without exposing stale data      |
+| Empty                | Explain why there is no content and the permitted next action              |
+| Validation error     | Place summary at top and link each error to its field                      |
+| Authorization denied | Show a safe message without confirming restricted record existence         |
+| Not found            | Offer a safe return path                                                   |
+| Stale version        | Preserve user input, show what changed, and require reload/review          |
+| Provider unavailable | Keep local state safe and show retry or staff follow-up path               |
+| Upload scanning      | Mark file unavailable until checks finish                                  |
+| Partial completion   | Identify complete and remaining items                                      |
+| Success              | Confirm the action, timestamp, resulting status, and next step             |
+| System error         | Provide correlation/reference number without technical or sensitive detail |
 
 M1.5 provides the shared `AccessState` component (authentication required, denied, not found, reauthentication required, session no longer eligible, system error) with fixed safe text, a focused level-1 heading, one status/alert announcement, and fixed same-origin actions. `src/app/not-found.tsx` uses it for every unknown or hidden route.
 

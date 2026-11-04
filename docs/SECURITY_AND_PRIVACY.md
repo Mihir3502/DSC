@@ -82,14 +82,14 @@ The application must not automatically decide whether legal notification is requ
 
 Every database field, document type, event payload, report column, and provider attribute must have an owner, purpose, classification, retention class, and allowed audience.
 
-| Classification | Examples | Default controls |
-|---|---|---|
-| Public | Published position, agency contact information | Integrity protection; public read |
-| Internal | Workflow configuration, aggregate operational metrics | Authenticated staff; no public access |
-| Confidential Personnel | Applications, employment history, interview notes, compensation, training | Scoped staff access; encryption; audited export |
-| Restricted Identity and Financial | SSN/TIN, I-9, identity document, banking, tax forms, signature evidence | Field/document-level authorization; encryption; masking; access audit; recent authentication |
-| Restricted Screening and Medical | Background reports, registry results, drug screen, TB, medical clearance, disputes | Separate logical files; specialty-role access; no general search; access audit; export restriction |
-| Security and Audit Restricted | Password/session material, recovery state, access logs, security events | Security-service access; immutable/protected logs; never exposed to business users |
+| Classification                    | Examples                                                                           | Default controls                                                                                   |
+| --------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Public                            | Published position, agency contact information                                     | Integrity protection; public read                                                                  |
+| Internal                          | Workflow configuration, aggregate operational metrics                              | Authenticated staff; no public access                                                              |
+| Confidential Personnel            | Applications, employment history, interview notes, compensation, training          | Scoped staff access; encryption; audited export                                                    |
+| Restricted Identity and Financial | SSN/TIN, I-9, identity document, banking, tax forms, signature evidence            | Field/document-level authorization; encryption; masking; access audit; recent authentication       |
+| Restricted Screening and Medical  | Background reports, registry results, drug screen, TB, medical clearance, disputes | Separate logical files; specialty-role access; no general search; access audit; export restriction |
+| Security and Audit Restricted     | Password/session material, recovery state, access logs, security events            | Security-service access; immutable/protected logs; never exposed to business users                 |
 
 ### Prohibited storage
 
@@ -175,20 +175,20 @@ Use deterministic synthetic candidates and documents. If production debugging is
 
 ### 6.3 Primary abuse cases
 
-| Abuse case | Required defense |
-|---|---|
-| Enumerate candidate accounts | Generic authentication/recovery responses; rate limits |
-| Change a URL to open another record | Object-level server authorization on every request |
-| Recruiter opens a medical report | Field/document classification and specialty-role check |
-| Administrator approves readiness | Separation of technical and business authority |
-| Edit status directly | Named commands and domain transition policies |
-| Reuse expired signing link | One-time, expiring, audience-bound token and current-version check |
-| Upload executable content as PDF | Allowlist, signature detection, size limit, quarantine, scan, safe serving |
-| Replay provider webhook | Signature, timestamp, nonce/event deduplication, idempotency |
-| Export all candidates | Separate export permission, scope, purpose, bounds, audit, secure delivery |
-| Hide action by changing audit data | Append-only records and protected audit access |
-| Use stale approval page | Optimistic concurrency and transaction-time gate recalculation |
-| Production starts with fake screening | Startup configuration validation and fail closed |
+| Abuse case                            | Required defense                                                           |
+| ------------------------------------- | -------------------------------------------------------------------------- |
+| Enumerate candidate accounts          | Generic authentication/recovery responses; rate limits                     |
+| Change a URL to open another record   | Object-level server authorization on every request                         |
+| Recruiter opens a medical report      | Field/document classification and specialty-role check                     |
+| Administrator approves readiness      | Separation of technical and business authority                             |
+| Edit status directly                  | Named commands and domain transition policies                              |
+| Reuse expired signing link            | One-time, expiring, audience-bound token and current-version check         |
+| Upload executable content as PDF      | Allowlist, signature detection, size limit, quarantine, scan, safe serving |
+| Replay provider webhook               | Signature, timestamp, nonce/event deduplication, idempotency               |
+| Export all candidates                 | Separate export permission, scope, purpose, bounds, audit, secure delivery |
+| Hide action by changing audit data    | Append-only records and protected audit access                             |
+| Use stale approval page               | Optimistic concurrency and transaction-time gate recalculation             |
+| Production starts with fake screening | Startup configuration validation and fail closed                           |
 
 ### 6.4 Trust boundaries
 
@@ -367,7 +367,7 @@ flowchart TD
 - Use short-lived signed delivery or authorized streaming; never permanent public URLs.
 - Prevent a replaced document from silently erasing the prior compliance version.
 
-Local development uses synthetic documents and an explicit test scanner. Production startup fails if the test scanner is configured.
+Local development uses synthetic documents and an explicit test scanner, which flags only the EICAR test string. Production startup fails if the test scanner is configured, because the environment schema refuses `PROVIDER_MODE=fake` in production. No production scanner or storage provider is approved yet, so in production mode uploads are refused rather than stored unscanned.
 
 ## 12. Database Security
 
@@ -543,17 +543,17 @@ Do not implement one global retention period. Each record/document category has:
 
 ### 18.2 Initial retention classes
 
-| Class | Examples | Release 1 behavior |
-|---|---|---|
-| Recruiting | Application, interview, selection | Retain by approved applicant/personnel policy |
-| Classification | W-2/1099 analysis and decision | Retain with worker engagement and defense requirements |
-| FCRA screening | Report, authorization, adverse-action evidence | Counsel-approved FCRA/employment schedule and secure disposal |
-| Medical | TB, drug screen, medical clearance | Separate confidential schedule; no general personnel merge |
-| I-9 | Form and supporting copies if retained | Formula based on hire/termination dates |
-| Tax/payment | W-4/W-9 and payment setup | Tax/accounting schedule |
-| Training/competency | Completion and evaluation evidence | Workforce/compliance schedule |
-| Audit/security | Business audit and security logs | Purpose-specific schedule; protected from ordinary deletion |
-| Unfinished prospect | Minimal contact/invitation | Short approved inactivity window |
+| Class               | Examples                                       | Release 1 behavior                                            |
+| ------------------- | ---------------------------------------------- | ------------------------------------------------------------- |
+| Recruiting          | Application, interview, selection              | Retain by approved applicant/personnel policy                 |
+| Classification      | W-2/1099 analysis and decision                 | Retain with worker engagement and defense requirements        |
+| FCRA screening      | Report, authorization, adverse-action evidence | Counsel-approved FCRA/employment schedule and secure disposal |
+| Medical             | TB, drug screen, medical clearance             | Separate confidential schedule; no general personnel merge    |
+| I-9                 | Form and supporting copies if retained         | Formula based on hire/termination dates                       |
+| Tax/payment         | W-4/W-9 and payment setup                      | Tax/accounting schedule                                       |
+| Training/competency | Completion and evaluation evidence             | Workforce/compliance schedule                                 |
+| Audit/security      | Business audit and security logs               | Purpose-specific schedule; protected from ordinary deletion   |
+| Unfinished prospect | Minimal contact/invitation                     | Short approved inactivity window                              |
 
 USCIS states Form I-9 must be retained for three years after hire or one year after employment ends, whichever is later. Store the formula, relevant dates, and calculated eligible-disposal date; do not hard-code a single number for every I-9.
 
@@ -758,19 +758,19 @@ Production deployment is blocked until:
 
 The following decisions remain open until an authorized owner records them:
 
-| Decision | Owner | Required before |
-|---|---|---|
-| HIPAA applicability and relationships | Legal/compliance | Production data design approval |
-| FCRA applicability/templates for each worker path | Employment counsel/HR | Screening provider integration |
-| Exact retention schedule by record class | Legal/HR/compliance | Production launch |
-| MFA and session timeout policy | Security/management | Staff pilot |
-| Field-level encryption list | Security/data owner | Production migration |
-| Approved file types and maximum sizes | Security/business owners | Upload implementation |
-| Production hosting and data location | Management/security | Infrastructure build |
-| Email/SMS content and provider | Privacy/operations | Notification integration |
-| Screening/e-signature/storage vendors | Management/legal/security | Vendor implementation |
-| Incident contacts and insurance notice duties | Leadership/legal | Production launch |
-| Recovery point/time objectives | Business owner/engineering | Production launch |
+| Decision                                          | Owner                      | Required before                                                                                     |
+| ------------------------------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------- |
+| HIPAA applicability and relationships             | Legal/compliance           | Production data design approval                                                                     |
+| FCRA applicability/templates for each worker path | Employment counsel/HR      | Screening provider integration                                                                      |
+| Exact retention schedule by record class          | Legal/HR/compliance        | Production launch                                                                                   |
+| MFA and session timeout policy                    | Security/management        | Staff pilot                                                                                         |
+| Field-level encryption list                       | Security/data owner        | Production migration                                                                                |
+| Approved file types and maximum sizes             | Security/business owners   | Upload implementation (application attachments decided 2026-11-03: PDF, JPEG, PNG, 10 MB, 10 files) |
+| Production hosting and data location              | Management/security        | Infrastructure build                                                                                |
+| Email/SMS content and provider                    | Privacy/operations         | Notification integration                                                                            |
+| Screening/e-signature/storage vendors             | Management/legal/security  | Vendor implementation                                                                               |
+| Incident contacts and insurance notice duties     | Leadership/legal           | Production launch                                                                                   |
+| Recovery point/time objectives                    | Business owner/engineering | Production launch                                                                                   |
 
 ## 28. Authoritative References
 

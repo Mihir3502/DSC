@@ -429,12 +429,12 @@ archive_hiring_cycle:  CLOSED/CANCELLED -> ARCHIVED
 
 Effective public availability is computed at request time from trusted stored state and the server clock. No background job is involved.
 
-| State | Public result |
-| --- | --- |
-| `OPEN`, every parent `ACTIVE`, and `opens_at ≤ now < closes_at` | Listed and accepting |
-| `OPEN` at or after `closes_at`, or with an inactive parent | Generic "no longer accepting" |
-| `CLOSED` after having been opened | Generic "no longer accepting" |
-| `DRAFT`, `PUBLISHED`, `CANCELLED`, `ARCHIVED`, never-opened `CLOSED`, unknown | Indistinguishable not-found |
+| State                                                                         | Public result                 |
+| ----------------------------------------------------------------------------- | ----------------------------- |
+| `OPEN`, every parent `ACTIVE`, and `opens_at ≤ now < closes_at`               | Listed and accepting          |
+| `OPEN` at or after `closes_at`, or with an inactive parent                    | Generic "no longer accepting" |
+| `CLOSED` after having been opened                                             | Generic "no longer accepting" |
+| `DRAFT`, `PUBLISHED`, `CANCELLED`, `ARCHIVED`, never-opened `CLOSED`, unknown | Indistinguishable not-found   |
 
 Upcoming (published but not yet open) display is not approved and is not implemented.
 
@@ -526,7 +526,7 @@ Key fields:
 - `person_id`.
 - `hiring_cycle_id`, `organization_id`, `position_id`, `branch_id`, `team_id` (nullable).
 - `source_code`: `CANDIDATE_SELF_SERVICE` or `STAFF_ENTERED`.
-- `current_stage`: `PROSPECT` or `APPLICATION_INCOMPLETE` in M2.2.
+- `current_stage`: `PROSPECT`, `APPLICATION_INCOMPLETE`, or `APPLICATION_SUBMITTED` (M2.6).
 - `status`: `ACTIVE`, `TERMINAL`, `ARCHIVED`.
 - `candidate_visible_status`:
   - `NOT_STARTED` for an active `PROSPECT`;
@@ -651,12 +651,16 @@ These remain later work and are not implemented:
 
 ### 7.1 `application_template`
 
+M2.4 implements `application_template`, `application_template_version`, `application_version`, and `application_draft_section` (migration `0007_application_draft`, `applications` module). Nothing is ever hard-deleted, and no foreign key cascades.
+
 Key fields:
 
 - `id`
-- `code`
+- `code`: unique. M2.4 seeds one template, `CANDIDATE_APPLICATION`.
 - `name`
-- `status`
+- `created_at`
+
+Append-only (error class `CN`), and the runtime role has `SELECT` only.
 
 ### 7.2 `application_template_version`
 
@@ -664,17 +668,21 @@ Key fields:
 
 - `id`
 - `application_template_id`
-- `version_number`
-- `schema_json`
-- `validation_rules_json`
+- `version_number`: unique per template.
+- `schema_json`: sections and fields. It is parsed strictly before use, so a malformed version is refused rather than shown.
 - `published_at`
-- `published_by_user_id`
 - `effective_from`
 - `effective_to`
+- `created_at`
+
+Rules:
+
+- Append-only, even for the migration owner. A change ships as a new version.
+- A new draft uses the newest version effective at that moment. An existing draft stays on the version it started with.
+- Version 1 has four neutral sections: availability, experience, education, and references. Its wording is a draft awaiting business review. It deliberately has no eligibility or disclosure questions, date of birth, or tax identifier.
+- There is no template editor yet, and one template applies to every position and worker path. Configuring required questions by worker path and position (PRD-APP-002) remains open.
 
 ### 7.3 `application_version`
-
-Future scope (M2.4). M2.2 creates no application template, version, draft, or answer.
 
 Key fields:
 
@@ -682,22 +690,72 @@ Key fields:
 - `candidacy_id`
 - `template_version_id`
 - `version_number`
-- `status`: `DRAFT`, `SUBMITTED`, `RETURNED`, `SUPERSEDED`
-- `answers_json`
-- `completion_percent`
-- `candidate_certified_at`
-- `submitted_at`
-- `returned_at`
-- `return_reason_code`
-- `return_instructions`
-- `supersedes_id`
-- Common timestamps
+- `status`: `DRAFT`, `SUBMITTED`, `RETURNED`, or `SUPERSEDED`.
+- `supersedes_id`: the returned version this one corrects (M2.7).
+- `created_by_account_id`
+- `created_at`
 
 Rules:
 
-- Submitted versions are immutable.
-- Returned correction starts a new draft linked to the submitted version.
-- Sensitive answers should be stored in protected columns or separate records rather than plain JSON.
+- A partial unique index allows one `DRAFT` per candidacy.
+- A draft begins only through `begin_application_draft`. Reading a page never creates one.
+- The candidacy, template version, version number, and creation facts never change (trigger).
+- A version becomes `SUBMITTED` only with its frozen `application_submission`, and it never goes back (trigger).
+- The lifecycle is `DRAFT`, `SUBMITTED` (with its frozen record), `RETURNED` (with its return), then `SUPERSEDED` once a correction is submitted (trigger).
+- A correction is a new version on the same template, pre-filled from the frozen answers. Every submitted version and its frozen record stay.
+
+`application_draft_section` holds one section's answers:
+
+- `id`
+- `application_version_id`
+- `section_code`: unique per application version.
+- `answers`: a JSON object, size bounded. Field names and values are validated against the pinned template.
+- `completion_status`: `IN_PROGRESS` or `COMPLETE`, set by the server. Not started means no row.
+- `version`: optimistic. Each write adds exactly one (trigger); a save names the version it read, or 0 for the first save.
+- `saved_by_account_id`, `saved_by_kind` (`CANDIDATE` or `STAFF_ASSIST`), `assist_reason_code` (required only for an assist), `saved_at`
+- `created_at`
+
+Rules:
+
+- Draft answers are Confidential Personnel. They hold no restricted identity, financial, screening, or medical field.
+- Answers are overwritten in place while in draft; earlier draft values aren't kept. Audit records each save's section, status, and version, and never an answer.
+- `application.assist` has no role grant, so no staff member can write a draft today.
+
+M2.6 adds migration `0010_application_submission`, with three more tables.
+
+`application_certification_version` holds each certification statement:
+
+- `id`, `version_number`, `statement`, `effective_from`, `created_at`
+- `review_status`: `DRAFT_UNREVIEWED` or `APPROVED`. **Version 1 is `DRAFT_UNREVIEWED`: its wording needs counsel's review before real use.** Approved text ships as a new version, and past submissions keep the version they accepted.
+- Append-only; the runtime role has `SELECT` only.
+
+`application_submission` is the frozen record of one submission:
+
+- `id`, `application_version_id` (unique), `candidacy_id`, `template_version_id`, `certification_version_id`
+- `answers`: every section's answers at submission.
+- `content_hash`: SHA-256 of the answers, attachment versions, and certification version the candidate reviewed.
+- `certified_name`: the typed name.
+- `receipt_number`: `R-` plus eight random characters; unique, and not a credential.
+- `submitted_by_account_id`, `submitted_at`
+- Append-only, even for the migration owner.
+
+`application_submission_attachment` lists exactly which clean document versions were frozen (a trigger refuses any other).
+
+Rules:
+
+- A submission re-checks everything in one transaction: ownership, stage, the hiring cycle still accepting, every section against the pinned template, and that nothing changed since the review page was read.
+- No attachment is required (owner decision, 2026-11-03). Files without a clean version are left out, and the review page says so.
+- A first submission is refused once the hiring cycle stops accepting (owner decision, 2026-11-04), and the draft is kept. A correction staff asked for can still be submitted.
+
+M2.7 adds migration `0011_application_return` and `application_return`, one per returned version:
+
+- `id`, `application_version_id` (unique), `candidacy_id`
+- `reason_code`: `INCOMPLETE_INFORMATION`, `INCORRECT_INFORMATION`, `UNCLEAR_ANSWER`, `ATTACHMENT_PROBLEM`, or `OTHER`.
+- `instructions`: up to 1000 characters, **candidate-visible**. Stored here and shown as plain text. It never reaches audit or email, and it is separate from internal notes.
+- `reopened`: section codes, each with the fields staff flagged. A flag guides the candidate; the whole section is editable (owner decision, 2026-11-04).
+- `attachments_reopened`
+- `returned_by_account_id`, `returned_at`
+- Append-only, even for the migration owner.
 
 ### 7.4 `prescreen_review`
 
@@ -1152,6 +1210,8 @@ Store only information necessary for the employment clearance workflow.
 
 ## 12. Document Domain
 
+M2.5 implements `document` and `document_version` for application attachments (migration `0009_application_attachments`, `documents` module). `document_link` and `document_access_event` aren't created: a document names its candidacy directly, and the append-only audit history records access. Later document types may add them.
+
 ### 12.1 `document`
 
 Logical document identity.
@@ -1159,13 +1219,15 @@ Logical document identity.
 Key fields:
 
 - `id`
-- `owner_person_id`
-- `document_category_code`
-- `data_classification`
-- `retention_class_code`
-- `current_version_id`
-- `status`
-- Common timestamps
+- `public_id`: used in routes. It grants nothing.
+- `candidacy_id`: ownership comes from candidacy, person, and account, so a person merge keeps it correct.
+- `category_code`: `RESUME` or `CREDENTIAL` in M2.5.
+- `data_classification`: `CONFIDENTIAL_PERSONNEL`.
+- `retention_class_code`: `APPLICATION_ATTACHMENT_UNSET` until the retention schedule is approved.
+- `current_version_id`: moves only to this document's clean version.
+- `status`: `ACTIVE` or `REMOVED`. Removing hides the document; the record and its stored bytes stay.
+- `version`: optimistic; each change adds one (trigger).
+- `created_by_account_id`, `created_at`, `updated_at`
 
 ### 12.2 `document_version`
 
@@ -1175,54 +1237,26 @@ Key fields:
 - `document_id`
 - `version_number`
 - `storage_provider_code`
-- `storage_object_key`
-- `original_file_name_protected`
-- `media_type`
+- `storage_object_key`: a generated UUID, never a file name, and never returned to a client.
+- `display_name`: normalized, with paths and unsafe characters removed.
+- `media_type`: from the file's signature, not the client.
 - `size_bytes`
-- `content_hash`
-- `malware_scan_status`
-- `uploaded_by_user_id`
-- `uploaded_at`
-- `finalized_at`
+- `content_hash`: SHA-256.
+- `scan_status`: `PENDING`, `CLEAN`, `REJECTED`, or `FAILED`.
+- `scanner_code`
 - `supersedes_id`
-- `encryption_key_version`
+- `uploaded_by_account_id`, `uploaded_at`, `finalized_at`
 
 Rules:
 
+- A version starts `PENDING`, finishes once, and is then immutable (trigger).
 - Do not place storage URLs directly in business responses.
-- Generate short-lived authorized access links.
+- Download is by authorized streaming through the M1.5 document gate. The audit event commits before any byte is read.
 - A clean malware-scan state is required before ordinary download or review.
-
-### 12.3 `document_link`
-
-Polymorphic linking table implemented with validated target types.
-
-Key fields:
-
-- `id`
-- `document_id`
-- `target_type`
-- `target_id`
-- `purpose_code`
-- `created_at`
-
-Alternatively, use explicit join tables where the ORM and schema design favor stronger foreign keys.
-
-### 12.4 `document_access_event`
-
-Append-only record for restricted document activity.
-
-Key fields:
-
-- `id`
-- `document_id`
-- `document_version_id`
-- `actor_user_id`
-- `action`: `VIEW`, `DOWNLOAD`, `PRINT`, `EXPORT`
-- `purpose_code`
-- `occurred_at`
-- `request_id`
-- `ip_address_protected`
+- A malicious file's bytes are discarded; the version row remains as evidence. A file that can't be scanned stays in quarantine, unavailable.
+- Approved file types and limits (owner decision, 2026-11-03): PDF, JPEG, and PNG, up to 10 MB each and 10 active per application.
+- The runtime role has no `DELETE` or `TRUNCATE`, and triggers refuse them too.
+- `encryption_key_version` isn't added yet. Attachments rely on platform storage encryption, and the local adapter is for synthetic development data only.
 
 ## 13. Onboarding Domain
 
@@ -1574,29 +1608,43 @@ Key fields:
 
 ### 17.1 `work_item`
 
-Represents an actionable staff or candidate task.
+Represents an action a candidate needs to take. M2.3 implements it (migration `0008_work_item`, `candidates` module).
 
 Key fields:
 
 - `id`
 - `candidacy_id`
-- `work_type_code`
-- `target_record_type`
-- `target_record_id`
-- `assigned_user_id`
-- `assigned_team_id`
-- `candidate_action_required`
+- `work_type_code`: `COMPLETE_APPLICATION` and `CORRECT_APPLICATION` (candidate), or `REVIEW_SUBMITTED_APPLICATION` (staff, unassigned).
+- `target_record_type`: `CANDIDACY`.
+- `target_record_id`: the same candidacy.
+- `candidate_action_required`: true only for the candidate types (check constraint).
 - `status`: `OPEN`, `IN_PROGRESS`, `BLOCKED`, `COMPLETED`, `CANCELED`
-- `priority`
-- `due_at`
-- `completed_at`
-- `completion_event_id`
+- `priority`: `NORMAL` or `HIGH`, for ordering only and never shown.
+- `due_at`: optional. Nothing sets it yet, so no deadline is ever invented.
+- `completed_at`: set exactly when the status is `COMPLETED`.
+- `source_code`: `CANDIDACY_TRANSITION`, `BACKFILL`, or `RECONCILIATION`.
 - `version`
+- Common timestamps
+
+Not added yet: `assigned_user_id`, `assigned_team_id`, and `completion_event_id`. They arrive with staff tasks and completion commands.
 
 Rules:
 
+- A work item never decides candidacy state. Candidate ownership comes from candidacy, person, and account, never from an assignment.
+- One active item per candidacy, work type, and target (partial unique index).
+- Rows hold no candidate-facing text or URL. Wording and routes come from the code-owned registry.
+- A finished item is history and can't change (trigger). Identity fields are immutable, and each update adds one version. The runtime role has no `DELETE` or `TRUNCATE`.
+- Candidates have no command that creates, edits, completes, cancels, or reassigns an item.
+- **Lifecycle of `COMPLETE_APPLICATION`:**
+  - Opened in the same transaction when an owned candidacy reaches `APPLICATION_INCOMPLETE`.
+  - The migration backfills existing candidacies, and `pnpm db:reconcile:work-items` opens missing tasks and cancels stale ones. It's bounded, repeatable, and reports counts only.
+  - An unowned candidacy gets no task until it has an owner.
+  - Submission completes it in the same transaction and opens the staff review item.
+- Reads never write. A stale item is hidden on read and canceled only by reconciliation. If an eligible candidacy has no row, the stage still produces the same next action.
 - Completing the business action should complete its work item transactionally.
 - A work item is not the source of truth for the underlying compliance result.
+
+The portal reads through application queries (`candidate.portal_shell.v1`, `candidate.portal_home.v1`, `candidate.task_list.v1`, `candidate.help.v1`) rather than a stored projection, so there is no freshness lag. Each query filters to the session's own person and returns explicit fields only.
 
 ### 17.2 `timer_definition`
 
@@ -1735,6 +1783,8 @@ Key fields:
 
 The state change, audit append, and outbox insert occur in one database transaction.
 
+M2.6 and M2.7 implement `outbox_event` for `APPLICATION_RECEIVED_EMAIL` and `APPLICATION_RETURNED_EMAIL`, with a unique source (type, aggregate, version). It has no `payload_json`: the address and reference are read when sending, so rows hold no personal data. Each row is leased before sending and retried up to five times; `pnpm outbox:dispatch` runs pending rows. There is no background worker yet, so a retry happens only when that command runs.
+
 ### 19.4 `integration_request`
 
 Key fields:
@@ -1821,19 +1871,19 @@ This retention hold is different from an operational `compliance_hold` on a cand
 
 ## 21. Sensitive-Data Placement Matrix
 
-| Data | Primary storage | Search behavior | Ordinary API behavior |
-| --- | --- | --- | --- |
-| Name/contact | `person` | Authorized normalized search | Return only permitted fields |
-| Date of birth | Protected person field | Avoid broad search | Mask or omit |
-| Tax identifier | `person_sensitive_identity` | Last-four exact match only if authorized | Omit; reveal only through special command |
-| I-9/identity image | Restricted `document` | Metadata only | Short-lived authorized link |
-| Bank account | `payment_account` | No general search | Masked last four only |
-| Interview notes | `interview_scorecard` | Staff-scoped search only | Never candidate visible |
-| Classification rationale | `worker_classification_review` | Specialist search only | Restricted response schema |
-| Criminal/registry report | `screening_result` plus restricted document | Status/reference only | Content only through restricted endpoint |
-| Drug-screen result | Restricted screening records | Status only | Candidate-safe status; specialist detail |
-| TB/medical evidence | `tb_clearance_record` plus restricted document | Clearance status only | Specialist detail only |
-| Audit metadata | `audit_event` | Authorized filtered search | Redact restricted values |
+| Data                     | Primary storage                                | Search behavior                          | Ordinary API behavior                     |
+| ------------------------ | ---------------------------------------------- | ---------------------------------------- | ----------------------------------------- |
+| Name/contact             | `person`                                       | Authorized normalized search             | Return only permitted fields              |
+| Date of birth            | Protected person field                         | Avoid broad search                       | Mask or omit                              |
+| Tax identifier           | `person_sensitive_identity`                    | Last-four exact match only if authorized | Omit; reveal only through special command |
+| I-9/identity image       | Restricted `document`                          | Metadata only                            | Short-lived authorized link               |
+| Bank account             | `payment_account`                              | No general search                        | Masked last four only                     |
+| Interview notes          | `interview_scorecard`                          | Staff-scoped search only                 | Never candidate visible                   |
+| Classification rationale | `worker_classification_review`                 | Specialist search only                   | Restricted response schema                |
+| Criminal/registry report | `screening_result` plus restricted document    | Status/reference only                    | Content only through restricted endpoint  |
+| Drug-screen result       | Restricted screening records                   | Status only                              | Candidate-safe status; specialist detail  |
+| TB/medical evidence      | `tb_clearance_record` plus restricted document | Clearance status only                    | Specialist detail only                    |
+| Audit metadata           | `audit_event`                                  | Authorized filtered search               | Redact restricted values                  |
 
 ## 22. Key Constraints and Indexes
 

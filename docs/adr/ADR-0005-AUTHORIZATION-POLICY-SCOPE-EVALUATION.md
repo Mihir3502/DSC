@@ -169,7 +169,7 @@ Candidates take the ownership path instead of steps 5–7.
 
 **Sensitivity** is an upper bound: `PUBLIC < INTERNAL < CONFIDENTIAL_PERSONNEL`. Each restricted category matches only itself.
 
-**Workflow policies** are closed named evaluators registered by owning domains. The production registry is empty, so workflow-gated permissions deny until M2+ registers them.
+**Workflow policies** are closed named evaluators registered by owning domains. A workflow-gated permission denies until its owning domain registers it (M2.4 registered the first).
 
 ### Separation of duties and recent-authentication composition
 
@@ -273,6 +273,7 @@ Every denial writes one bounded log line (`authz.denied`: permission, reason, po
   - **Fail-closed.** Database failures in either adapter answer `UNAVAILABLE`.
   - **Defect found and fixed.** `authorizeInTransaction` resolvers previously queried through the pool while the command transaction held locks. Under a small pool, a concurrent command could starve and deny (`SCOPE_UNAVAILABLE`). An `AsyncLocalStorage` authorization executor now makes in-transaction resolvers use the command's transaction. No grant or scope semantics changed. The fix is regression-tested by the concurrent review-versus-merge race.
 - **M2.3+:** remaining scope entities (`ASSIGNED_RECORDS`, `AUDIT_ASSIGNMENT`), designations, and workflow policies.
+- **M2.4:** registers the first production workflow policy, `CANDIDACY_WORKFLOW`. It permits only `application.own.edit` and `application.assist`, and only in `APPLICATION_INCOMPLETE`. Every other workflow-gated permission still denies, and no role gained a grant.
 
 ## Rejected alternatives
 
