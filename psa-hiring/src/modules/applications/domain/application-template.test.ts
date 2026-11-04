@@ -2,7 +2,9 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  checkApplication,
   LONG_TEXT_MAX,
+  normalizeSignature,
   parseTemplate,
   SHORT_TEXT_MAX,
   validateSection,
@@ -169,5 +171,54 @@ describe("draft validation", () => {
       ok: true,
       answers: { name: "TEST Ríos 李", notes: "line one\nline two" },
     });
+  });
+});
+
+describe("whole-application validation", () => {
+  const template = { sections: [section] };
+
+  it("reports each section and the labels still needed", () => {
+    expect(checkApplication(template, {})).toEqual({
+      complete: false,
+      sections: [
+        {
+          code: "sample",
+          title: "Sample",
+          complete: false,
+          missing: ["Name"],
+        },
+      ],
+    });
+    expect(
+      checkApplication(template, { sample: { name: "TEST" } }).complete,
+    ).toBe(true);
+  });
+
+  it("treats a stored answer that no longer validates as still needed", () => {
+    const check = checkApplication(template, {
+      sample: { name: "TEST", mail: "not-an-email" },
+    });
+    expect(check.complete).toBe(false);
+    expect(check.sections[0]!.missing).toEqual(["Email"]);
+    expect(
+      checkApplication(template, { sample: { unknown_field: "x" } }).complete,
+    ).toBe(false);
+  });
+});
+
+describe("typed signature", () => {
+  it("normalizes a name and refuses an unusable one", () => {
+    expect(normalizeSignature("  TEST   Ana  Ríos ")).toBe("TEST Ana Ríos");
+    for (const bad of [
+      "",
+      " ",
+      "x",
+      "TEST\u202Ename",
+      "x".repeat(201),
+      42,
+      null,
+    ]) {
+      expect(normalizeSignature(bad)).toBeNull();
+    }
   });
 });

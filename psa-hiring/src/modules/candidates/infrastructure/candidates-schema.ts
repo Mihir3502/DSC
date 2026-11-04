@@ -226,7 +226,7 @@ export const candidacy = appSchema.table(
     ),
     check(
       "candidacy_stage_check",
-      sql`${table.currentStage} IN ('PROSPECT', 'APPLICATION_INCOMPLETE')`,
+      sql`${table.currentStage} IN ('PROSPECT', 'APPLICATION_INCOMPLETE', 'APPLICATION_SUBMITTED')`,
     ),
     check(
       "candidacy_status_check",
@@ -234,7 +234,7 @@ export const candidacy = appSchema.table(
     ),
     check(
       "candidacy_visible_status_check",
-      sql`${table.candidateVisibleStatus} = CASE WHEN ${table.status} <> 'ACTIVE' THEN 'CLOSED' WHEN ${table.currentStage} = 'APPLICATION_INCOMPLETE' THEN 'APPLICATION_STARTED' ELSE 'NOT_STARTED' END`,
+      sql`${table.candidateVisibleStatus} = CASE WHEN ${table.status} <> 'ACTIVE' THEN 'CLOSED' WHEN ${table.currentStage} = 'APPLICATION_INCOMPLETE' THEN 'APPLICATION_STARTED' WHEN ${table.currentStage} = 'APPLICATION_SUBMITTED' THEN 'APPLICATION_SUBMITTED' ELSE 'NOT_STARTED' END`,
     ),
     check(
       "candidacy_worker_path_check",
@@ -242,7 +242,7 @@ export const candidacy = appSchema.table(
     ),
     check(
       "candidacy_lifecycle_check",
-      sql`((${table.currentStage} = 'APPLICATION_INCOMPLETE') = (${table.startedAt} IS NOT NULL)) AND ((${table.status} = 'TERMINAL') = (${table.closedAt} IS NOT NULL)) AND ((${table.closedAt} IS NULL) = (${table.closureReasonCode} IS NULL)) AND (${table.closureReasonCode} IS NULL OR ${table.closureReasonCode} ~ '^[A-Z][A-Z0-9_]{1,63}$')`,
+      sql`((${table.currentStage} <> 'PROSPECT') = (${table.startedAt} IS NOT NULL)) AND ((${table.status} = 'TERMINAL') = (${table.closedAt} IS NOT NULL)) AND ((${table.closedAt} IS NULL) = (${table.closureReasonCode} IS NULL)) AND (${table.closureReasonCode} IS NULL OR ${table.closureReasonCode} ~ '^[A-Z][A-Z0-9_]{1,63}$')`,
     ),
     check("candidacy_version_check", sql`${table.version} >= 1`),
     index("candidacy_scope_idx").on(
@@ -296,7 +296,7 @@ export const candidacyStageHistory = appSchema.table(
     ),
     check(
       "candidacy_stage_history_command_check",
-      sql`${table.commandCode} IN ('create_prospect', 'start_application', 'start_application_from_prospect', 'close_prospect')`,
+      sql`${table.commandCode} IN ('create_prospect', 'start_application', 'start_application_from_prospect', 'close_prospect', 'submit_application')`,
     ),
     check(
       "candidacy_stage_history_version_check",
@@ -533,11 +533,11 @@ export const workItem = appSchema.table(
     index("work_item_source_idx").on(table.sourceCode, table.workTypeCode),
     check(
       "work_item_type_check",
-      sql`${table.workTypeCode} = 'COMPLETE_APPLICATION'`,
+      sql`${table.workTypeCode} IN ('COMPLETE_APPLICATION', 'REVIEW_SUBMITTED_APPLICATION')`,
     ),
     check(
       "work_item_target_check",
-      sql`${table.targetRecordType} = 'CANDIDACY' AND ${table.targetRecordId} = ${table.candidacyId} AND ${table.candidateActionRequired}`,
+      sql`${table.targetRecordType} = 'CANDIDACY' AND ${table.targetRecordId} = ${table.candidacyId} AND ${table.candidateActionRequired} = (${table.workTypeCode} = 'COMPLETE_APPLICATION')`,
     ),
     check(
       "work_item_status_check",

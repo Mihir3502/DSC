@@ -3,13 +3,16 @@
 export {
   assistSaveApplicationSection,
   beginApplicationDraft,
-  candidacyWorkflow,
   saveApplicationSection,
   type ApplicationCommandResult,
 } from "./application/application-commands";
 export {
   queryApplicationOverview,
+  queryApplicationReceipt,
+  queryApplicationReview,
   queryApplicationSection,
   type ApplicationQueryResult,
 } from "./application/application-queries";
 export { applicationProjectionNames } from "./presentation/application-views";
+export { submitApplication } from "./application/application-submission";
+export { dispatchApplicationEmails } from "./application/application-outbox";

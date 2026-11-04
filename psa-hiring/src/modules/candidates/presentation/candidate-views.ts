@@ -21,6 +21,7 @@ export const candidateProjectionNames = [
   "staff.prospect_form.v1",
   "staff.prospect_detail.v1",
   "staff.duplicate_queue.v1",
+  "staff.submitted_queue.v1",
   "staff.duplicate_review.v1",
 ] as const;
 
@@ -136,6 +137,7 @@ const homeSchema = z.strictObject({
         code: z.enum([
           "UNDER_REVIEW",
           "APPLICATION_IN_PROGRESS",
+          "APPLICATION_SUBMITTED",
           "NOT_CONTINUING",
           "UNAVAILABLE",
         ]),
@@ -270,7 +272,11 @@ const prospectDetailSchema = z.strictObject({
   email: z.string().max(254),
   phone: z.string().max(40).nullable(),
   opening: label,
-  stage: z.enum(["Prospect", "Application incomplete"]),
+  stage: z.enum([
+    "Prospect",
+    "Application incomplete",
+    "Application submitted",
+  ]),
   status: z.enum(["Active", "Closed"]),
   source: z.enum(["Candidate self-service", "Staff entered"]),
   owner: z.enum(["Unassigned", "You", "Another staff member"]),
@@ -400,4 +406,30 @@ export const duplicateReviewContract = defineProjection<
     "candidate.duplicate.review",
   ),
   schema: reviewSchema,
+});
+
+// ------------------------------------------------ submitted-application queue
+
+const submittedQueueSchema = z.strictObject({
+  items: z
+    .array(
+      z.strictObject({
+        id: publicId,
+        reference,
+        opening: label,
+        submitted: z.string().max(40),
+      }),
+    )
+    .max(100),
+});
+export type SubmittedQueueView = z.infer<typeof submittedQueueSchema>;
+export const submittedQueueContract = defineProjection<
+  SubmittedQueueView,
+  SubmittedQueueView
+>({
+  name: "staff.submitted_queue.v1",
+  audience: "STAFF",
+  purpose: "LIST",
+  fields: fieldsFor<SubmittedQueueView>(["items"], "application.read"),
+  schema: submittedQueueSchema,
 });

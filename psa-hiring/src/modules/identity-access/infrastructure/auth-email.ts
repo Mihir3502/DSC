@@ -16,6 +16,7 @@ export const authEmailTemplates = [
   "PASSWORD_CHANGED",
   "STAFF_INVITATION",
   "STAFF_SECURITY_NOTICE",
+  "APPLICATION_RECEIVED",
 ] as const;
 export type AuthEmailTemplate = (typeof authEmailTemplates)[number];
 
@@ -47,6 +48,12 @@ export type AuthEmailMessage =
       template: "STAFF_SECURITY_NOTICE";
       to: string;
       notice: "PASSWORD_CHANGED" | "BACKUP_CODES_REGENERATED";
+    }>
+  | Readonly<{
+      template: "APPLICATION_RECEIVED";
+      to: string;
+      /** The candidate's nonsecret reference; no name or answer. */
+      reference: string;
     }>;
 
 export type RenderedAuthEmail = Readonly<{
@@ -166,6 +173,21 @@ export function renderAuthEmail(
         html,
       });
     }
+    case "APPLICATION_RECEIVED": {
+      if (!/^C-[0-9A-HJKMNP-TV-Z]{8}$/.test(message.reference)) {
+        throw new Error("invalid candidate reference shape");
+      }
+      const body = paragraphs([
+        `We received your application. Your reference is ${message.reference}.`,
+        "You can sign in to see its status. We'll contact you if we need anything else.",
+      ]);
+      return Object.freeze({
+        template: message.template,
+        to: message.to,
+        subject: "We received your application",
+        ...body,
+      });
+    }
     case "PASSWORD_CHANGED": {
       const body = paragraphs([
         `The password for your ${productName} account was changed, and other signed-in sessions were ended.`,
@@ -273,6 +295,11 @@ export class AuthEmailDispatcher implements AuthEmailPort {
       )
       .finally(() => this.#pending.delete(task));
     this.#pending.add(task);
+  }
+
+  /** Delivers now and reports failure, for callers that track their own retries. */
+  async deliver(message: AuthEmailMessage): Promise<void> {
+    await this.transport.deliver(renderAuthEmail(message, this.origin));
   }
 
   /** Resolves when queued deliveries have settled (tests and shutdown). */

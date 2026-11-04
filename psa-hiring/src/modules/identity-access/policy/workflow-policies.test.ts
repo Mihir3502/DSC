@@ -19,6 +19,7 @@ describe("production workflow policies", () => {
     expect(permitted.sort()).toEqual([
       "application.assist@APPLICATION_INCOMPLETE",
       "application.own.edit@APPLICATION_INCOMPLETE",
+      "application.own.submit@APPLICATION_INCOMPLETE",
     ]);
   });
 

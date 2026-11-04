@@ -40,6 +40,8 @@ export const candidateRateLimits = Object.freeze({
   staffProspectCreatePerAccount: { limit: 30, windowMs: 15 * 60_000 },
   // M2.4 draft saves: autosave runs at most once per idle period.
   applicationSavePerAccount: { limit: 300, windowMs: 15 * 60_000 },
+  // M2.6 submission.
+  applicationSubmitPerAccount: { limit: 20, windowMs: 15 * 60_000 },
   // M2.5 attachments.
   documentUploadPerAccount: { limit: 30, windowMs: 15 * 60_000 },
   documentDownloadPerAccount: { limit: 120, windowMs: 15 * 60_000 },

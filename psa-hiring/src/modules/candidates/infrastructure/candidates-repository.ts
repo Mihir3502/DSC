@@ -728,6 +728,76 @@ export async function ensureCompleteApplicationTask(
     .onConflictDoNothing();
 }
 
+/** Completes the candidate's task when their application is submitted. */
+export async function completeApplicationTask(
+  db: Executor,
+  candidacyId: string,
+  now: Date,
+): Promise<void> {
+  await db
+    .update(workItem)
+    .set({
+      status: "COMPLETED",
+      completedAt: now,
+      version: sql`${workItem.version} + 1`,
+    })
+    .where(
+      and(
+        eq(workItem.candidacyId, candidacyId),
+        eq(workItem.workTypeCode, "COMPLETE_APPLICATION"),
+        inArray(workItem.status, ["OPEN", "IN_PROGRESS", "BLOCKED"]),
+      ),
+    );
+}
+
+/** One staff review item, unassigned until staff workflows arrive. */
+export async function openReviewQueueItem(
+  db: Executor,
+  candidacyId: string,
+): Promise<void> {
+  await db
+    .insert(workItem)
+    .values({
+      candidacyId,
+      workTypeCode: "REVIEW_SUBMITTED_APPLICATION",
+      targetRecordType: "CANDIDACY",
+      targetRecordId: candidacyId,
+      candidateActionRequired: false,
+      sourceCode: "CANDIDACY_TRANSITION",
+    })
+    .onConflictDoNothing();
+}
+
+/** Open staff review items in a scope, oldest first; bounded. */
+export async function listSubmittedQueueInScope(
+  db: Executor,
+  constraint: QueryConstraint,
+  limit = 100,
+) {
+  return db
+    .select({
+      candidacy,
+      queuedAt: workItem.createdAt,
+    })
+    .from(workItem)
+    .innerJoin(candidacy, eq(candidacy.id, workItem.candidacyId))
+    .innerJoin(person, eq(person.id, candidacy.personId))
+    .where(
+      and(
+        eq(workItem.workTypeCode, "REVIEW_SUBMITTED_APPLICATION"),
+        inArray(workItem.status, ["OPEN", "IN_PROGRESS", "BLOCKED"]),
+        constraintPredicate(constraint, {
+          organizationId: candidacy.organizationId,
+          branchId: candidacy.branchId,
+          teamId: candidacy.teamId,
+          subjectAccountId: person.candidateAccountId,
+        }),
+      ),
+    )
+    .orderBy(asc(workItem.createdAt), asc(workItem.id))
+    .limit(limit);
+}
+
 /**
  * Bounded reconciliation: opens the missing task for owned active
  * APPLICATION_INCOMPLETE candidacies, and cancels active tasks whose candidacy

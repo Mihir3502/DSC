@@ -25,12 +25,22 @@ export type WorkflowPolicyRegistry = ReadonlyMap<
 /** What each candidacy state permits. Later work items add their own. */
 const candidacyPermissions: Readonly<Record<string, readonly string[]>> = {
   // M2.4: editing a draft. application.assist still has no role grant.
-  APPLICATION_INCOMPLETE: ["application.own.edit", "application.assist"],
+  APPLICATION_INCOMPLETE: [
+    "application.own.edit",
+    "application.assist",
+    // M2.6: submitting. application.assist stays ungranted.
+    "application.own.submit",
+  ],
 };
 
 export const candidacyWorkflowPolicy: WorkflowPolicy = Object.freeze({
   code: "CANDIDACY_WORKFLOW",
-  states: Object.freeze(["PROSPECT", "APPLICATION_INCOMPLETE", "CLOSED"]),
+  states: Object.freeze([
+    "PROSPECT",
+    "APPLICATION_INCOMPLETE",
+    "APPLICATION_SUBMITTED",
+    "CLOSED",
+  ]),
   permits: (permissionCode: string, state: string) =>
     candidacyPermissions[state]?.includes(permissionCode) === true,
 });

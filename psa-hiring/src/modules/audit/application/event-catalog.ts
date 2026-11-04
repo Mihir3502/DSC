@@ -663,6 +663,12 @@ const definitions: readonly EventDefinition[] = [
     "APPLICATION_SECTION_ASSIST",
     "CANDIDACY",
   ),
+  // M2.6 submission. Metadata holds versions and codes, never an answer.
+  candidateRecord(
+    "application.submitted",
+    "APPLICATION_SUBMIT",
+    "CANDIDACY",
+  ),
   // M2.5 attachments. Metadata holds codes and versions, never a file name,
   // hash, or contents.
   candidateRecord("document.received", "DOCUMENT_RECEIVE", "DOCUMENT"),
@@ -816,6 +822,7 @@ export const catalogEventNames = [
   "application.started",
   "application.section_saved",
   "application.section_assisted",
+  "application.submitted",
   "document.received",
   "document.upload_rejected",
   "document.scanned",

@@ -184,6 +184,7 @@ function countsOf(
     if (!row) continue;
     const category = taskCategory(item, factsOf(row));
     if (category === "action_needed") counts.actionNeeded += 1;
+    if (category === "under_review") counts.underReview += 1;
     if (category === "completed") counts.completed += 1;
   }
   return counts;
@@ -317,7 +318,9 @@ export async function queryCandidateTasks(
       instruction: actionable ? type.instruction : null,
       status: actionable
         ? "Action needed"
-        : (finishedLabel[item.status] ?? "Completed"),
+        : filter === "under_review"
+          ? "Submitted"
+          : (finishedLabel[item.status] ?? "Completed"),
       due: item.dueAt ? dateLabel(item.dueAt) : null,
       reference: row.candidateReference,
       opening: (await openingOf(row, deps)).title,

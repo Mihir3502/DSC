@@ -22,7 +22,11 @@ export const candidacySources = [
 ] as const;
 export type CandidacySource = (typeof candidacySources)[number];
 
-export const candidacyStages = ["PROSPECT", "APPLICATION_INCOMPLETE"] as const;
+export const candidacyStages = [
+  "PROSPECT",
+  "APPLICATION_INCOMPLETE",
+  "APPLICATION_SUBMITTED",
+] as const;
 export type CandidacyStage = (typeof candidacyStages)[number];
 
 export const candidacyStatuses = ["ACTIVE", "TERMINAL", "ARCHIVED"] as const;
@@ -67,7 +71,8 @@ export type StageCommand =
   | "create_prospect"
   | "start_application"
   | "start_application_from_prospect"
-  | "close_prospect";
+  | "close_prospect"
+  | "submit_application";
 
 /** The named transition table; anything else is refused. */
 export function stageTransition(
@@ -89,6 +94,11 @@ export function stageTransition(
       return from?.stage === "PROSPECT" && from.status === "ACTIVE"
         ? { stage: "PROSPECT", status: "TERMINAL" }
         : null;
+    case "submit_application":
+      return from?.stage === "APPLICATION_INCOMPLETE" &&
+        from.status === "ACTIVE"
+        ? { stage: "APPLICATION_SUBMITTED", status: "ACTIVE" }
+        : null;
   }
 }
 
@@ -96,8 +106,9 @@ export function stageTransition(
 export function candidateVisibleStatus(
   stage: CandidacyStage,
   status: CandidacyStatus,
-): "NOT_STARTED" | "APPLICATION_STARTED" | "CLOSED" {
+): "NOT_STARTED" | "APPLICATION_STARTED" | "APPLICATION_SUBMITTED" | "CLOSED" {
   if (status !== "ACTIVE") return "CLOSED";
+  if (stage === "APPLICATION_SUBMITTED") return "APPLICATION_SUBMITTED";
   return stage === "APPLICATION_INCOMPLETE"
     ? "APPLICATION_STARTED"
     : "NOT_STARTED";

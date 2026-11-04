@@ -126,6 +126,7 @@ export {
 } from "./application/authorize";
 export {
   actionRateLimiter,
+  applicationEmailSender,
   authorizationDependencies,
   type ActionRateLimiter,
 } from "./application/authorization-support";

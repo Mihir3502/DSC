@@ -10,7 +10,11 @@
 export const CANDIDATE_STATUS_VERSION = "STATUS-1";
 
 export type CandidateStatusCode =
-  "UNDER_REVIEW" | "APPLICATION_IN_PROGRESS" | "NOT_CONTINUING" | "UNAVAILABLE";
+  | "UNDER_REVIEW"
+  | "APPLICATION_IN_PROGRESS"
+  | "APPLICATION_SUBMITTED"
+  | "NOT_CONTINUING"
+  | "UNAVAILABLE";
 
 export const candidateStatusWording: Readonly<
   Record<CandidateStatusCode, Readonly<{ label: string; explanation: string }>>
@@ -23,6 +27,11 @@ export const candidateStatusWording: Readonly<
   APPLICATION_IN_PROGRESS: {
     label: "Application in progress",
     explanation: "Complete your application to continue.",
+  },
+  APPLICATION_SUBMITTED: {
+    label: "Application submitted",
+    explanation:
+      "We received your application. We'll contact you if we need anything else.",
   },
   NOT_CONTINUING: {
     label: "Application not continuing",
@@ -43,6 +52,7 @@ export function candidateStatusCode(
   if (status !== "ACTIVE") return "UNAVAILABLE";
   if (stage === "PROSPECT") return "UNDER_REVIEW";
   if (stage === "APPLICATION_INCOMPLETE") return "APPLICATION_IN_PROGRESS";
+  if (stage === "APPLICATION_SUBMITTED") return "APPLICATION_SUBMITTED";
   return "UNAVAILABLE";
 }
 
@@ -127,13 +137,21 @@ export function isActionable(
   );
 }
 
-/** A finished item is history; a stale or unknown active one is hidden. */
+/**
+ * A finished item is history, and a stale or unknown active one is hidden. A
+ * completed application task on a submitted candidacy is under review.
+ */
 export function taskCategory(
   item: Pick<WorkItemFacts, "workTypeCode" | "status">,
   candidacy: CandidacyFacts,
-): "action_needed" | "completed" | null {
+): "action_needed" | "under_review" | "completed" | null {
   if (item.status === "COMPLETED" || item.status === "CANCELED") {
-    return workTypes[item.workTypeCode] ? "completed" : null;
+    if (!workTypes[item.workTypeCode]) return null;
+    return item.status === "COMPLETED" &&
+      candidacy.status === "ACTIVE" &&
+      candidacy.stage === "APPLICATION_SUBMITTED"
+      ? "under_review"
+      : "completed";
   }
   return isActionable(item, candidacy) ? "action_needed" : null;
 }
@@ -240,3 +258,14 @@ export function candidateNavigation(
     { key: "help", label: "Help", href: "/candidate/help" },
   ];
 }
+
+// ------------------------------------------------------ workflow facts
+
+/** The server-read state the workflow policy decides on. */
+export const candidacyWorkflow = (
+  row: Readonly<{ status: string; currentStage: string }>,
+) =>
+  ({
+    policy: "CANDIDACY_WORKFLOW",
+    state: row.status === "ACTIVE" ? row.currentStage : "CLOSED",
+  }) as const;

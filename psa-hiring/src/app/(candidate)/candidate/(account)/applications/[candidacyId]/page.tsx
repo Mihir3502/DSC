@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
 import { queryApplicationOverview } from "@/modules/applications";
 import { BeginApplicationForm } from "@/modules/applications/ui/begin-application-form";
 import { newCandidateCommandKey } from "@/modules/candidates";
@@ -46,7 +47,22 @@ export default async function ApplicationOverviewPage({
         <dd>{view.status}</dd>
       </dl>
 
-      {!view.editable ? (
+      {view.submitted ? (
+        <div className="flex flex-col gap-3 rounded-lg border p-4">
+          <p className="font-medium">
+            You submitted this application, so it can&apos;t be changed.
+          </p>
+          <p>
+            <Link
+              prefetch={false}
+              href={`${base}/submitted`}
+              className="underline underline-offset-4"
+            >
+              See your receipt
+            </Link>
+          </p>
+        </div>
+      ) : !view.editable ? (
         <p role="status" className="rounded-lg border p-4">
           This application can&apos;t be edited right now.
         </p>
@@ -103,6 +119,15 @@ export default async function ApplicationOverviewPage({
               Add a resume and any licenses or certifications. Optional.
             </p>
           </section>
+          <p>
+            <Link
+              prefetch={false}
+              href={`${base}/review`}
+              className={buttonVariants({ size: "lg" })}
+            >
+              Review and submit
+            </Link>
+          </p>
         </>
       )}
     </div>

@@ -71,6 +71,13 @@
       "when": 1793731814513,
       "tag": "0009_application_attachments",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793757715186,
+      "tag": "0010_application_submission",
+      "breakpoints": true
     }
   ]
 }

@@ -326,7 +326,10 @@ describe("scope", () => {
     // organization hierarchy, positions, description versions, hiring
     // cycles, and command receipts (DATA_MODEL §5, ADR-0013).
     expect(rows.map((r) => r.t)).toEqual([
+      "app.application_certification_version",
       "app.application_draft_section",
+      "app.application_submission",
+      "app.application_submission_attachment",
       "app.application_template",
       "app.application_template_version",
       "app.application_version",
@@ -341,6 +344,7 @@ describe("scope", () => {
       "app.job_description_version",
       "app.organization",
       "app.organization_command_receipt",
+      "app.outbox_event",
       "app.person",
       "app.person_merge_record",
       "app.position",
@@ -366,7 +370,7 @@ describe("scope", () => {
       "drizzle.__drizzle_migrations",
     ]);
     const forbidden =
-      /account|screening|offer|onboard|readiness|assignment|timesheet|payroll|leave|audit|outbox|posting|requisition|vacanc|campaign|attachment|certification|submission/;
+      /account|screening|offer|onboard|readiness|assignment|timesheet|payroll|leave|audit|posting|requisition|vacanc|campaign/;
     expect(
       rows.filter(
         (r) =>
@@ -379,7 +383,7 @@ describe("scope", () => {
     // assignments) and competing opening concepts do not exist yet.
     expect(
       rows.filter((r) =>
-        /attachment|certification|submission|audit_assignment|job_posting|opening/.test(
+        /audit_assignment|job_posting|opening/.test(
           r.t,
         ),
       ),

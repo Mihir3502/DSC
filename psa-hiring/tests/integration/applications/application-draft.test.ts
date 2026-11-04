@@ -933,6 +933,12 @@ describe("database integrity (AC-M2.4-X2)", () => {
         "UPDATE app.application_version SET status = 'SUBMITTED' WHERE id = $1",
         [started.draftId],
       ),
+    ).toBe("CN005");
+    expect(
+      await sqlstate(
+        "UPDATE app.application_version SET status = 'ARCHIVED' WHERE id = $1",
+        [started.draftId],
+      ),
     ).toBe("23514");
     expect(
       await sqlstate(

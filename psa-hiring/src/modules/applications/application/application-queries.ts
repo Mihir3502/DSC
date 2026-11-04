@@ -8,6 +8,7 @@ import {
   type ProjectionContract,
 } from "@/modules/identity-access";
 import {
+  candidacyWorkflow,
   candidateDependencies,
   candidateStatusCode,
   candidateStatusWording,
@@ -18,22 +19,32 @@ import {
   type CandidateExecutor,
 } from "@/modules/candidates";
 import { cycleForCandidacy } from "@/modules/organization";
-import { candidacyWorkflow } from "./application-commands";
+import { listSubmittableAttachments } from "@/modules/documents";
 import {
+  checkApplication,
   parseTemplate,
   type ApplicationTemplate,
+  type TemplateField,
 } from "../domain/application-template";
+import { reviewTokenFor } from "./application-submission";
 import {
   findDraft,
+  findEffectiveCertification,
   findEffectiveTemplateVersion,
+  findLatestSubmission,
+  findLatestVersion,
   findTemplateVersion,
   listDraftSections,
   type DraftSectionRow,
 } from "../infrastructure/applications-repository";
 import {
   applicationOverviewContract,
+  applicationReceiptContract,
+  applicationReviewContract,
   applicationSectionContract,
   type ApplicationOverviewView,
+  type ApplicationReceiptView,
+  type ApplicationReviewView,
   type ApplicationSectionView,
 } from "../presentation/application-views";
 
@@ -88,7 +99,7 @@ function render<V extends object>(
 function ownRequest(
   principal: Principal,
   permission: string,
-  operation: "READ" | "EDIT",
+  operation: "READ" | "EDIT" | "CREATE",
   id: string,
 ): AuthorizationRequest {
   return {
@@ -148,7 +159,7 @@ export async function queryApplicationOverview(
     { cycleId: row.hiringCycleId },
     deps.clock(),
   );
-  const draft = await findDraft(db(deps), row.id);
+  const draft = await findLatestVersion(db(deps), row.id);
   const template = await templateFor(deps, draft?.templateVersionId ?? null);
   const saved = draft ? await listDraftSections(db(deps), draft.id) : [];
   const bySection = new Map(saved.map((s) => [s.sectionCode, s]));
@@ -176,6 +187,7 @@ export async function queryApplicationOverview(
           candidateStatusCode(row.currentStage, row.status)
         ].label,
       started: draft !== null,
+      submitted: draft?.status === "SUBMITTED",
       editable: isEditable(row) && template !== null,
       sections,
       completeCount: sections.filter((s) => s.status === "Complete").length,
@@ -251,6 +263,147 @@ export async function queryApplicationSection(
       next: neighbor(template.sections[index + 1]),
     },
     ["application.own.edit"],
+    deps,
+  );
+}
+
+function displayValue(
+  field: TemplateField,
+  value: string | readonly string[] | undefined,
+): string | null {
+  if (value === undefined) return null;
+  if (field.type === "single_choice" || field.type === "multi_choice") {
+    const chosen = Array.isArray(value) ? value : [value];
+    return field.options
+      .filter((o) => chosen.includes(o.value))
+      .map((o) => o.label)
+      .join(", ");
+  }
+  return String(value);
+}
+
+/** Everything the candidate certifies: answers, files, and the statement. */
+export async function queryApplicationReview(
+  headers: Headers,
+  candidacyId: unknown,
+  deps: CandidateDependencies = candidateDependencies(),
+): Promise<ApplicationQueryResult<ApplicationReviewView>> {
+  const principal = await resolveCurrentCandidate(headers);
+  if (!principal) return { kind: "UNAUTHENTICATED" };
+  const row = await candidacyById(deps, candidacyId);
+  if (!row) return { kind: "NOT_FOUND" };
+  const decision = await authorize(
+    {
+      ...ownRequest(principal, "application.own.submit", "CREATE", row.id),
+      workflow: candidacyWorkflow(row),
+    },
+    deps,
+  );
+  if (decision.decision !== "ALLOW" || !isEditable(row)) {
+    return { kind: "NOT_FOUND" };
+  }
+  const draft = await findDraft(db(deps), row.id);
+  const template = draft
+    ? await templateFor(deps, draft.templateVersionId)
+    : null;
+  const certification = await findEffectiveCertification(
+    db(deps),
+    deps.clock(),
+  );
+  if (!draft || !template || !certification) return { kind: "NOT_FOUND" };
+  const answers = Object.fromEntries(
+    (await listDraftSections(db(deps), draft.id)).map((s) => [
+      s.sectionCode,
+      s.answers,
+    ]),
+  ) as Record<string, Record<string, string | string[] | undefined>>;
+  const check = checkApplication(template, answers);
+  const files = await listSubmittableAttachments(db(deps), row.id);
+  const found = await cycleForCandidacy(
+    db(deps),
+    { cycleId: row.hiringCycleId },
+    deps.clock(),
+  );
+  return render(
+    applicationReviewContract,
+    {
+      candidacyId: row.publicId,
+      reference: row.candidateReference,
+      title: found?.cycle.publicTitle ?? "",
+      complete: check.complete,
+      accepting: found?.accepting === true,
+      sections: template.sections.map((section, index) => ({
+        code: section.code,
+        title: section.title,
+        complete: check.sections[index]!.complete,
+        missing: [...check.sections[index]!.missing],
+        answers: section.fields.flatMap((field) => {
+          const value = displayValue(
+            field,
+            answers[section.code]?.[field.code],
+          );
+          return value === null ? [] : [{ label: field.label, value }];
+        }),
+      })),
+      attachments: files.included.map(({ category, name, size }) => ({
+        category,
+        name,
+        size,
+      })),
+      excludedAttachments: [...files.excluded],
+      certification: {
+        version: certification.versionNumber,
+        statement: certification.statement,
+      },
+      reviewToken: reviewTokenFor(
+        answers,
+        files.included.map((f) => f.versionId),
+        certification.versionNumber,
+      ),
+    },
+    ["application.own.submit"],
+    deps,
+  );
+}
+
+/** The candidate's receipt, read from the frozen submission. */
+export async function queryApplicationReceipt(
+  headers: Headers,
+  candidacyId: unknown,
+  deps: CandidateDependencies = candidateDependencies(),
+): Promise<ApplicationQueryResult<ApplicationReceiptView>> {
+  const principal = await resolveCurrentCandidate(headers);
+  if (!principal) return { kind: "UNAUTHENTICATED" };
+  const row = await candidacyById(deps, candidacyId);
+  if (!row) return { kind: "NOT_FOUND" };
+  const decision = await authorize(
+    ownRequest(principal, "candidate.candidacy.read_own", "READ", row.id),
+    deps,
+  );
+  if (decision.decision !== "ALLOW") return { kind: "NOT_FOUND" };
+  const frozen = await findLatestSubmission(db(deps), row.id);
+  if (!frozen) return { kind: "NOT_FOUND" };
+  const found = await cycleForCandidacy(
+    db(deps),
+    { cycleId: row.hiringCycleId },
+    deps.clock(),
+  );
+  return render(
+    applicationReceiptContract,
+    {
+      candidacyId: row.publicId,
+      reference: row.candidateReference,
+      receiptNumber: frozen.submission.receiptNumber,
+      title: found?.cycle.publicTitle ?? "",
+      submitted: savedLabel(frozen.submission.submittedAt),
+      certifiedName: frozen.submission.certifiedName,
+      certificationVersion: frozen.certificationVersion,
+      sectionCount: Object.keys(
+        frozen.submission.answers as Record<string, unknown>,
+      ).length,
+      attachmentCount: frozen.attachmentCount,
+    },
+    ["candidate.candidacy.read_own"],
     deps,
   );
 }

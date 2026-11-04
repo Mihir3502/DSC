@@ -1,6 +1,7 @@
 import "server-only";
 import {
   authorizeCandidateCommand,
+  candidacyWorkflow,
   candidateDependencies,
   findCandidacyByPublicId,
   fingerprint,
@@ -66,13 +67,6 @@ function requireEditable(row: CandidacyRow) {
     refuse("INVALID_TRANSITION");
   }
 }
-
-/** The server-read state the workflow policy decides on. */
-export const candidacyWorkflow = (row: CandidacyRow) =>
-  ({
-    policy: "CANDIDACY_WORKFLOW",
-    state: row.status === "ACTIVE" ? row.currentStage : "CLOSED",
-  }) as const;
 
 const accountOf = (actor: CandidateActor) =>
   actor.kind === "BOOTSTRAP" ? actor.accountId : actor.principal.accountId;

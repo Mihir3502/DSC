@@ -2,6 +2,7 @@ import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import {
   authorizeCandidateCommand,
+  candidacyWorkflow,
   candidateDependencies,
   findCandidacy,
   findCandidacyByPublicId,
@@ -16,7 +17,6 @@ import {
   type CandidateExecutor,
   type CommandContext,
 } from "@/modules/candidates";
-import { candidacyWorkflow } from "@/modules/applications";
 import { withAuditedTransaction } from "@/modules/audit";
 import {
   checkAttachment,

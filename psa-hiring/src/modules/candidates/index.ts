@@ -17,6 +17,8 @@ export {
 export {
   findCandidacy,
   findCandidacyByPublicId,
+  findPerson,
+  newCandidateReference,
   newPublicId,
   type CandidacyRow,
   type Executor as CandidateExecutor,
@@ -24,6 +26,7 @@ export {
 export {
   assignCandidacyOwnerToSelf,
   closeProspect,
+  markApplicationSubmitted,
   createStaffProspect,
   mergePeople,
   reviewDuplicateMatch,
@@ -38,6 +41,7 @@ export {
   queryDuplicateReview,
   queryProspectDetail,
   queryProspectForm,
+  querySubmittedQueue,
 } from "./application/candidate-queries";
 export { candidateProjectionNames } from "./presentation/candidate-views";
 export {
@@ -47,6 +51,7 @@ export {
   queryCandidateTasks,
 } from "./application/candidate-portal-queries";
 export {
+  candidacyWorkflow,
   candidateStatusCode,
   candidateStatusWording,
   taskFilters,

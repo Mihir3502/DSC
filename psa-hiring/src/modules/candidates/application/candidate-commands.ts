@@ -28,7 +28,9 @@ import {
   type FieldProblem,
 } from "../domain/normalization";
 import {
+  completeApplicationTask,
   ensureCompleteApplicationTask,
+  openReviewQueueItem,
   findActiveCandidacy,
   findCandidacyByPublicId,
   findMatchByPublicId,
@@ -1177,4 +1179,43 @@ export async function mergePeople(
     }
     return result;
   });
+}
+
+/**
+ * The stage change a submission makes (M2.6), inside the caller's transaction:
+ * history, the candidate's task completed, and one staff review item opened.
+ * The caller has locked the candidacy and authorized the command.
+ */
+export async function markApplicationSubmitted(
+  ctx: CommandContext,
+  row: CandidacyRow,
+): Promise<CandidacyRow> {
+  const to =
+    stageTransition("submit_application", {
+      stage: row.currentStage as CandidacyStage,
+      status: row.status as CandidacyStatus,
+    }) ?? refuse("INVALID_TRANSITION");
+  const updated =
+    (await updateCandidacy(
+      ctx.tx,
+      row.id,
+      row.version,
+      {
+        currentStage: to.stage,
+        status: to.status,
+        candidateVisibleStatus: candidateVisibleStatus(to.stage, to.status),
+      },
+      ctx.actorId,
+      ctx.now,
+    )) ?? refuse("STALE_VERSION");
+  await recordStage(
+    ctx,
+    updated,
+    "submit_application",
+    { stage: row.currentStage, status: row.status, version: row.version },
+    null,
+  );
+  await completeApplicationTask(ctx.tx, row.id, ctx.now);
+  await openReviewQueueItem(ctx.tx, row.id);
+  return updated;
 }

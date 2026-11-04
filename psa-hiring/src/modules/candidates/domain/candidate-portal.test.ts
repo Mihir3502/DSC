@@ -117,6 +117,26 @@ describe("task filters and categories", () => {
   });
 });
 
+describe("after submission", () => {
+  const submitted = { stage: "APPLICATION_SUBMITTED", status: "ACTIVE" };
+
+  it("offers no next action, shows the task under review, and uses plain wording", () => {
+    expect(resolveNextAction(submitted, [])).toBeNull();
+    expect(taskCategory(item({ status: "COMPLETED" }), submitted)).toBe(
+      "under_review",
+    );
+    expect(
+      taskCategory(item({ status: "COMPLETED" }), {
+        stage: "APPLICATION_SUBMITTED",
+        status: "TERMINAL",
+      }),
+    ).toBe("completed");
+    expect(candidateStatusCode("APPLICATION_SUBMITTED", "ACTIVE")).toBe(
+      "APPLICATION_SUBMITTED",
+    );
+  });
+});
+
 describe("candidacy context", () => {
   const candidate = (over: Partial<ContextCandidate>): ContextCandidate => ({
     ...incomplete,

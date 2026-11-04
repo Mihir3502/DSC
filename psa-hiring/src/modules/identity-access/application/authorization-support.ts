@@ -32,6 +32,14 @@ export function actionRateLimiter(
   return runtime.limiter;
 }
 
+/** Sends the application-received email; rejects if delivery fails. */
+export function applicationEmailSender(
+  runtime: IdentityRuntime = getIdentityRuntime(),
+) {
+  return (to: string, reference: string) =>
+    runtime.email.deliver({ template: "APPLICATION_RECEIVED", to, reference });
+}
+
 export function roleAssignmentDependencies(
   runtime: IdentityRuntime = getIdentityRuntime(),
 ): RoleAssignmentDependencies {

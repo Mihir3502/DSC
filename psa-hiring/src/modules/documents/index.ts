@@ -14,3 +14,7 @@ export {
   MAX_ATTACHMENT_BYTES,
   MAX_UPLOAD_REQUEST_BYTES,
 } from "./domain/attachment-policy";
+export {
+  listSubmittableAttachments,
+  type SubmittableAttachments,
+} from "./application/attachment-queries";

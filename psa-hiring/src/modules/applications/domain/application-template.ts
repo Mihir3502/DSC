@@ -220,3 +220,50 @@ export type AssistReason = (typeof assistReasons)[number];
 
 /** Upper bound on a serialized section submission. */
 export const MAX_ANSWERS_JSON_LENGTH = 40_000;
+
+export type ApplicationCheck = Readonly<{
+  complete: boolean;
+  sections: readonly Readonly<{
+    code: string;
+    title: string;
+    complete: boolean;
+    /** Labels of required answers still missing or no longer valid. */
+    missing: readonly string[];
+  }>[];
+}>;
+
+/** Whole-application validation: every section against the pinned template. */
+export function checkApplication(
+  template: ApplicationTemplate,
+  answersBySection: Readonly<Record<string, unknown>>,
+): ApplicationCheck {
+  const sections = template.sections.map((section) => {
+    const result = validateSection(
+      section,
+      answersBySection[section.code] ?? {},
+    );
+    const labels = (codes: readonly string[]) =>
+      section.fields.filter((f) => codes.includes(f.code)).map((f) => f.label);
+    const missing = !result.ok
+      ? "problems" in result
+        ? labels(Object.keys(result.problems))
+        : section.fields.map((f) => f.label)
+      : labels(result.missing);
+    return {
+      code: section.code,
+      title: section.title,
+      complete: missing.length === 0,
+      missing,
+    };
+  });
+  return { complete: sections.every((s) => s.complete), sections };
+}
+
+/** Normalizes the typed signature; null when it can't be accepted. */
+export function normalizeSignature(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const name = raw.normalize("NFC").trim().replace(/\s+/g, " ");
+  return name.length >= 2 && name.length <= 200 && !hasForbiddenCharacters(name)
+    ? name
+    : null;
+}

@@ -232,3 +232,48 @@ export async function openApplicationAttachment(
     mediaType: current.mediaType as AttachmentMediaType,
   };
 }
+
+export type SubmittableAttachments = Readonly<{
+  included: readonly Readonly<{
+    versionId: string;
+    category: string;
+    name: string;
+    size: string;
+  }>[];
+  /** Files with no clean version, which a submission leaves out. */
+  excluded: readonly Readonly<{ name: string; status: string }>[];
+}>;
+
+/**
+ * What a submission would freeze: each active document's current clean version.
+ * The caller has already authorized the candidacy.
+ */
+export async function listSubmittableAttachments(
+  executor: CandidateExecutor,
+  candidacyId: string,
+): Promise<SubmittableAttachments> {
+  const included = [];
+  const excluded = [];
+  for (const row of await listCandidacyDocuments(executor, candidacyId)) {
+    const current = row.currentVersionId
+      ? await findVersion(executor, row.currentVersionId)
+      : null;
+    if (current) {
+      included.push({
+        versionId: current.id,
+        category: attachmentCategories[row.categoryCode as AttachmentCategory],
+        name: current.displayName,
+        size: sizeLabel(current.sizeBytes),
+      });
+    } else {
+      const latest = await latestVersion(executor, row.id);
+      if (latest) {
+        excluded.push({
+          name: latest.displayName,
+          status: scanStatusLabels[latest.scanStatus as ScanStatus],
+        });
+      }
+    }
+  }
+  return { included, excluded };
+}

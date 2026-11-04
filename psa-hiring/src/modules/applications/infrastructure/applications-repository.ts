@@ -1,8 +1,11 @@
 import "server-only";
-import { and, asc, desc, eq, gt, isNull, lte, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, isNull, lte, or } from "drizzle-orm";
 import type { CandidateExecutor as Executor } from "@/modules/candidates";
 import {
+  applicationCertificationVersion,
   applicationDraftSection,
+  applicationSubmission,
+  applicationSubmissionAttachment,
   applicationTemplate,
   applicationTemplateVersion,
   applicationVersion,
@@ -170,4 +173,54 @@ export async function updateDraftSection(
     )
     .returning();
   return row ?? null;
+}
+
+/** The newest certification statement effective at `at`. */
+export async function findEffectiveCertification(db: Executor, at: Date) {
+  const [row] = await db
+    .select()
+    .from(applicationCertificationVersion)
+    .where(lte(applicationCertificationVersion.effectiveFrom, at))
+    .orderBy(desc(applicationCertificationVersion.versionNumber))
+    .limit(1);
+  return row ?? null;
+}
+
+/** The candidacy's newest application version, in any status. */
+export async function findLatestVersion(
+  db: Executor,
+  candidacyId: string,
+): Promise<ApplicationVersionRow | null> {
+  const [row] = await db
+    .select()
+    .from(applicationVersion)
+    .where(eq(applicationVersion.candidacyId, candidacyId))
+    .orderBy(desc(applicationVersion.versionNumber))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function findLatestSubmission(db: Executor, candidacyId: string) {
+  const [row] = await db
+    .select({
+      submission: applicationSubmission,
+      certificationVersion: applicationCertificationVersion.versionNumber,
+    })
+    .from(applicationSubmission)
+    .innerJoin(
+      applicationCertificationVersion,
+      eq(
+        applicationCertificationVersion.id,
+        applicationSubmission.certificationVersionId,
+      ),
+    )
+    .where(eq(applicationSubmission.candidacyId, candidacyId))
+    .orderBy(desc(applicationSubmission.submittedAt))
+    .limit(1);
+  if (!row) return null;
+  const [files] = await db
+    .select({ n: count() })
+    .from(applicationSubmissionAttachment)
+    .where(eq(applicationSubmissionAttachment.submissionId, row.submission.id));
+  return { ...row, attachmentCount: files?.n ?? 0 };
 }

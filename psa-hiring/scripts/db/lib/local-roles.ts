@@ -202,6 +202,12 @@ export async function applyLocalDatabaseGrants(
     }
   }
 
+  for (const table of applicationFrozenTables) {
+    if (await tableExists(admin, `app.${table}`)) {
+      statements.push(`REVOKE UPDATE ON app.${table} FROM ${app}`);
+    }
+  }
+
   // The runtime role reaches audit storage only through the reviewed
   // SECURITY DEFINER append functions, and may read only the projection
   // columns of audit_event: never integrity hashes, key versions, chain
@@ -266,6 +272,7 @@ export const candidateAppendOnlyTables = [
 export const applicationTemplateTables = [
   "application_template",
   "application_template_version",
+  "application_certification_version",
 ] as const;
 
 /** M2.4 drafts (no runtime DELETE/TRUNCATE). */
@@ -277,6 +284,17 @@ export const applicationDraftTables = [
   // M2.5 attachments: history, never deleted.
   "document",
   "document_version",
+  // M2.6 notification delivery.
+  "outbox_event",
+  // M2.6 frozen submissions (also no runtime UPDATE, below).
+  "application_submission",
+  "application_submission_attachment",
+] as const;
+
+/** M2.6 frozen submissions (runtime SELECT and INSERT only). */
+export const applicationFrozenTables = [
+  "application_submission",
+  "application_submission_attachment",
 ] as const;
 
 /** Assignment columns the runtime role may update (lifecycle only). */

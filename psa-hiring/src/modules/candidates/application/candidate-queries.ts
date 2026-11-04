@@ -37,6 +37,7 @@ import {
   findPersonByAccount,
   hasOpenDuplicate,
   listOpenMatchesInScope,
+  listSubmittedQueueInScope,
   listStageHistory,
   type Executor,
 } from "../infrastructure/candidates-repository";
@@ -50,6 +51,7 @@ import {
   duplicateReviewContract,
   prospectDetailContract,
   prospectFormContract,
+  submittedQueueContract,
   type CandidateStartView,
   type DuplicateReviewView,
   type ProspectDetailView,
@@ -272,6 +274,7 @@ export async function queryProspectForm(
 const stageLabels = {
   PROSPECT: "Prospect",
   APPLICATION_INCOMPLETE: "Application incomplete",
+  APPLICATION_SUBMITTED: "Application submitted",
 } as const;
 
 /** Bounded prospect/candidacy detail (not the M3 workspace). */
@@ -570,4 +573,49 @@ export async function queryCandidacyPath(
   return allowed.decision === "ALLOW"
     ? `/staff/candidates/${row.publicId}`
     : null;
+}
+
+/**
+ * Applications waiting for staff review, unassigned and oldest first (M2.6).
+ * Each row is rechecked on its own record, and a staff member's own candidacy
+ * is excluded. It shows no answer, name, or contact detail.
+ */
+export async function querySubmittedQueue(
+  headers: Headers,
+  deps: CandidateDependencies = candidateDependencies(),
+) {
+  const principal = await staff(headers);
+  if (!principal) return { kind: "UNAUTHENTICATED" } as const;
+  const scope = await authorizeQueryScope(
+    {
+      principal: principalOf(principal),
+      permission: "application.read",
+      operation: "READ",
+      sensitivity: "CONFIDENTIAL_PERSONNEL",
+    },
+    { ...deps, events: silent },
+  );
+  if (scope.decision !== "ALLOW" || scope.constraint.kind !== "SCOPES") {
+    return { kind: "NOT_FOUND" } as const;
+  }
+  const rows = await listSubmittedQueueInScope(db(deps), {
+    ...scope.constraint,
+    excludeSubjectAccountId: principal.accountId,
+  });
+  const items = [];
+  for (const { candidacy: row, queuedAt } of rows) {
+    const recheck = await authorize(
+      request(principal, "application.read", "READ", row.id),
+      { ...deps, events: silent },
+    );
+    if (recheck.decision !== "ALLOW") continue;
+    const summary = await openingSummary(deps, row.hiringCycleId);
+    items.push({
+      id: row.publicId,
+      reference: row.candidateReference,
+      opening: summary ? `${summary.title} · ${summary.location}` : "",
+      submitted: queuedAt.toISOString(),
+    });
+  }
+  return render(submittedQueueContract, { items }, ["application.read"], deps);
 }

@@ -13,6 +13,8 @@ import {
 export const applicationProjectionNames = [
   "candidate.application_overview.v1",
   "candidate.application_section.v1",
+  "candidate.application_review.v1",
+  "candidate.application_receipt.v1",
 ] as const;
 
 const requires = (permission: string): FieldRule => ({
@@ -47,6 +49,8 @@ const overviewSchema = z.strictObject({
   status: label,
   /** False when no draft has been started yet. */
   started: z.boolean(),
+  /** True once the application has been submitted. */
+  submitted: z.boolean(),
   /** False once the application can no longer be edited. */
   editable: z.boolean(),
   sections: z
@@ -79,6 +83,7 @@ export const applicationOverviewContract = defineProjection<
       "location",
       "status",
       "started",
+      "submitted",
       "editable",
       "sections",
       "completeCount",
@@ -152,4 +157,106 @@ export const applicationSectionContract = defineProjection<
     "application.own.edit",
   ),
   schema: sectionSchema,
+});
+
+const reviewSchema = z.strictObject({
+  candidacyId: publicId,
+  reference,
+  title: label,
+  complete: z.boolean(),
+  /** False once the position stops accepting applications. */
+  accepting: z.boolean(),
+  sections: z
+    .array(
+      z.strictObject({
+        code,
+        title: label,
+        complete: z.boolean(),
+        missing: z.array(label).max(30),
+        answers: z
+          .array(
+            z.strictObject({
+              label,
+              value: z.string().max(4000),
+            }),
+          )
+          .max(30),
+      }),
+    )
+    .max(20),
+  attachments: z
+    .array(z.strictObject({ category: label, name: label, size: label }))
+    .max(20),
+  excludedAttachments: z
+    .array(z.strictObject({ name: label, status: label }))
+    .max(20),
+  certification: z.strictObject({
+    version: z.number().int().min(1),
+    statement: z.string().max(2000),
+  }),
+  /** Binds the submission to exactly what this page shows. */
+  reviewToken: z.string().regex(/^[0-9a-f]{64}$/),
+});
+export type ApplicationReviewView = z.infer<typeof reviewSchema>;
+
+export const applicationReviewContract = defineProjection<
+  ApplicationReviewView,
+  ApplicationReviewView
+>({
+  name: "candidate.application_review.v1",
+  audience: "CANDIDATE",
+  purpose: "REVIEW",
+  fields: fieldsFor<ApplicationReviewView>(
+    [
+      "candidacyId",
+      "reference",
+      "title",
+      "complete",
+      "accepting",
+      "sections",
+      "attachments",
+      "excludedAttachments",
+      "certification",
+      "reviewToken",
+    ],
+    "application.own.submit",
+  ),
+  schema: reviewSchema,
+});
+
+const receiptSchema = z.strictObject({
+  candidacyId: publicId,
+  reference,
+  receiptNumber: z.string().regex(/^R-[0-9A-HJKMNP-TV-Z]{8}$/),
+  title: label,
+  submitted: label,
+  certifiedName: label,
+  certificationVersion: z.number().int().min(1),
+  sectionCount: z.number().int().min(0),
+  attachmentCount: z.number().int().min(0),
+});
+export type ApplicationReceiptView = z.infer<typeof receiptSchema>;
+
+export const applicationReceiptContract = defineProjection<
+  ApplicationReceiptView,
+  ApplicationReceiptView
+>({
+  name: "candidate.application_receipt.v1",
+  audience: "CANDIDATE",
+  purpose: "STATUS",
+  fields: fieldsFor<ApplicationReceiptView>(
+    [
+      "candidacyId",
+      "reference",
+      "receiptNumber",
+      "title",
+      "submitted",
+      "certifiedName",
+      "certificationVersion",
+      "sectionCount",
+      "attachmentCount",
+    ],
+    "candidate.candidacy.read_own",
+  ),
+  schema: receiptSchema,
 });

@@ -50,11 +50,20 @@ const knownRoutes = new Set([
   // M2.2 (record ids are labelled by template, never raw).
   "/staff/candidates/new",
   "/staff/candidates/duplicates",
+  "/staff/candidates/submitted",
 ]);
 
 /** Dynamic M2.1 routes: label by template so no reference is logged. */
 const templateRoutes: readonly (readonly [RegExp, string])[] = [
   [/^\/positions\/[^/]+$/, "/positions/[positionId]"],
+  [
+    /^\/candidate\/applications\/[^/]+\/review$/,
+    "/candidate/applications/[candidacyId]/review",
+  ],
+  [
+    /^\/candidate\/applications\/[^/]+\/submitted$/,
+    "/candidate/applications/[candidacyId]/submitted",
+  ],
   [
     /^\/candidate\/applications\/[^/]+\/attachments$/,
     "/candidate/applications/[candidacyId]/attachments",

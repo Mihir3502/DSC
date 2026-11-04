@@ -494,8 +494,8 @@
     {
       "id": "PRD-APP-003",
       "title": "The system shall validate required fields before submission",
-      "status": "partial",
-      "note": "M2.4 tracks required fields per section (a missing answer keeps it In progress). The submission check itself is M2.6.",
+      "status": "covered",
+      "note": "M2.6: whole-application validation against the pinned template at submission.",
       "tests": [
         {
           "file": "src/modules/applications/domain/application-template.test.ts",
@@ -504,6 +504,34 @@
         {
           "file": "src/modules/applications/domain/application-template.test.ts",
           "title": "marks a section complete once every required answer is valid"
+        },
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "names what's missing and changes nothing when the application is incomplete"
+        }
+      ]
+    },
+    {
+      "id": "PRD-APP-004",
+      "title": "Submitted answers shall be versioned or historically recoverable",
+      "status": "covered",
+      "note": "M2.6: an append-only frozen submission.",
+      "tests": [
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "makes a submission immutable and refuses a version submitted without one"
+        }
+      ]
+    },
+    {
+      "id": "PRD-APP-007",
+      "title": "The system shall record candidate certification, submission time, and applicable form version",
+      "status": "covered",
+      "note": "M2.6: certification version, typed name, time, and template version on the frozen record.",
+      "tests": [
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "freezes answers, clean files, and certification, moves the stage, and swaps the tasks, all at once"
         }
       ]
     }
@@ -3579,6 +3607,167 @@
         {
           "file": "tests/e2e/application-attachments.spec.ts",
           "title": "a candidate uploads, sees refusals, downloads safely, replaces, and removes"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.6-01",
+      "tests": [
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "names what's missing and changes nothing when the application is incomplete"
+        },
+        {
+          "file": "src/modules/applications/domain/application-template.test.ts",
+          "title": "reports each section and the labels still needed"
+        },
+        {
+          "file": "src/modules/applications/domain/application-template.test.ts",
+          "title": "treats a stored answer that no longer validates as still needed"
+        },
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "refuses once the hiring cycle closes, and keeps the draft"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.6-02",
+      "tests": [
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "requires the certification, a typed name, and a current version"
+        },
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "freezes answers, clean files, and certification, moves the stage, and swaps the tasks, all at once"
+        },
+        {
+          "file": "src/modules/applications/domain/application-template.test.ts",
+          "title": "normalizes a name and refuses an unusable one"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.6-03",
+      "tests": [
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "freezes the application: no later save, upload, removal, or review"
+        },
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "freezes only clean files and tells the candidate which are left out"
+        },
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "refuses when answers or files changed after the review page was read"
+        },
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "makes a submission immutable and refuses a version submitted without one"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.6-04",
+      "tests": [
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "gives the candidate a receipt and read-only status, and nothing left to do"
+        },
+        {
+          "file": "tests/e2e/application-submission.spec.ts",
+          "title": "a candidate reviews, certifies, submits, and gets a receipt, and a recruiter sees the queue item"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.6-05",
+      "tests": [
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "freezes answers, clean files, and certification, moves the stage, and swaps the tasks, all at once"
+        },
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "lists a submission for scoped staff only, with no answers or names"
+        },
+        {
+          "file": "tests/e2e/application-submission.spec.ts",
+          "title": "a candidate reviews, certifies, submits, and gets a receipt, and a recruiter sees the queue item"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.6-06",
+      "tests": [
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "delivers once to the verified address, with the reference and no answers"
+        },
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "retries a failed delivery without undoing the submission, then stops"
+        },
+        {
+          "file": "tests/e2e/application-submission.spec.ts",
+          "title": "a candidate reviews, certifies, submits, and gets a receipt, and a recruiter sees the queue item"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.6-X1",
+      "tests": [
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "gives another candidate and an unknown reference the same result, with no change"
+        },
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "denies every staff role the candidate's submission"
+        },
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "lists a submission for scoped staff only, with no answers or names"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.6-X2",
+      "tests": [
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "replays the same key once and rejects it with a different request"
+        },
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "serializes concurrent submissions so only one applies"
+        },
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "rolls everything back when the audit append fails"
+        },
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "keeps every audit chain verifiable"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.6-X3",
+      "tests": [
+        {
+          "file": "tests/accessibility/application-submission.a11y.spec.ts",
+          "title": "review, confirmation, and receipt are accessible and keyboard operable"
+        },
+        {
+          "file": "tests/integration/applications/submission.test.ts",
+          "title": "limits submission attempts per account"
+        },
+        {
+          "file": "tests/e2e/application-submission.spec.ts",
+          "title": "a candidate reviews, certifies, submits, and gets a receipt, and a recruiter sees the queue item"
         }
       ]
     }
