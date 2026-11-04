@@ -727,6 +727,7 @@ describe("authorization and nondisclosure (AC-M2.4-X1)", () => {
     expect(Object.keys(view.view).sort()).toEqual([
       "candidacyId",
       "code",
+      "correction",
       "description",
       "fields",
       "lastSaved",
@@ -939,7 +940,7 @@ describe("database integrity (AC-M2.4-X2)", () => {
         "UPDATE app.application_version SET status = 'ARCHIVED' WHERE id = $1",
         [started.draftId],
       ),
-    ).toBe("23514");
+    ).toBe("CN005");
     expect(
       await sqlstate(
         "UPDATE app.application_draft_section SET saved_by_kind = 'STAFF_ASSIST', version = version + 1 WHERE application_version_id = $1",

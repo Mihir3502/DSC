@@ -299,6 +299,8 @@ const staffReviewSchema = z.strictObject({
   certifiedName: label,
   certificationVersion: z.number().int().min(1),
   version: z.number().int().min(1),
+  /** True once returned, until the candidate submits a correction. */
+  awaitingCorrection: z.boolean(),
   /** True only when this staff member may return it now. */
   canReturn: z.boolean(),
   sections: z
@@ -350,6 +352,7 @@ export const staffApplicationReviewContract = defineProjection<
       "certifiedName",
       "certificationVersion",
       "version",
+      "awaitingCorrection",
       "canReturn",
       "sections",
       "attachments",

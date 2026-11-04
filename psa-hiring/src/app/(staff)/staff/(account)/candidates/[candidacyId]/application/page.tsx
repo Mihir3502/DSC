@@ -114,6 +114,13 @@ export default async function StaffApplicationPage({
         </section>
       ) : null}
 
+      {view.awaitingCorrection ? (
+        <p role="status" className="rounded-lg border p-4">
+          Application returned. Waiting for the candidate to correct and submit
+          it. This page shows what they last submitted.
+        </p>
+      ) : null}
+
       {view.canReturn ? (
         <StaffReturnForm
           action={returnApplicationAction}

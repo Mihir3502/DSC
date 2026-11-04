@@ -40,7 +40,6 @@ export function StaffReturnForm({
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
   const alert = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
@@ -82,7 +81,7 @@ export function StaffReturnForm({
     try {
       const result = await action(data);
       if (result.ok) {
-        setDone(true);
+        // The refreshed page shows the lasting returned state.
         router.refresh();
         return;
       }
@@ -98,14 +97,6 @@ export function StaffReturnForm({
     } finally {
       setBusy(false);
     }
-  }
-
-  if (done) {
-    return (
-      <p role="status" className="rounded-lg border p-4">
-        Application returned. The candidate has been asked to correct it.
-      </p>
-    );
   }
 
   return (

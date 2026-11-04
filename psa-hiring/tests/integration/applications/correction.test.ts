@@ -836,6 +836,42 @@ describe("correcting (AC-M2.7-02/03/04)", () => {
     ]);
   });
 
+  it("keeps showing staff the last submission while a correction is under way", async () => {
+    const s = await submittedCandidate();
+    const staffRead = () =>
+      queryStaffApplicationReview(
+        headers(staff.recruiter!.jar),
+        s.candidacyId,
+        deps,
+      );
+    expect(await staffRead()).toMatchObject({
+      kind: "OK",
+      view: { awaitingCorrection: false, canReturn: true },
+    });
+    await sendBack(s);
+    expect(await staffRead()).toMatchObject({
+      kind: "OK",
+      view: { awaitingCorrection: true, canReturn: false },
+    });
+    await beginCorrection(s);
+    const open = await sectionVersion(s, "availability");
+    await save(
+      s,
+      "availability",
+      { ...complete.availability, earliest_start_date: "2027-03-03" },
+      String(open.version),
+    );
+    const during = await staffRead();
+    if (during.kind !== "OK") throw new Error("staff lost the application");
+    expect(during.view).toMatchObject({
+      awaitingCorrection: true,
+      canReturn: false,
+    });
+    // The unsubmitted draft stays out of the frozen view.
+    expect(JSON.stringify(during.view.sections)).toContain("2026-12-01");
+    expect(JSON.stringify(during.view.sections)).not.toContain("2027-03-03");
+  });
+
   it("lets a correction finish after the hiring cycle closes", async () => {
     const s = await submittedCandidate();
     await sendBack(s);

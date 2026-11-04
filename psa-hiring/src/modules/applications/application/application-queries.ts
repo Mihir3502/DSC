@@ -40,7 +40,6 @@ import {
   findLatestSubmission,
   findLatestVersion,
   findReturn,
-  findSubmissionOfVersion,
   listReturns,
   findTemplateVersion,
   listDraftSections,
@@ -504,12 +503,11 @@ export async function queryStaffApplicationReview(
     deps,
   );
   if (decision.decision !== "ALLOW") return { kind: "NOT_FOUND" };
+  // The newest frozen submission, even while a correction is being drafted.
   const latest = await findLatestVersion(db(deps), row.id);
-  const frozen = latest
-    ? await findSubmissionOfVersion(db(deps), latest.id)
-    : null;
   const record = await findLatestSubmission(db(deps), row.id);
-  if (!latest || !frozen || !record) return { kind: "NOT_FOUND" };
+  if (!latest || !record) return { kind: "NOT_FOUND" };
+  const frozen = record.submission;
   const template = await templateFor(deps, frozen.templateVersionId);
   if (!template) return { kind: "NOT_FOUND" };
   const review = await authorize(
@@ -541,6 +539,7 @@ export async function queryStaffApplicationReview(
       certifiedName: frozen.certifiedName,
       certificationVersion: record.certificationVersion,
       version: row.version,
+      awaitingCorrection: latest.status !== "SUBMITTED",
       canReturn:
         review.decision === "ALLOW" &&
         latest.status === "SUBMITTED" &&
