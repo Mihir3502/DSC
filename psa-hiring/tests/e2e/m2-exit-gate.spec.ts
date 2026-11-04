@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
 import {
   completeRequiredSections,
@@ -138,7 +138,7 @@ test.describe("M2 exit gate @critical", () => {
       {
         headers: { origin: baseURL! },
         multipart: {
-          commandKey: "00000000-0000-4000-8000-000000000003",
+          commandKey: randomUUID(),
           category: "RESUME",
           file: {
             name: "TEST.pdf",

@@ -47,7 +47,8 @@ export default defineConfig({
     // never run against an unknown process.
     reuseExistingServer: false,
     timeout: 180_000,
-    stdout: "ignore",
+    // Piped so the runner's leakage scan sees everything the server logs.
+    stdout: "pipe",
     stderr: "pipe",
     env: { NEXT_TELEMETRY_DISABLED: "1", APP_ENV: "test" },
   },

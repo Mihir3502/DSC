@@ -12,6 +12,8 @@ const forbiddenDir = /^(\.auth|\.local|node_modules|\.next)$/;
 const textExtension =
   /\.(json|html?|txt|md|xml|log|csv|lcov|info|js|css|svg)$/i;
 const CANARY_TAG = "TESTCANARY";
+// Marks synthetic application answers in E2E journeys (M2 exit gate).
+const APPLICATION_CANARY_TAG = "PSACANARY";
 
 export type ArtifactProblem = { file: string; reason: string };
 
@@ -27,7 +29,10 @@ export function checkArtifactFile(
   if (segments.some((s) => forbiddenDir.test(s)))
     problems.push({ file: relativePath, reason: "prohibited directory" });
   if (content !== undefined) {
-    if (content.includes(CANARY_TAG))
+    if (
+      content.includes(CANARY_TAG) ||
+      content.includes(APPLICATION_CANARY_TAG)
+    )
       problems.push({ file: relativePath, reason: "synthetic canary present" });
     for (const finding of scanForCanaries(relativePath, content)) {
       problems.push({ file: relativePath, reason: finding.rule });

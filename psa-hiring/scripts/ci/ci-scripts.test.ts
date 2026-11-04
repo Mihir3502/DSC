@@ -239,6 +239,14 @@ describe("artifact-guard", () => {
     expect(checkArtifactFile(file, "")).not.toEqual([]);
   });
 
+  it("rejects text containing the application data marker, naming only the rule", () => {
+    const problems = checkArtifactFile(
+      "test-results/error-context.md",
+      "answer: PSACANARYANSWERABC123",
+    );
+    expect(problems.map((p) => p.reason)).toEqual(["synthetic canary present"]);
+  });
+
   it("rejects text containing a synthetic canary or real-data pattern, naming only the rule", () => {
     const problems = checkArtifactFile(
       "playwright-report/index.html",
