@@ -798,6 +798,9 @@ describe("event coverage (§17)", () => {
       "candidacy.created",
       "candidacy.stage_changed",
       "candidacy.owner_assigned",
+      // M3.1: asserted in tests/integration/candidates/work-queue.test.ts.
+      "candidacy.owner_released",
+      "work_item.due_date_changed",
       "prospect.closed",
       "duplicate_match.created",
       "duplicate_match.reviewed",

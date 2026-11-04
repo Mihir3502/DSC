@@ -4,8 +4,8 @@ import { currentRequestHeaders } from "@/app/_auth/auth-messages";
 import { querySubmittedQueue } from "@/modules/candidates";
 import { refuseAccess } from "@/modules/identity-access/delivery/route-authorization";
 
-// Submitted applications waiting for review (packet M2.6). A narrow list only:
-// assignment, review, and the unified work queue arrive with M3.
+// Submitted applications waiting for review (packet M2.6). A narrow list only.
+// Assignment lives in the unified work queue (M3.1, /staff/work).
 
 export const metadata: Metadata = { title: "Submitted applications" };
 export const dynamic = "force-dynamic";
@@ -24,7 +24,7 @@ export default async function SubmittedQueuePage() {
           Submitted applications
         </h1>
         <p className="text-muted-foreground">
-          Applications waiting for review, oldest first. All are unassigned.
+          Applications waiting for review, oldest first.
         </p>
       </div>
       {items.length === 0 ? (

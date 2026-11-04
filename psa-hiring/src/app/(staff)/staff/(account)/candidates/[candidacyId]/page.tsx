@@ -107,14 +107,15 @@ export default async function ProspectDetailPage({
                 hidden={hidden}
               />
             ) : null}
-            {view.owner !== "You" && view.actions.includes("owner_assign") ? (
+            {view.owner === "Unassigned" &&
+            view.actions.includes("owner_assign") ? (
               <ConfirmCommand
                 action={assignOwnerToMeAction}
                 label="Assign to me"
                 title="Become the owner"
                 recordLabel={view.reference}
                 result="You are the owner"
-                consequence="You become responsible for following up on this record. Any previous owner is replaced; the change is recorded."
+                consequence="You become responsible for following up on this record. It doesn't change the stage or give you access to the candidate's account."
                 hidden={hidden}
               />
             ) : null}

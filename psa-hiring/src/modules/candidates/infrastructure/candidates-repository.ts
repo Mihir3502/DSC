@@ -5,14 +5,18 @@ import {
   asc,
   desc,
   eq,
+  gte,
   inArray,
   isNotNull,
+  isNull,
+  lt,
   ne,
   or,
   sql,
   type AnyColumn,
   type SQL,
 } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { Database } from "@/shared/database";
 import type { QueryConstraint } from "@/modules/identity-access/application/authorize";
 import { constraintPredicate } from "@/modules/identity-access/infrastructure/scope-predicates";
@@ -25,7 +29,18 @@ import {
   person,
   personMergeRecord,
   workItem,
+  workResponsibilityHistory,
 } from "./candidates-schema";
+import { user } from "@/modules/identity-access/infrastructure/auth-schema";
+import {
+  branch,
+  position,
+} from "@/modules/organization/infrastructure/organization-schema";
+import {
+  dueWindow,
+  type WorkQueueCursor,
+  type WorkQueueFilters,
+} from "../domain/work-queue";
 
 // Candidates-module repository (packet M2.2 §17, §21–§22). Narrow named
 // statements only: no generic update, patch, search, or delete. Version
@@ -872,4 +887,322 @@ export async function reconcileWorkItems(
   `);
   const count = (r: unknown) => (r as { rowCount?: number }).rowCount ?? 0;
   return { opened: count(opened), canceled: count(canceled) };
+}
+
+// ------------------------------------------------------- M3.1 work queue
+
+const activeWorkStatuses = ["OPEN", "IN_PROGRESS", "BLOCKED"];
+const staffItem = alias(workItem, "staff_item");
+const ownerAccount = alias(user, "owner_account");
+
+const exactInstant = (column: AnyColumn) =>
+  sql<string>`to_char(${column} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`;
+
+const isReturned = sql<boolean>`EXISTS (SELECT 1 FROM ${workItem} WHERE ${workItem.candidacyId} = ${candidacy.id} AND ${workItem.workTypeCode} = 'CORRECT_APPLICATION' AND ${workItem.status} IN ('OPEN', 'IN_PROGRESS', 'BLOCKED'))`;
+
+const staffItemJoin = and(
+  eq(staffItem.candidacyId, candidacy.id),
+  eq(staffItem.candidateActionRequired, false),
+  inArray(staffItem.status, activeWorkStatuses),
+);
+
+export type WorkQueueContext = Readonly<{
+  constraint: QueryConstraint;
+  actorAccountId: string;
+  teamIds: readonly string[];
+  now: Date;
+}>;
+
+function scopedActive(context: WorkQueueContext) {
+  return and(
+    eq(candidacy.status, "ACTIVE"),
+    constraintPredicate(context.constraint, {
+      organizationId: candidacy.organizationId,
+      branchId: candidacy.branchId,
+      teamId: candidacy.teamId,
+      subjectAccountId: person.candidateAccountId,
+    }),
+  )!;
+}
+
+function dueCondition(filter: WorkQueueFilters["due"], now: Date) {
+  switch (filter) {
+    case "OVERDUE":
+      return lt(staffItem.dueAt, now);
+    case "TODAY":
+    case "NEXT_7": {
+      const window = dueWindow(filter, now);
+      return and(
+        gte(staffItem.dueAt, window.from),
+        lt(staffItem.dueAt, window.to),
+      );
+    }
+    case "NONE":
+      return isNull(staffItem.dueAt);
+    default:
+      return undefined;
+  }
+}
+
+function assignmentCondition(
+  filter: WorkQueueFilters["assignment"],
+  context: WorkQueueContext,
+) {
+  switch (filter) {
+    case "MINE":
+      return eq(candidacy.ownerAccountId, context.actorAccountId);
+    case "UNASSIGNED":
+      return isNull(candidacy.ownerAccountId);
+    case "TEAM":
+      return context.teamIds.length > 0
+        ? inArray(candidacy.teamId, [...context.teamIds])
+        : sql`false`;
+    default:
+      return undefined;
+  }
+}
+
+function cursorCondition(cursor: WorkQueueCursor | null) {
+  if (!cursor) return undefined;
+  const after = sql`(${candidacy.createdAt}, ${candidacy.publicId}) > (${cursor.createdAt}::timestamptz, ${cursor.publicId})`;
+  if (cursor.dueAt === null) return and(isNull(staffItem.dueAt), after);
+  const due = sql`${cursor.dueAt}::timestamptz`;
+  return or(
+    sql`${staffItem.dueAt} > ${due}`,
+    isNull(staffItem.dueAt),
+    and(sql`${staffItem.dueAt} = ${due}`, after),
+  );
+}
+
+function queueWhere(filters: WorkQueueFilters, context: WorkQueueContext) {
+  return and(
+    scopedActive(context),
+    assignmentCondition(filters.assignment, context),
+    filters.stage ? eq(candidacy.currentStage, filters.stage) : undefined,
+    dueCondition(filters.due, context.now),
+    filters.branch ? eq(candidacy.branchId, filters.branch) : undefined,
+    filters.position ? eq(candidacy.positionId, filters.position) : undefined,
+    filters.workerPath
+      ? eq(candidacy.proposedWorkerPath, filters.workerPath)
+      : undefined,
+    filters.exception === "RETURNED" ? isReturned : undefined,
+  );
+}
+
+/**
+ * One page, in a stable order: soonest due first, no due date last, then
+ * oldest, then a unique identifier. Scope is in WHERE, so out-of-scope rows are
+ * never ordered, counted, or read, and a forged cursor can only move within
+ * what the caller may see.
+ */
+export async function listWorkQueuePage(
+  db: Executor,
+  filters: WorkQueueFilters,
+  context: WorkQueueContext,
+  limit: number,
+) {
+  return db
+    .select({
+      id: candidacy.id,
+      publicId: candidacy.publicId,
+      reference: candidacy.candidateReference,
+      stage: candidacy.currentStage,
+      createdAt: candidacy.createdAt,
+      createdAtText: exactInstant(candidacy.createdAt),
+      workerPath: candidacy.proposedWorkerPath,
+      ownerAccountId: candidacy.ownerAccountId,
+      ownerName: ownerAccount.name,
+      preferredName: person.preferredName,
+      legalFirstName: person.legalFirstName,
+      legalLastName: person.legalLastName,
+      position: position.internalTitle,
+      branch: branch.name,
+      itemId: staffItem.id,
+      dueAt: staffItem.dueAt,
+      dueAtText: exactInstant(staffItem.dueAt),
+      returned: isReturned,
+    })
+    .from(candidacy)
+    .innerJoin(person, eq(person.id, candidacy.personId))
+    .innerJoin(position, eq(position.id, candidacy.positionId))
+    .innerJoin(branch, eq(branch.id, candidacy.branchId))
+    .leftJoin(ownerAccount, eq(ownerAccount.id, candidacy.ownerAccountId))
+    .leftJoin(staffItem, staffItemJoin)
+    .where(and(queueWhere(filters, context), cursorCondition(filters.cursor)))
+    .orderBy(
+      sql`${staffItem.dueAt} ASC NULLS LAST`,
+      asc(candidacy.createdAt),
+      asc(candidacy.publicId),
+    )
+    .limit(limit);
+}
+
+/** How many rows match, from the same predicate as the page. */
+export async function countWorkQueue(
+  db: Executor,
+  filters: WorkQueueFilters,
+  context: WorkQueueContext,
+): Promise<number> {
+  const [row] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(candidacy)
+    .innerJoin(person, eq(person.id, candidacy.personId))
+    .leftJoin(staffItem, staffItemJoin)
+    .where(queueWhere(filters, context));
+  return row?.total ?? 0;
+}
+
+/** Aggregates for the dashboard; every one is inside the caller's scope. */
+export async function countWorkQueueDashboard(
+  db: Executor,
+  context: WorkQueueContext,
+) {
+  const today = dueWindow("TODAY", context.now);
+  const [row] = await db
+    .select({
+      myDueToday: sql<number>`count(*) FILTER (WHERE ${candidacy.ownerAccountId} = ${context.actorAccountId} AND ${staffItem.dueAt} >= ${today.from.toISOString()}::timestamptz AND ${staffItem.dueAt} < ${today.to.toISOString()}::timestamptz)::int`,
+      overdue: sql<number>`count(*) FILTER (WHERE ${staffItem.dueAt} < ${context.now.toISOString()}::timestamptz)::int`,
+      unassignedSubmitted: sql<number>`count(*) FILTER (WHERE ${candidacy.ownerAccountId} IS NULL AND ${candidacy.currentStage} = 'APPLICATION_SUBMITTED')::int`,
+      returned: sql<number>`count(*) FILTER (WHERE ${isReturned})::int`,
+    })
+    .from(candidacy)
+    .innerJoin(person, eq(person.id, candidacy.personId))
+    .leftJoin(staffItem, staffItemJoin)
+    .where(scopedActive(context));
+  return (
+    row ?? { myDueToday: 0, overdue: 0, unassignedSubmitted: 0, returned: 0 }
+  );
+}
+
+/** Branches and positions the caller's active records are actually in. */
+export async function listWorkQueueFilterOptions(
+  db: Executor,
+  context: WorkQueueContext,
+) {
+  const base = scopedActive(context);
+  const [branches, positions] = await Promise.all([
+    db
+      .selectDistinct({ id: branch.id, label: branch.name })
+      .from(candidacy)
+      .innerJoin(person, eq(person.id, candidacy.personId))
+      .innerJoin(branch, eq(branch.id, candidacy.branchId))
+      .where(base)
+      .orderBy(asc(branch.name), asc(branch.id))
+      .limit(100),
+    db
+      .selectDistinct({ id: position.id, label: position.internalTitle })
+      .from(candidacy)
+      .innerJoin(person, eq(person.id, candidacy.personId))
+      .innerJoin(position, eq(position.id, candidacy.positionId))
+      .where(base)
+      .orderBy(asc(position.internalTitle), asc(position.id))
+      .limit(100),
+  ]);
+  return { branches, positions };
+}
+
+/** The one open staff item on a candidacy, optionally locked. */
+export async function findOpenStaffWorkItem(
+  db: Executor,
+  candidacyId: string,
+  lock: Lock = null,
+) {
+  const query = db
+    .select()
+    .from(workItem)
+    .where(
+      and(
+        eq(workItem.candidacyId, candidacyId),
+        eq(workItem.candidateActionRequired, false),
+        inArray(workItem.status, activeWorkStatuses),
+      ),
+    )
+    .orderBy(asc(workItem.createdAt), asc(workItem.id))
+    .limit(1);
+  const [row] = await (locked(query, lock) as typeof query);
+  return row ?? null;
+}
+
+export async function updateWorkItemDueDate(
+  tx: Executor,
+  id: string,
+  expectedVersion: number,
+  dueAt: Date | null,
+  now: Date,
+) {
+  const [row] = await tx
+    .update(workItem)
+    .set({ dueAt, version: sql`${workItem.version} + 1`, updatedAt: now })
+    .where(and(eq(workItem.id, id), eq(workItem.version, expectedVersion)))
+    .returning();
+  return row ?? null;
+}
+
+export async function insertResponsibilityHistory(
+  tx: Executor,
+  values: Readonly<{
+    candidacyId: string;
+    workItemId?: string;
+    changeCode:
+      | "OWNER_ASSIGNED"
+      | "OWNER_REASSIGNED"
+      | "OWNER_RELEASED"
+      | "DUE_DATE_SET"
+      | "DUE_DATE_CLEARED";
+    previousOwnerAccountId?: string;
+    newOwnerAccountId?: string;
+    previousDueAt?: Date | null;
+    newDueAt?: Date | null;
+    reasonCode?: string;
+    actorAccountId: string;
+    occurredAt: Date;
+  }>,
+): Promise<void> {
+  await tx.insert(workResponsibilityHistory).values(values);
+}
+
+/** Newest first; bounded. Codes and instants, with the actor's display name. */
+export async function listResponsibilityHistory(
+  db: Executor,
+  candidacyId: string,
+  limit = 20,
+) {
+  return db
+    .select({
+      id: workResponsibilityHistory.id,
+      changeCode: workResponsibilityHistory.changeCode,
+      reasonCode: workResponsibilityHistory.reasonCode,
+      occurredAt: workResponsibilityHistory.occurredAt,
+      actorName: user.name,
+    })
+    .from(workResponsibilityHistory)
+    .innerJoin(user, eq(user.id, workResponsibilityHistory.actorAccountId))
+    .where(eq(workResponsibilityHistory.candidacyId, candidacyId))
+    .orderBy(
+      desc(workResponsibilityHistory.occurredAt),
+      desc(workResponsibilityHistory.id),
+    )
+    .limit(limit);
+}
+
+export async function findAccountName(db: Executor, accountId: string) {
+  const [row] = await db
+    .select({ name: user.name })
+    .from(user)
+    .where(eq(user.id, accountId));
+  return row?.name ?? null;
+}
+
+/** Branch and position names for one record's summary. */
+export async function findPlacementLabels(
+  db: Executor,
+  branchId: string,
+  positionId: string,
+) {
+  const [row] = await db
+    .select({ branch: branch.name, position: position.internalTitle })
+    .from(branch)
+    .innerJoin(position, eq(position.id, positionId))
+    .where(eq(branch.id, branchId));
+  return row ?? null;
 }

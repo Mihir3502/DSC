@@ -6,13 +6,16 @@ import {
   returnApplication,
 } from "@/modules/applications";
 import {
+  assignCandidacyOwner,
   assignCandidacyOwnerToSelf,
   closeProspect,
   candidateDependencies,
   createStaffProspect,
   mergePeople,
   queryCandidacyPath,
+  releaseCandidacyOwner,
   reviewDuplicateMatch,
+  setWorkItemDueDate,
   staffActorFrom,
   startApplicationFromProspect,
   type CandidateActor,
@@ -59,6 +62,8 @@ const refusalText: Readonly<Record<string, string>> = {
   COMMAND_KEY_CONFLICT:
     "This form was already used for a different request. Reload the page and try again.",
   INVALID_INPUT: "Check the form and try again.",
+  OWNER_NOT_ELIGIBLE:
+    "That person can't own this record. Reload the page and choose someone else.",
   RATE_LIMITED: "Too many attempts. Wait a few minutes, then try again.",
   BLOCKED_CASE_NOT_CONFIRMED: "Confirm the duplicate before merging.",
   BLOCKED_PERSON_NOT_ACTIVE:
@@ -207,6 +212,42 @@ export async function assignOwnerToMeAction(
   const result = await assignCandidacyOwnerToSelf(input.values, await actor());
   return outcome(previous, result, input.values, {
     message: "You are now the owner.",
+  });
+}
+
+export async function assignOwnerAction(
+  previous: ConfigFormState,
+  formData: FormData,
+): Promise<ConfigFormState> {
+  const input = parseFormInput(formData, formSchemas.workOwnerAssign);
+  if (input.kind === "REJECTED") return rejected(previous);
+  const result = await assignCandidacyOwner(input.values, await actor());
+  return outcome(previous, result, input.values, {
+    message: "Owner updated.",
+  });
+}
+
+export async function releaseOwnerAction(
+  previous: ConfigFormState,
+  formData: FormData,
+): Promise<ConfigFormState> {
+  const input = parseFormInput(formData, formSchemas.candidacyCommand);
+  if (input.kind === "REJECTED") return rejected(previous);
+  const result = await releaseCandidacyOwner(input.values, await actor());
+  return outcome(previous, result, input.values, {
+    message: "This record is now unassigned.",
+  });
+}
+
+export async function setDueDateAction(
+  previous: ConfigFormState,
+  formData: FormData,
+): Promise<ConfigFormState> {
+  const input = parseFormInput(formData, formSchemas.workDueDate);
+  if (input.kind === "REJECTED") return rejected(previous);
+  const result = await setWorkItemDueDate(input.values, await actor());
+  return outcome(previous, result, input.values, {
+    message: "Due date updated.",
   });
 }
 

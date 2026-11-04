@@ -26,8 +26,8 @@ describe("role × permission matrix (§10)", () => {
   it("covers every catalog role and permission exactly once", () => {
     const ids = new Set(pairRows.map((r) => r.id));
     expect(ids.size).toBe(pairRows.length);
-    expect(pairRows.length).toBe(roleCodes.length * 202);
-    expect(pairRows.filter((r) => r.granted)).toHaveLength(415);
+    expect(pairRows.length).toBe(roleCodes.length * 205);
+    expect(pairRows.filter((r) => r.granted)).toHaveLength(421);
   });
 
   it.each(pairRows.map((row) => [row.id, row] as const))(

@@ -1,7 +1,7 @@
 {
   "$comment": "Reviewed snapshot of the accepted grant catalog (packet M1.7 §7; version 2 adds the M2.1 organization-configuration grants; version 3 the M2.2 person and candidacy grants). Changing a grant requires an approved catalog change AND an updated snapshot; tests/authorization/m1-matrix-coverage.test.ts fails on any difference.",
-  "catalogVersion": 3,
-  "catalogDigest": "10dc8a26d0ba5595ea8356de02c1107fa60aa5611d9f9f77a3295a5d2b1c81b9",
+  "catalogVersion": 4,
+  "catalogDigest": "d22092c4adce6ffdc8ebbcd0952abd18336e7c6da7cbc4d2ead1fa41891a57ad",
   "grants": [
     {
       "role": "AUDITOR_READ_ONLY",
@@ -1029,6 +1029,12 @@
     },
     {
       "role": "HR_SPECIALIST",
+      "permission": "candidate.work_queue.read",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "HR_SPECIALIST",
       "permission": "capability_profile.read",
       "condition": null,
       "status": "ACTIVE"
@@ -1563,6 +1569,12 @@
     },
     {
       "role": "PSA_MANAGER",
+      "permission": "candidate.due_date.manage",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
       "permission": "candidate.duplicate.review",
       "condition": null,
       "status": "ACTIVE"
@@ -1570,6 +1582,12 @@
     {
       "role": "PSA_MANAGER",
       "permission": "candidate.owner.assign",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "candidate.owner.assign_others",
       "condition": null,
       "status": "ACTIVE"
     },
@@ -1600,6 +1618,12 @@
     {
       "role": "PSA_MANAGER",
       "permission": "candidate.read.assigned",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "PSA_MANAGER",
+      "permission": "candidate.work_queue.read",
       "condition": null,
       "status": "ACTIVE"
     },
@@ -2201,6 +2225,12 @@
     },
     {
       "role": "RECRUITER",
+      "permission": "candidate.due_date.manage",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
       "permission": "candidate.owner.assign",
       "condition": null,
       "status": "ACTIVE"
@@ -2226,6 +2256,12 @@
     {
       "role": "RECRUITER",
       "permission": "candidate.read.assigned",
+      "condition": null,
+      "status": "ACTIVE"
+    },
+    {
+      "role": "RECRUITER",
+      "permission": "candidate.work_queue.read",
       "condition": null,
       "status": "ACTIVE"
     },

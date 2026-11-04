@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useId, useRef } from "react";
+import {
+  useActionState,
+  useEffect,
+  useId,
+  useRef,
+  type ReactNode,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { ConfigErrorSummary, useConfigSuccess } from "./config-form";
 import {
@@ -25,6 +31,7 @@ export function ConfirmCommand({
   reasons = [],
   hidden,
   destructive = false,
+  children,
 }: {
   action: ConfigFormAction;
   /** Button text, e.g. "Publish cycle". */
@@ -39,6 +46,8 @@ export function ConfirmCommand({
   reasons?: readonly Readonly<{ value: string; label: string }>[];
   hidden: Readonly<Record<string, string>>;
   destructive?: boolean;
+  /** Extra labelled fields the command takes, shown above the reason. */
+  children?: ReactNode;
 }) {
   const [state, formAction, pending] = useActionState(
     action,
@@ -93,6 +102,7 @@ export function ConfirmCommand({
           {Object.entries(hidden).map(([name, value]) => (
             <input key={name} type="hidden" name={name} value={value} />
           ))}
+          {children}
           {reasons.length > 0 ? (
             <div className="flex flex-col gap-1.5">
               <label htmlFor={reasonId} className="font-medium">

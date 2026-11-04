@@ -42,6 +42,7 @@ import {
   insertMatchIfAbsent,
   insertMergeRecord,
   insertPerson,
+  insertResponsibilityHistory,
   insertStageHistory,
   lockActiveCandidaciesOf,
   reparentCandidacies,
@@ -84,7 +85,7 @@ class InputProblems extends Error {
   }
 }
 
-async function validated(
+export async function validated(
   run: () => Promise<CandidateOutcome>,
 ): Promise<CandidateResult> {
   try {
@@ -126,7 +127,7 @@ function personFields(input: NameInput) {
   };
 }
 
-function version(value: unknown): number {
+export function version(value: unknown): number {
   if (typeof value !== "string" || !/^[1-9][0-9]{0,8}$/.test(value)) {
     return refuse("INVALID_INPUT");
   }
@@ -614,6 +615,14 @@ export async function createStaffProspect(
         newCandidacyEvents(ctx, row);
         await recordStage(ctx, row, "create_prospect", null, null);
         if (ownerAccountId) {
+          await insertResponsibilityHistory(ctx.tx, {
+            candidacyId: row.id,
+            changeCode: "OWNER_ASSIGNED",
+            newOwnerAccountId: ownerAccountId,
+            reasonCode: "INITIAL_ASSIGNMENT",
+            actorAccountId: ctx.actorId,
+            occurredAt: ctx.now,
+          });
           ctx.events.push({
             code: "candidacy.owner_assigned",
             recordRef: row.id,
@@ -639,7 +648,7 @@ export type CandidacyCommandInput = Readonly<{
   reasonCode?: string;
 }>;
 
-async function lockCandidacy(
+export async function lockCandidacy(
   ctx: CommandContext,
   publicId: string,
 ): Promise<CandidacyRow> {
@@ -647,7 +656,7 @@ async function lockCandidacy(
   return row ?? refuse("NOT_FOUND");
 }
 
-const recordOf = (row: CandidacyRow) =>
+export const recordOf = (row: CandidacyRow) =>
   ({
     kind: "RECORD",
     id: row.id,
@@ -864,6 +873,9 @@ export async function assignCandidacyOwnerToSelf(
         );
         if (row.version !== expected) refuse("STALE_VERSION");
         if (row.status !== "ACTIVE") refuse("INVALID_TRANSITION");
+        // Claiming is self-only: taking a record from another owner needs
+        // candidate.owner.assign_others (M3.1 reassign_candidacy_owner).
+        if (row.ownerAccountId !== null) refuse("INVALID_TRANSITION");
         const updated =
           (await updateCandidacy(
             ctx.tx,
@@ -873,6 +885,14 @@ export async function assignCandidacyOwnerToSelf(
             ctx.actorId,
             ctx.now,
           )) ?? refuse("STALE_VERSION");
+        await insertResponsibilityHistory(ctx.tx, {
+          candidacyId: row.id,
+          changeCode: "OWNER_ASSIGNED",
+          newOwnerAccountId: ctx.actorId,
+          reasonCode: "WORKLOAD_BALANCE",
+          actorAccountId: ctx.actorId,
+          occurredAt: ctx.now,
+        });
         ctx.events.push({
           code: "candidacy.owner_assigned",
           recordRef: row.id,
@@ -880,6 +900,7 @@ export async function assignCandidacyOwnerToSelf(
           organizationRef: row.organizationId,
           previousVersion: row.version,
           newVersion: updated.version,
+          changeCodes: ["ASSIGNED", "SELF"],
           reasonCode: "WORKLOAD_BALANCE",
         });
         return {

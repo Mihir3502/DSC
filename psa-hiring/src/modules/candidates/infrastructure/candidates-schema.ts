@@ -256,6 +256,10 @@ export const candidacy = appSchema.table(
     index("candidacy_owner_idx")
       .on(table.ownerAccountId, table.currentStage)
       .where(sql`${table.ownerAccountId} IS NOT NULL`),
+    // M3.1 work-queue paging over active records only.
+    index("candidacy_work_queue_idx")
+      .on(table.createdAt, table.publicId)
+      .where(sql`${table.status} = 'ACTIVE'`),
   ],
 );
 
@@ -513,6 +517,7 @@ export const workItem = appSchema.table(
       columns: [table.candidacyId],
       foreignColumns: [candidacy.id],
     }),
+    unique("work_item_id_candidacy_unique").on(table.id, table.candidacyId),
     uniqueIndex("work_item_active_unique")
       .on(
         table.candidacyId,
@@ -531,6 +536,12 @@ export const workItem = appSchema.table(
       table.id,
     ),
     index("work_item_source_idx").on(table.sourceCode, table.workTypeCode),
+    // M3.1: open staff work, by candidacy and due date.
+    index("work_item_staff_queue_idx")
+      .on(table.candidacyId, table.dueAt)
+      .where(
+        sql`${table.candidateActionRequired} = false AND ${table.status} IN ('OPEN', 'IN_PROGRESS', 'BLOCKED')`,
+      ),
     check(
       "work_item_type_check",
       sql`${table.workTypeCode} IN ('COMPLETE_APPLICATION', 'CORRECT_APPLICATION', 'REVIEW_SUBMITTED_APPLICATION')`,
@@ -556,5 +567,76 @@ export const workItem = appSchema.table(
       sql`${table.sourceCode} IN ('CANDIDACY_TRANSITION', 'BACKFILL', 'RECONCILIATION')`,
     ),
     check("work_item_version_check", sql`${table.version} >= 1`),
+    // Due dates belong to staff work; a candidate task never carries one.
+    check(
+      "work_item_due_staff_check",
+      sql`${table.dueAt} IS NULL OR ${table.candidateActionRequired} = false`,
+    ),
+  ],
+);
+
+// Who became responsible, and which due date applied, over time (packet M3.1
+// §6). Append-only: a change adds a row, and the runtime role can't alter one.
+export const workResponsibilityHistory = appSchema.table(
+  "work_responsibility_history",
+  {
+    id: uuid("id")
+      .default(sql`pg_catalog.gen_random_uuid()`)
+      .primaryKey(),
+    candidacyId: uuid("candidacy_id").notNull(),
+    workItemId: uuid("work_item_id"),
+    changeCode: varchar("change_code", { length: 32 }).notNull(),
+    previousOwnerAccountId: uuid("previous_owner_account_id"),
+    newOwnerAccountId: uuid("new_owner_account_id"),
+    previousDueAt: timestamp("previous_due_at", tz),
+    newDueAt: timestamp("new_due_at", tz),
+    reasonCode: varchar("reason_code", { length: 64 }),
+    actorAccountId: uuid("actor_account_id").notNull(),
+    occurredAt: timestamp("occurred_at", tz).notNull(),
+  },
+  (table) => [
+    foreignKey({
+      name: "work_responsibility_history_candidacy_fk",
+      columns: [table.candidacyId],
+      foreignColumns: [candidacy.id],
+    }),
+    foreignKey({
+      name: "work_responsibility_history_item_fk",
+      columns: [table.workItemId, table.candidacyId],
+      foreignColumns: [workItem.id, workItem.candidacyId],
+    }),
+    foreignKey({
+      name: "work_responsibility_history_previous_owner_fk",
+      columns: [table.previousOwnerAccountId],
+      foreignColumns: [user.id],
+    }),
+    foreignKey({
+      name: "work_responsibility_history_new_owner_fk",
+      columns: [table.newOwnerAccountId],
+      foreignColumns: [user.id],
+    }),
+    foreignKey({
+      name: "work_responsibility_history_actor_fk",
+      columns: [table.actorAccountId],
+      foreignColumns: [user.id],
+    }),
+    check(
+      "work_responsibility_history_change_check",
+      sql`CASE ${table.changeCode}
+        WHEN 'OWNER_ASSIGNED' THEN ${table.workItemId} IS NULL AND ${table.previousOwnerAccountId} IS NULL AND ${table.newOwnerAccountId} IS NOT NULL AND ${table.newDueAt} IS NULL AND ${table.previousDueAt} IS NULL
+        WHEN 'OWNER_REASSIGNED' THEN ${table.workItemId} IS NULL AND ${table.previousOwnerAccountId} IS NOT NULL AND ${table.newOwnerAccountId} IS NOT NULL AND ${table.previousOwnerAccountId} <> ${table.newOwnerAccountId} AND ${table.newDueAt} IS NULL AND ${table.previousDueAt} IS NULL
+        WHEN 'OWNER_RELEASED' THEN ${table.workItemId} IS NULL AND ${table.previousOwnerAccountId} IS NOT NULL AND ${table.newOwnerAccountId} IS NULL AND ${table.newDueAt} IS NULL AND ${table.previousDueAt} IS NULL
+        WHEN 'DUE_DATE_SET' THEN ${table.workItemId} IS NOT NULL AND ${table.previousOwnerAccountId} IS NULL AND ${table.newOwnerAccountId} IS NULL AND ${table.newDueAt} IS NOT NULL AND ${table.previousDueAt} IS DISTINCT FROM ${table.newDueAt}
+        WHEN 'DUE_DATE_CLEARED' THEN ${table.workItemId} IS NOT NULL AND ${table.previousOwnerAccountId} IS NULL AND ${table.newOwnerAccountId} IS NULL AND ${table.newDueAt} IS NULL AND ${table.previousDueAt} IS NOT NULL
+        ELSE false END`,
+    ),
+    check(
+      "work_responsibility_history_reason_check",
+      sql`${table.reasonCode} IS NULL OR ${table.reasonCode} ~ '^[A-Z][A-Z0-9_]{1,63}$'`,
+    ),
+    index("work_responsibility_history_candidacy_idx").on(
+      table.candidacyId,
+      table.occurredAt,
+    ),
   ],
 );

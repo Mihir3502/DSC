@@ -550,6 +550,50 @@
           "title": "a recruiter returns a section, and the candidate corrects and resubmits it"
         }
       ]
+    },
+    {
+      "id": "PRD-QUE-001",
+      "title": "Staff view candidates by stage, owner, age, due date, worker path, and blocker",
+      "status": "partial",
+      "note": "M3.1: every field except blockers, which aren't modeled yet. Worker path is the proposed path only.",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "filters by stage, branch, position, proposed worker path, due date, and exception"
+        },
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "filters assigned, team, and unassigned work from the caller's own scope"
+        }
+      ]
+    },
+    {
+      "id": "PRD-QUE-002",
+      "title": "The dashboard identifies overdue, expiring, returned, disputed, and review-required items",
+      "status": "partial",
+      "note": "M3.1: overdue, due today, returned, and unassigned submitted. Expiring and disputed items arrive with their milestones.",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "counts the dashboard only within the caller's scope"
+        }
+      ]
+    },
+    {
+      "id": "PRD-QUE-005",
+      "title": "Staff may assign responsibility and due dates for actions",
+      "status": "covered",
+      "note": "M3.1: self-claim, manager assignment with a reason, and manual due dates on staff work items.",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "lets a manager assign and reassign with a reason, writing history and audit once"
+        },
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "sets, changes, and clears a staff item's due date with history, and never invents one"
+        }
+      ]
     }
   ],
   "acceptanceCriteria": [
@@ -3916,6 +3960,146 @@
         {
           "file": "tests/e2e/application-correction.spec.ts",
           "title": "a recruiter returns a section, and the candidate corrects and resubmits it"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.1-01",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "filters assigned, team, and unassigned work from the caller's own scope"
+        },
+        {
+          "file": "tests/e2e/staff-work-queue.spec.ts",
+          "title": "staff find, claim, date, and reassign work, and nobody else gets the queue @critical"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.1-02",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "filters by stage, branch, position, proposed worker path, due date, and exception"
+        },
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "refuses unknown, repeated, malformed, and oversized filters"
+        },
+        {
+          "file": "src/modules/candidates/domain/work-queue.test.ts",
+          "title": "never lets a proposal read as an approved worker path"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.1-03",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "pages with a bound and a stable order, without repeats or gaps, while rows change"
+        },
+        {
+          "file": "src/modules/candidates/domain/work-queue.test.ts",
+          "title": "round-trips exact instants, with or without a due date"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.1-04",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "returns exact fields with no contact details, answers, or account ids"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.1-05",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "lets a manager assign and reassign with a reason, writing history and audit once"
+        },
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "stops a claim from taking a record someone else owns"
+        },
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "lets owners release their own record and only a manager release someone else's"
+        },
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "sets, changes, and clears a staff item's due date with history, and never invents one"
+        },
+        {
+          "file": "tests/e2e/staff-work-queue.spec.ts",
+          "title": "staff find, claim, date, and reassign work, and nobody else gets the queue @critical"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.1-X1",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "gives a candidate, an administrator, and a wrong-organization manager nothing"
+        },
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "allows only the manager to assign others, and denies every other role and scope"
+        },
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "refuses an owner who isn't eligible at this record"
+        },
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "a filter naming an out-of-scope branch can't widen the caller's scope"
+        },
+        {
+          "file": "src/modules/candidates/domain/work-queue.test.ts",
+          "title": "grants exactly the approved roles, and nothing to auditors or administrators"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.1-X2",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "refuses a stale version with no partial state"
+        },
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "returns the original result for a repeat and rejects a changed request with the same key"
+        },
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "lets exactly one of two concurrent changes win"
+        },
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "rolls everything back when the audit write fails"
+        },
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "keeps responsibility history append-only and refuses incoherent rows"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.1-X3",
+      "tests": [
+        {
+          "file": "tests/accessibility/staff-work-queue.a11y.spec.ts",
+          "title": "the dashboard, queue, and responsibility panel are accessible and reflow"
+        },
+        {
+          "file": "tests/integration/candidates/work-queue.test.ts",
+          "title": "refuses bad dates, wrong roles, stale versions, and records with no staff item"
         }
       ]
     }

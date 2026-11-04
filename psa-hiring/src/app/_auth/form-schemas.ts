@@ -230,6 +230,19 @@ export const formSchemas = Object.freeze({
     expectedVersion: version,
     reasonCode: key,
   }),
+  workOwnerAssign: defineFormSchema({
+    commandKey: ref,
+    candidacyId: key,
+    expectedVersion: version,
+    ownerAccountId: key,
+    reasonCode: key,
+  }),
+  workDueDate: defineFormSchema({
+    commandKey: ref,
+    candidacyId: key,
+    expectedVersion: version,
+    dueDate: key,
+  }),
   duplicateReview: defineFormSchema({
     commandKey: ref,
     matchId: key,

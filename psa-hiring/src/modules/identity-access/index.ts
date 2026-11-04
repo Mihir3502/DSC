@@ -5,6 +5,7 @@ export {
   resolveCurrentAccount,
   type Principal,
 } from "./application/current-account";
+export { listStaffHoldingPermissionAt } from "./infrastructure/eligible-staff";
 export {
   closeAccount,
   disableAccount,

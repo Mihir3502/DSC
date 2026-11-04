@@ -44,6 +44,33 @@ export {
   queryProspectForm,
   querySubmittedQueue,
 } from "./application/candidate-queries";
+export {
+  queryStaffDashboard,
+  queryStaffShell,
+  queryWorkItem,
+  queryWorkQueue,
+} from "./application/work-queue-queries";
+export {
+  assignCandidacyOwner,
+  releaseCandidacyOwner,
+  setWorkItemDueDate,
+} from "./application/work-queue-commands";
+export {
+  assignmentFilters,
+  assignmentLabels,
+  dueFilters,
+  dueLabels,
+  exceptionFilters,
+  exceptionLabels,
+  ownerChangeReasonLabels,
+  ownerChangeReasons,
+  stageFilters,
+  stageLabels,
+  workerPathFilters,
+  workerPathLabels,
+  workQueueQuery,
+  type WorkQueueFilters,
+} from "./domain/work-queue";
 export { candidateProjectionNames } from "./presentation/candidate-views";
 export {
   queryCandidateHelp,

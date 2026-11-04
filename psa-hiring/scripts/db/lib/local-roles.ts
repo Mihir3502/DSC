@@ -259,6 +259,7 @@ export const candidateTables = [
   "duplicate_candidate_match",
   "person_merge_record",
   "candidate_command_receipt",
+  "work_responsibility_history",
 ] as const;
 
 /** M2.2 append-only tables (no runtime UPDATE either). */
@@ -266,6 +267,7 @@ export const candidateAppendOnlyTables = [
   "candidacy_stage_history",
   "person_merge_record",
   "candidate_command_receipt",
+  "work_responsibility_history",
 ] as const;
 
 /** M2.4 published templates (runtime SELECT only). */

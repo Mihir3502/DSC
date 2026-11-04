@@ -34,44 +34,21 @@ test.describe("foundation routes", { tag: "@critical" }, () => {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
-  for (const route of [
-    {
-      path: "/staff",
-      heading: "Staff Portal",
-      note: /No candidate or operational data/,
-    },
-  ]) {
-    test(`${route.path} shows its foundation page and returns home by keyboard`, async ({
-      page,
-    }) => {
-      const response = await page.goto(route.path);
-      expect(response?.status()).toBe(200);
-      await expect(page).toHaveTitle(
-        `${route.heading} · PSA Workforce Hiring System`,
-      );
-      await expect(
-        page.getByRole("heading", { level: 1, name: route.heading }),
-      ).toBeVisible();
-      await expect(page.getByText(route.note)).toBeVisible();
-      await expect(page.locator("form")).toHaveCount(0);
-
-      const back = await tabToLink(page, "Back to home");
-      await expect(back).toBeFocused();
-      await page.keyboard.press("Enter");
-      await expect(page).toHaveURL("/");
-      await expect(
-        page.getByRole("heading", {
-          level: 1,
-          name: "PSA Workforce Hiring System",
-        }),
-      ).toBeVisible();
-    });
-  }
+  test("the staff portal is authenticated, so an anonymous visitor is asked to sign in", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const link = await tabToLink(page, "Staff Portal");
+    await expect(link).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL("/staff/sign-in");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  });
 
   test("skip link is the first keyboard stop and moves focus to main", async ({
     page,
   }) => {
-    await page.goto("/staff");
+    await page.goto("/staff/sign-in");
     await page.keyboard.press("Tab");
     const skip = page.getByRole("link", { name: "Skip to main content" });
     await expect(skip).toBeFocused();
@@ -86,7 +63,7 @@ test.describe("foundation routes", { tag: "@critical" }, () => {
     const uuid =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
     const seen = new Set<string>();
-    for (const path of ["/", "/sign-in", "/staff"]) {
+    for (const path of ["/", "/sign-in", "/staff/sign-in"]) {
       const response = await page.goto(path);
       const id = response?.headers()["x-correlation-id"] ?? "";
       expect(id, `${path} correlation header`).toMatch(uuid);
@@ -105,7 +82,7 @@ test.describe("foundation routes", { tag: "@critical" }, () => {
     expect(kept.headers()["x-correlation-id"]).toBe(valid);
 
     const forged = `${valid}-injected-${"x".repeat(200)}`;
-    const replaced = await request.get("/staff", {
+    const replaced = await request.get("/staff/sign-in", {
       headers: { "x-correlation-id": forged },
     });
     const id = replaced.headers()["x-correlation-id"];

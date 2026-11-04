@@ -638,6 +638,18 @@ const definitions: readonly EventDefinition[] = [
     "CANDIDACY_OWNER_ASSIGN",
     "CANDIDACY",
   ),
+  // M3.1 responsibility changes. Metadata holds codes and versions, never a
+  // name, an account, or a date.
+  candidateRecord(
+    "candidacy.owner_released",
+    "CANDIDACY_OWNER_RELEASE",
+    "CANDIDACY",
+  ),
+  candidateRecord(
+    "work_item.due_date_changed",
+    "WORK_ITEM_DUE_DATE_CHANGE",
+    "CANDIDACY",
+  ),
   candidateRecord("prospect.closed", "PROSPECT_CLOSE", "CANDIDACY"),
   candidateRecord(
     "duplicate_match.created",
@@ -817,6 +829,8 @@ export const catalogEventNames = [
   "candidacy.created",
   "candidacy.stage_changed",
   "candidacy.owner_assigned",
+  "candidacy.owner_released",
+  "work_item.due_date_changed",
   "prospect.closed",
   "duplicate_match.created",
   "duplicate_match.reviewed",

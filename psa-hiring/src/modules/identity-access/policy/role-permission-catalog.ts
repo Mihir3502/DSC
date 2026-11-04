@@ -178,6 +178,9 @@ const grantSpecs: Readonly<Record<RoleCode, readonly Spec[]>> = {
     "candidate.prospect.read",
     "candidate.prospect.close",
     "candidate.owner.assign",
+    // M3.1 work queue (catalog version 4, approved 2026-11-04).
+    "candidate.work_queue.read",
+    "candidate.due_date.manage",
   ],
 
   HR_SPECIALIST: [
@@ -268,6 +271,8 @@ const grantSpecs: Readonly<Record<RoleCode, readonly Spec[]>> = {
     "candidate.prospect.create",
     "candidate.prospect.read",
     "candidate.prospect.close",
+    // M3.1 work queue (catalog version 4, approved 2026-11-04). Read only.
+    "candidate.work_queue.read",
   ],
 
   CLASSIFICATION_REVIEWER: [
@@ -456,6 +461,11 @@ const grantSpecs: Readonly<Record<RoleCode, readonly Spec[]>> = {
     "candidate.prospect.read",
     "candidate.prospect.close",
     "candidate.owner.assign",
+    // M3.1 work queue (catalog version 4, approved 2026-11-04). Only the
+    // manager assigns other staff.
+    "candidate.owner.assign_others",
+    "candidate.due_date.manage",
+    "candidate.work_queue.read",
     "candidate.duplicate.review",
     "candidate.person.merge",
   ],

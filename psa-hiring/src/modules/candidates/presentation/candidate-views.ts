@@ -23,6 +23,10 @@ export const candidateProjectionNames = [
   "staff.duplicate_queue.v1",
   "staff.submitted_queue.v1",
   "staff.duplicate_review.v1",
+  "staff.shell.v1",
+  "staff.dashboard.v1",
+  "staff.work_queue.v1",
+  "staff.work_item.v1",
 ] as const;
 
 const requires = (permission: string): FieldRule => ({
@@ -432,4 +436,166 @@ export const submittedQueueContract = defineProjection<
   purpose: "LIST",
   fields: fieldsFor<SubmittedQueueView>(["items"], "application.read"),
   schema: submittedQueueSchema,
+});
+
+// ------------------------------------------------------ M3.1 staff work queue
+//
+// Safe summary fields only: a reference, a display name, placement, and
+// workflow labels. Never an email, phone, date of birth, answer, attachment,
+// internal note, or account id. A worker path is a proposal label.
+
+const QUEUE_PERMISSION = "candidate.work_queue.read";
+
+const staffShellSchema = z.strictObject({
+  navigation: z
+    .array(
+      z.strictObject({
+        label: label,
+        href: z.string().regex(/^\/staff(\/[a-z/-]+)?$/),
+      }),
+    )
+    .max(6),
+});
+export type StaffShellView = z.infer<typeof staffShellSchema>;
+export const staffShellContract = defineProjection<
+  StaffShellView,
+  StaffShellView
+>({
+  name: "staff.shell.v1",
+  audience: "STAFF",
+  purpose: "DETAIL",
+  fields: fieldsFor<StaffShellView>(["navigation"], QUEUE_PERMISSION),
+  schema: staffShellSchema,
+});
+
+const count = z.number().int().min(0);
+const dashboardSchema = z.strictObject({
+  myDueToday: count,
+  overdue: count,
+  unassignedSubmitted: count,
+  returned: count,
+});
+export type StaffDashboardView = z.infer<typeof dashboardSchema>;
+export const staffDashboardContract = defineProjection<
+  StaffDashboardView,
+  StaffDashboardView
+>({
+  name: "staff.dashboard.v1",
+  audience: "STAFF",
+  purpose: "DETAIL",
+  fields: fieldsFor<StaffDashboardView>(
+    ["myDueToday", "overdue", "unassignedSubmitted", "returned"],
+    QUEUE_PERMISSION,
+  ),
+  schema: dashboardSchema,
+});
+
+const dayOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const filterOption = z.strictObject({ id: z.uuid(), label });
+const workQueueSchema = z.strictObject({
+  items: z
+    .array(
+      z.strictObject({
+        id: publicId,
+        reference,
+        displayName: label,
+        position: label,
+        branch: label,
+        stage: label,
+        nextAction: label,
+        owner: label,
+        workerPath: label,
+        returned: z.boolean(),
+        dueDate: dayOnly.nullable(),
+        overdue: z.boolean(),
+        ageDays: count,
+      }),
+    )
+    .max(25),
+  total: count,
+  nextCursor: z.string().max(80).nullable(),
+  branches: z.array(filterOption).max(100),
+  positions: z.array(filterOption).max(100),
+  hasTeamScope: z.boolean(),
+});
+export type WorkQueueView = z.infer<typeof workQueueSchema>;
+export const workQueueContract = defineProjection<WorkQueueView, WorkQueueView>(
+  {
+    name: "staff.work_queue.v1",
+    audience: "STAFF",
+    purpose: "LIST",
+    fields: fieldsFor<WorkQueueView>(
+      ["items", "total", "nextCursor", "branches", "positions", "hasTeamScope"],
+      QUEUE_PERMISSION,
+    ),
+    schema: workQueueSchema,
+  },
+);
+
+const workItemSchema = z.strictObject({
+  id: publicId,
+  reference,
+  displayName: label,
+  position: label,
+  branch: label,
+  stage: label,
+  nextAction: label,
+  owner: label,
+  unassigned: z.boolean(),
+  ownedByActor: z.boolean(),
+  workerPath: label,
+  returned: z.boolean(),
+  version,
+  hasApplication: z.boolean(),
+  item: z
+    .strictObject({
+      version,
+      dueDate: dayOnly.nullable(),
+      overdue: z.boolean(),
+    })
+    .nullable(),
+  actions: actions,
+  eligibleOwners: z
+    .array(z.strictObject({ id: z.uuid(), name: label }))
+    .max(100),
+  history: z
+    .array(
+      z.strictObject({
+        change: label,
+        reason: label.nullable(),
+        by: label,
+        when: z.string().max(40),
+      }),
+    )
+    .max(20),
+});
+export type WorkItemView = z.infer<typeof workItemSchema>;
+export const workItemContract = defineProjection<WorkItemView, WorkItemView>({
+  name: "staff.work_item.v1",
+  audience: "STAFF",
+  purpose: "DETAIL",
+  fields: fieldsFor<WorkItemView>(
+    [
+      "id",
+      "reference",
+      "displayName",
+      "position",
+      "branch",
+      "stage",
+      "nextAction",
+      "owner",
+      "unassigned",
+      "ownedByActor",
+      "workerPath",
+      "returned",
+      "version",
+      "hasApplication",
+      "item",
+      "actions",
+      "eligibleOwners",
+      "history",
+    ],
+    QUEUE_PERMISSION,
+  ),
+  schema: workItemSchema,
 });

@@ -352,6 +352,7 @@ describe("scope", () => {
       "app.system_metadata",
       "app.team",
       "app.work_item",
+      "app.work_responsibility_history",
       "audit.audit_event",
       "audit.chain_head",
       "audit.security_event",
