@@ -62,6 +62,9 @@ void runScript("auth:mailpit:check", async () => {
       expiresInMinutes: 4320,
     },
     { template: "STAFF_SECURITY_NOTICE", to, notice: "PASSWORD_CHANGED" },
+    // M2.6 and M2.7 application notices.
+    { template: "APPLICATION_RECEIVED", to, reference: "C-ABCDEFGH" },
+    { template: "APPLICATION_RETURNED", to, reference: "C-ABCDEFGH" },
   ];
   for (const message of messages) dispatcher.enqueue(message);
   await dispatcher.idle();

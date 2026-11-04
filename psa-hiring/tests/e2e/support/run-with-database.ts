@@ -127,13 +127,23 @@ async function main() {
       migratorPassword: owned.context.migratorPassword,
     };
     const leaks: string[] = [];
+    // M2 exit gate: synthetic answers, instructions, file names, and signatures
+    // are tagged with this marker, which must never leave the application's own
+    // pages. Generic rules can't recognize free-text answers.
+    const applicationCanary = /PSACANARY[A-Z0-9]+/;
     for (const c of leakCategories(output.join(""), secrets, outputRules)) {
       leaks.push(`playwright/server output: ${c}`);
+    }
+    if (applicationCanary.test(output.join(""))) {
+      leaks.push("playwright/server output: application data canary");
     }
     for (const name of readdirSync(captureDir)) {
       const text = readFileSync(path.join(captureDir, name), "utf8");
       for (const c of leakCategories(text, secrets, mailRules)) {
         leaks.push(`captured email: ${c}`);
+      }
+      if (applicationCanary.test(text)) {
+        leaks.push("captured email: application data canary");
       }
     }
     const admin = await adminClient(owned.context, database.name);
@@ -144,6 +154,9 @@ async function main() {
       );
       for (const c of leakCategories(rows[0]?.t ?? "", secrets, auditRules)) {
         leaks.push(`audit/security rows: ${c}`);
+      }
+      if (applicationCanary.test(rows[0]?.t ?? "")) {
+        leaks.push("audit/security rows: application data canary");
       }
     } finally {
       await admin.end();
