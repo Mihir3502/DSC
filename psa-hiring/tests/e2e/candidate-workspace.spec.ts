@@ -42,6 +42,7 @@ test.describe("candidate workspace @critical", () => {
 
     const recruiterContext = await browser.newContext();
     const recruiterPage = await recruiterContext.newPage();
+    await useDistinctClient(recruiterPage);
     const recruiter = await activateStaff(recruiterPage, "ws-recruiter");
     await orgHarness(
       "grant",
@@ -102,6 +103,7 @@ test.describe("candidate workspace @critical", () => {
     // A compliance reviewer gets the shell, without contact details.
     const reviewerContext = await browser.newContext();
     const reviewerPage = await reviewerContext.newPage();
+    await useDistinctClient(reviewerPage);
     const reviewer = await activateStaff(reviewerPage, "ws-compliance");
     await orgHarness(
       "grant",
@@ -121,6 +123,7 @@ test.describe("candidate workspace @critical", () => {
     // An administrator gets the same not-found as a record that doesn't exist.
     const adminContext = await browser.newContext();
     const adminPage = await adminContext.newPage();
+    await useDistinctClient(adminPage);
     const administrator = await activateStaff(adminPage, "ws-admin");
     await orgHarness(
       "grant",

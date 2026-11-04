@@ -60,6 +60,7 @@ test.describe("staff work queue @critical", () => {
     // Recruiter: find it, claim it, and set a due date.
     const recruiterContext = await browser.newContext();
     const recruiterPage = await recruiterContext.newPage();
+    await useDistinctClient(recruiterPage);
     const recruiter = await activateStaff(recruiterPage, "queue-recruiter");
     await orgHarness(
       "grant",
@@ -120,6 +121,7 @@ test.describe("staff work queue @critical", () => {
     // A stale screen is refused rather than overwriting the newer change.
     const staleContext = await browser.newContext();
     const managerPage = await staleContext.newPage();
+    await useDistinctClient(managerPage);
     const manager = await activateStaff(managerPage, "queue-manager");
     await orgHarness(
       "grant",
@@ -171,6 +173,7 @@ test.describe("staff work queue @critical", () => {
     // An administrator has no queue and no record.
     const adminContext = await browser.newContext();
     const adminPage = await adminContext.newPage();
+    await useDistinctClient(adminPage);
     const administrator = await activateStaff(adminPage, "queue-admin");
     await orgHarness(
       "grant",
