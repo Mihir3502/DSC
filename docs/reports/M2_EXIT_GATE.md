@@ -6,9 +6,9 @@
 | Work item | M2 exit gate ([IMPLEMENTATION_PLAN.md](../IMPLEMENTATION_PLAN.md#m2-exit-gate)) |
 | Gate commands | `pnpm test:m1:gate` and the phone journey in §3 (from `psa-hiring/`) |
 | Gate date | 2026-11-04 |
-| Reviewer sign-off | _Pending; see [Sign-off](#8-sign-off)_ |
+| Owner sign-off | Accepted 2026-11-04, with the §7 items still open; see [Sign-off](#8-sign-off) |
 
-All four M2 exit conditions have automated evidence, on the same tested tree, in two consecutive runs with no failed, skipped, or flaky test. M2 is approved only after the sign-off in §8.
+All four M2 exit conditions have automated evidence, on the same tested tree, in two consecutive runs with no failed, skipped, or flaky test. The project owner accepted M2 on 2026-11-04 (§8). The §7 items remain open and must be finished before real use.
 
 Preparing this gate exposed a gap in earlier reports: until now, the E2E leakage scan never saw the server's standard output, which is where application logs go. See §5.
 
@@ -153,6 +153,6 @@ No production code changed for this gate. The changes are limited to one E2E spe
 | Role | Name | Date | Decision |
 |---|---|---|---|
 | Reviewer | | | ☐ Approve M2 exit ☐ Reject |
-| Project owner | | | ☐ Approve M2 exit ☐ Reject |
+| Project owner | Recorded from the owner's decision in the working session | 2026-11-04 | ☑ Approve M2 exit ☐ Reject |
 
 Once approved, the next work item is `docs/tasks/M3.1_STAFF_DASHBOARD_AND_UNIFIED_WORK_QUEUE.md`. It is not part of this gate.

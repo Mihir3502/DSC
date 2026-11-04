@@ -1620,13 +1620,13 @@ Key fields:
 - `candidate_action_required`: true only for the candidate types (check constraint).
 - `status`: `OPEN`, `IN_PROGRESS`, `BLOCKED`, `COMPLETED`, `CANCELED`
 - `priority`: `NORMAL` or `HIGH`, for ordering only and never shown.
-- `due_at`: optional. Nothing sets it yet, so no deadline is ever invented.
+- `due_at`: optional, on staff items only (check constraint). Only `set_work_item_due_date` (M3.1) sets it. No deadline is ever set automatically.
 - `completed_at`: set exactly when the status is `COMPLETED`.
 - `source_code`: `CANDIDACY_TRANSITION`, `BACKFILL`, or `RECONCILIATION`.
 - `version`
 - Common timestamps
 
-Not added yet: `assigned_user_id`, `assigned_team_id`, and `completion_event_id`. They arrive with staff tasks and completion commands.
+Not added yet: `assigned_user_id`, `assigned_team_id`, and `completion_event_id`. They arrive with staff tasks and completion commands if needed; see §17.1a for M3.1 responsibility.
 
 Rules:
 
@@ -1643,6 +1643,24 @@ Rules:
 - Reads never write. A stale item is hidden on read and canceled only by reconciliation. If an eligible candidacy has no row, the stage still produces the same next action.
 - Completing the business action should complete its work item transactionally.
 - A work item is not the source of truth for the underlying compliance result.
+
+### 17.1a `work_responsibility_history` (M3.1)
+
+Append-only record of who became responsible and which due date applied. Migration `0012_work_queue`, `candidates` module.
+
+- `id`, `candidacy_id`, `work_item_id` (nullable; composite FK with `candidacy_id`, so history can't point at another candidacy's item)
+- `change_code`: `OWNER_ASSIGNED`, `OWNER_REASSIGNED`, `OWNER_RELEASED`, `DUE_DATE_SET`, `DUE_DATE_CLEARED`. A check constraint requires the fields that fit each code.
+- `previous_owner_account_id`, `new_owner_account_id`, `previous_due_at`, `new_due_at`
+- `reason_code` (closed code; never free text), `actor_account_id`, `occurred_at`
+
+Rules:
+
+- Every owner or due-date change writes one row, in the same transaction as the business row and audit event.
+- The runtime role has `SELECT` and `INSERT` only, and triggers refuse `UPDATE`, `DELETE`, and `TRUNCATE` for every role.
+- A candidacy's operational owner is `candidacy.owner_account_id`. It never grants candidate-account ownership or any permission.
+- "Assigned to me" and "unassigned" read the candidacy owner. `assigned_user_id` and `assigned_team_id` on `work_item` are still not added; item-level assignment arrives only if staff tasks need it. "My team" means candidacies whose hiring-cycle team is one the staff member holds a team-scoped role on.
+
+Queue indexes: `candidacy_work_queue_idx` (active records, by creation time and public ID) and `work_item_staff_queue_idx` (open staff items, by candidacy and due date).
 
 The portal reads through application queries (`candidate.portal_shell.v1`, `candidate.portal_home.v1`, `candidate.task_list.v1`, `candidate.help.v1`) rather than a stored projection, so there is no freshness lag. Each query filters to the session's own person and returns explicit fields only.
 

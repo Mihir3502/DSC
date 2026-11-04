@@ -493,6 +493,18 @@ Table columns:
 
 Bulk action is limited to low-risk operations such as assignment or reminder scheduling. Decisions, approvals, screening dispositions, signatures, and readiness approvals are never bulk actions.
 
+### 9.3 M3.1 implementation
+
+- **`/staff` is now authenticated.** It replaces the public foundation page. An anonymous visitor goes to staff sign-in, and a staff member whose role has no queue sees a plain statement instead of a dashboard.
+- **Dashboard cards shipped:** my work due today, overdue items, unassigned submitted applications, and returned for correction. The others need later milestones and aren't shown.
+- **Filters shipped:** assignment, stage, due date, branch, position, proposed worker path, and exception. Invalid values show a safe message with a link back to the full queue.
+- **Worker path labels are proposals:** Undecided, Proposed W-2, and Proposed contractor. "Approved 1099" and "classification pending" arrive with classification review, because a recruiter's proposal must never read as approval.
+- **Exception filter:** Returned for correction only. Hold, dispute, and escalation arrive with those workflows.
+- **Not shipped because the data doesn't exist yet:** task type and hiring-cycle filters, priority or risk indicator, blocking-item count, and bulk actions.
+- **Layout:** each row is a labelled card rather than a table, so it reflows on a phone with no sideways scrolling. Paging is "Next page" and "First page".
+- **`/staff/work/[candidacyId]`:** one record's owner, due date, and history, with only the actions the person may take. Each action asks for confirmation. It isn't the M3.2 candidate workspace.
+- **Dates:** a due date is a calendar day that runs to the end of the day in UTC, shown with a UTC label. Per-user time zones aren't built yet.
+
 ## 10. Candidate Workspace for Staff
 
 **Route:** `/staff/candidates/[candidacyId]`

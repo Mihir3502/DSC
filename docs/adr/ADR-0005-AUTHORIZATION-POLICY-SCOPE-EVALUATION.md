@@ -274,6 +274,11 @@ Every denial writes one bounded log line (`authz.denied`: permission, reason, po
   - **Defect found and fixed.** `authorizeInTransaction` resolvers previously queried through the pool while the command transaction held locks. Under a small pool, a concurrent command could starve and deny (`SCOPE_UNAVAILABLE`). An `AsyncLocalStorage` authorization executor now makes in-transaction resolvers use the command's transaction. No grant or scope semantics changed. The fix is regression-tested by the concurrent review-versus-merge race.
 - **M2.3+:** remaining scope entities (`ASSIGNED_RECORDS`, `AUDIT_ASSIGNMENT`), designations, and workflow policies.
 - **M2.4:** registers the first production workflow policy, `CANDIDACY_WORKFLOW`. It permits only `application.own.edit` and `application.assist`, and only in `APPLICATION_INCOMPLETE`. Every other workflow-gated permission still denies, and no role gained a grant.
+- **M3.1 (catalog version 4, approved by the project owner 2026-11-04):**
+  - Adds `candidate.work_queue.read` (Recruiter, HR, PSA Manager), `candidate.due_date.manage` (Recruiter, PSA Manager), and `candidate.owner.assign_others` (PSA Manager). Auditors and Administrators receive none of them.
+  - `candidate.owner.assign` stays self-only, now enforced: a claim refuses a record that already has an owner. This closes a path where a Recruiter could take a record from another owner.
+  - A new owner must hold `candidate.owner.assign` at the record's placement and can't be the candidate. The check runs under the candidacy's row lock.
+  - Ownership and due dates grant no authority. Scope still comes only from role assignments.
 
 ## Rejected alternatives
 

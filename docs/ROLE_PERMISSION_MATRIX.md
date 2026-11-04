@@ -198,6 +198,9 @@ Examples:
 | Create prospect | — | C scoped | C scoped | — | — | — | C scoped | — | — |
 | Close prospect | — | A scoped | A scoped | — | — | — | A scoped | — | — |
 | Assign candidacy owner | — | M scoped (self) | — | — | — | — | M scoped (self) | — | — |
+| Assign candidacy owner to others | — | — | — | — | — | — | M scoped | — | — |
+| Set staff work due date | — | M scoped | — | — | — | — | M scoped | — | — |
+| Read staff work queue | — | R scoped | R scoped | — | — | — | R scoped | — | — |
 | Review possible duplicates | — | Warning only | Warning only | — | — | — | A organization | — | — |
 | Merge candidate records | — | — | — | — | — | — | A organization | — | — |
 | Save own application | E | — | Assist only | — | — | — | — | — | — |
@@ -233,10 +236,15 @@ Examples:
 | Archive record | — | — | Request | — | Request | — | A | Technical operation after approval | — |
 | Export records | Own provided documents only | Limited approved export | Limited approved export | Limited approved export | Restricted approved export | Limited approved export | X | Technical export after approval | X assigned |
 
-The five rows after "Start own application" were added by M2.2 (authorization catalog version 3, approved 2026-10-08):
+The rows after "Start own application" were added by M2.2 (authorization catalog version 3, approved 2026-10-08), except the three work-queue rows from M3.1:
 
 - **Prospects:** Recruiter, HR, and PSA Manager may create, read, start, and close prospects within their organization, branch, or team scope (`candidate.prospect.*`).
 - **Operational owner:** Recruiter and PSA Manager may assign themselves as a candidacy's operational owner (`candidate.owner.assign`). It never grants candidate-account ownership.
+- **Work queue (M3.1, catalog version 4, approved by the project owner 2026-11-04):**
+  - Recruiter, HR, and PSA Manager read the staff dashboard and work queue in scope (`candidate.work_queue.read`). Auditors and Administrators don't get the queue.
+  - `candidate.owner.assign` stays self-only: a claim takes only an unowned record, and an owner may release their own record, with a reason.
+  - Only the PSA Manager assigns, reassigns, or clears another staff member's ownership (`candidate.owner.assign_others`), with a reason. The new owner must hold `candidate.owner.assign` at the record's placement.
+  - Recruiter and PSA Manager set or clear a staff work item's due date (`candidate.due_date.manage`). HR doesn't.
 - **Duplicates and merge:** only the PSA Manager, at organization scope, reviews possible duplicates (`candidate.duplicate.review`) and merges confirmed duplicate people (`candidate.person.merge`), each with recent authentication and a reason. Recruiter and HR see only a "possible duplicate" warning.
 - **Auditor:** reads prospects only through an approved audit assignment.
 - **Administrator:** none of these permissions.
