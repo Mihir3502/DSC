@@ -188,3 +188,7 @@ export {
   auditQueryAuthorizer,
   auditQueryDependencies,
 } from "./application/audit-query-authorizer";
+export {
+  authorizeDocumentAccess,
+  type DocumentPermissionRegistry,
+} from "./application/ports/authorized-document-access";

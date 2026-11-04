@@ -808,6 +808,13 @@ describe("event coverage (§17)", () => {
       "application.started",
       "application.section_saved",
       "application.section_assisted",
+      // M2.5 attachment events: asserted in
+      // tests/integration/documents/attachments.test.ts.
+      "document.received",
+      "document.upload_rejected",
+      "document.scanned",
+      "document.removed",
+      "document.downloaded",
     ];
     for (const name of elsewhere) covered.add(name);
     const all = [...new Set(eventCatalog.map((d) => d.name))];

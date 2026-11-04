@@ -65,7 +65,15 @@ export type AuditRecorderDependencies = Readonly<{
 }>;
 
 type Scope = { deferred: (() => Promise<unknown>)[] };
-const transactionScope = new AsyncLocalStorage<Scope>();
+// Global for the same reason as the authorization executor: recorders on the
+// shared runtime must see transactions opened from any Next.js bundle.
+const scopeKey = Symbol.for("psa.audit_transaction_scope");
+const globalScopes = globalThis as unknown as Record<
+  symbol,
+  AsyncLocalStorage<Scope> | undefined
+>;
+const transactionScope = (globalScopes[scopeKey] ??=
+  new AsyncLocalStorage<Scope>());
 
 const STANDALONE_LOCK_TIMEOUT = "2s";
 const STANDALONE_STATEMENT_TIMEOUT = "5s";

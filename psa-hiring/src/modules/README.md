@@ -17,4 +17,6 @@ Current modules:
 
 - `applications/` — versioned application templates, one draft per candidacy, per-section answers with optimistic versions, and candidate-safe validation (M2.4). It uses the `candidates` command runner, so idempotency receipts and audit stay in one place.
 
+- `documents/` — document and version records, storage and malware-scanner ports with local test adapters, and candidate application attachments (M2.5).
+
 Do not create empty module directories ahead of the work item that needs them.

@@ -3,6 +3,7 @@
 export {
   assistSaveApplicationSection,
   beginApplicationDraft,
+  candidacyWorkflow,
   saveApplicationSection,
   type ApplicationCommandResult,
 } from "./application/application-commands";

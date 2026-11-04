@@ -40,6 +40,9 @@ export const candidateRateLimits = Object.freeze({
   staffProspectCreatePerAccount: { limit: 30, windowMs: 15 * 60_000 },
   // M2.4 draft saves: autosave runs at most once per idle period.
   applicationSavePerAccount: { limit: 300, windowMs: 15 * 60_000 },
+  // M2.5 attachments.
+  documentUploadPerAccount: { limit: 30, windowMs: 15 * 60_000 },
+  documentDownloadPerAccount: { limit: 120, windowMs: 15 * 60_000 },
 } satisfies Record<string, RateLimitPolicy>);
 
 export type RateLimitBucket = keyof typeof candidateRateLimits;

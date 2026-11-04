@@ -334,6 +334,8 @@ describe("scope", () => {
       "app.candidacy",
       "app.candidacy_stage_history",
       "app.candidate_command_receipt",
+      "app.document",
+      "app.document_version",
       "app.duplicate_candidate_match",
       "app.hiring_cycle",
       "app.job_description_version",

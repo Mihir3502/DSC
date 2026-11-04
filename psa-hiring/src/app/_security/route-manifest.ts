@@ -1,6 +1,7 @@
 import type { SelfServicePolicyCode } from "@/modules/identity-access/domain/self-service-policy";
 import type { organizationProjectionNames } from "@/modules/organization/presentation/staff-views";
 import type { applicationProjectionNames } from "@/modules/applications/presentation/application-views";
+import type { documentProjectionNames } from "@/modules/documents/presentation/document-views";
 import type { candidateProjectionNames } from "@/modules/candidates/presentation/candidate-views";
 import type { formSchemas } from "@/app/_auth/form-schemas";
 
@@ -87,6 +88,12 @@ export type OutputContract =
   | (typeof candidateProjectionNames)[number]
   /** M2.4 candidate application-draft projections (CONFIDENTIAL_PERSONNEL). */
   | (typeof applicationProjectionNames)[number]
+  /** M2.5 candidate attachment list (CONFIDENTIAL_PERSONNEL). */
+  | (typeof documentProjectionNames)[number]
+  /** M2.5 closed upload result codes. */
+  | "UPLOAD_RESULT"
+  /** M2.5 an authorized, audited protected file. */
+  | "PROTECTED_DOWNLOAD"
   /** M2.1 public-only hiring-cycle projections (classification PUBLIC). */
   | "PUBLIC_POSITION_LIST"
   | "PUBLIC_POSITION_DETAIL"
@@ -137,7 +144,7 @@ export type ManifestEntry = Readonly<{
   output: OutputContract;
   input?: keyof typeof formSchemas;
   /** State-changing requests: Next.js Server Action origin check. */
-  csrf: "NEXT_SERVER_ACTION_ORIGIN" | "NO_STATE_CHANGE";
+  csrf: "NEXT_SERVER_ACTION_ORIGIN" | "SAME_ORIGIN_HEADER" | "NO_STATE_CHANGE";
   /** Named limiter(s) enforced by the application command. */
   rateLimit: readonly string[];
   cache: CachePolicy;
@@ -1457,6 +1464,105 @@ export const routeManifest: readonly ManifestEntry[] = Object.freeze([
     denial: "SIGN_IN_OR_NOT_FOUND",
     recentAuth: "NONE",
     futureAudit: "SECURITY_EVENT_AND_DENIAL",
+  },
+
+  // ------------------------------------------- M2.5 application attachments
+  {
+    id: "candidate.attachments",
+    kind: "PAGE",
+    file: `${candidateApplication}/attachments/page.tsx`,
+    method: "RENDER",
+    route: "/candidate/applications/[candidacyId]/attachments",
+    audience: "CANDIDATE",
+    authentication: "REQUIRED",
+    account: "ACTIVE_VERIFIED_CANDIDATE",
+    authorization: {
+      kind: "PERMISSION",
+      permissions: ["candidate.candidacy.read_own"],
+    },
+    service: "queryApplicationAttachments",
+    resource: "OWN_CANDIDATE_RECORD",
+    output: "candidate.application_attachments.v1",
+    csrf: "NO_STATE_CHANGE",
+    rateLimit: [],
+    cache: "PRIVATE_NO_STORE",
+    denial: "SIGN_IN_OR_NOT_FOUND",
+    recentAuth: "NONE",
+    futureAudit: "NONE",
+  },
+  {
+    id: "candidate.attachments.remove",
+    kind: "SERVER_ACTION",
+    file: `${candidateApplication}/attachments/actions.ts`,
+    export: "removeAttachmentAction",
+    method: "POST",
+    route: "/candidate/applications/[candidacyId]/attachments",
+    audience: "CANDIDATE",
+    authentication: "REQUIRED",
+    account: "ACTIVE_VERIFIED_CANDIDATE",
+    authorization: {
+      kind: "PERMISSION",
+      permissions: ["application.own.edit"],
+    },
+    service: "removeApplicationAttachment",
+    resource: "OWN_CANDIDATE_RECORD",
+    output: "FORM_STATE",
+    input: "attachmentRemove",
+    csrf: "NEXT_SERVER_ACTION_ORIGIN",
+    rateLimit: [],
+    cache: "PRIVATE_NO_STORE",
+    denial: "SIGN_IN_OR_NOT_FOUND",
+    recentAuth: "NONE",
+    futureAudit: "SECURITY_EVENT_AND_DENIAL",
+  },
+  {
+    id: "candidate.attachments.upload",
+    kind: "ROUTE_HANDLER",
+    file: `${A}/api/candidate/applications/[candidacyId]/attachments/upload/route.ts`,
+    export: "POST",
+    method: "POST",
+    route: "/api/candidate/applications/[candidacyId]/attachments/upload",
+    audience: "CANDIDATE",
+    authentication: "REQUIRED",
+    account: "ACTIVE_VERIFIED_CANDIDATE",
+    authorization: {
+      kind: "PERMISSION",
+      permissions: ["application.own.edit"],
+    },
+    service: "uploadApplicationAttachment",
+    resource: "OWN_CANDIDATE_RECORD",
+    output: "UPLOAD_RESULT",
+    csrf: "SAME_ORIGIN_HEADER",
+    rateLimit: ["documentUploadPerAccount"],
+    cache: "PRIVATE_NO_STORE",
+    denial: "SIGN_IN_OR_NOT_FOUND",
+    recentAuth: "NONE",
+    futureAudit: "SECURITY_EVENT_AND_DENIAL",
+  },
+  {
+    id: "candidate.attachments.download",
+    kind: "ROUTE_HANDLER",
+    file: `${A}/api/candidate/applications/[candidacyId]/attachments/[documentId]/download/route.ts`,
+    export: "GET",
+    method: "GET",
+    route:
+      "/api/candidate/applications/[candidacyId]/attachments/[documentId]/download",
+    audience: "CANDIDATE",
+    authentication: "REQUIRED",
+    account: "ACTIVE_VERIFIED_CANDIDATE",
+    authorization: {
+      kind: "PERMISSION",
+      permissions: ["candidate.candidacy.read_own"],
+    },
+    service: "openApplicationAttachment",
+    resource: "OWN_CANDIDATE_RECORD",
+    output: "PROTECTED_DOWNLOAD",
+    csrf: "NO_STATE_CHANGE",
+    rateLimit: ["documentDownloadPerAccount"],
+    cache: "PRIVATE_NO_STORE",
+    denial: "SIGN_IN_OR_NOT_FOUND",
+    recentAuth: "NONE",
+    futureAudit: "SECURITY_EVENT",
   },
 
   // ------------------------------------------ M2.2 staff candidate records

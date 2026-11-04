@@ -15,7 +15,9 @@ export {
   type CommandContext,
 } from "./application/candidate-runtime";
 export {
+  findCandidacy,
   findCandidacyByPublicId,
+  newPublicId,
   type CandidacyRow,
   type Executor as CandidateExecutor,
 } from "./infrastructure/candidates-repository";

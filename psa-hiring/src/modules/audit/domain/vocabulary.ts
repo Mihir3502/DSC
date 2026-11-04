@@ -66,6 +66,8 @@ export const targetTypes = [
   "PERSON",
   "CANDIDACY",
   "DUPLICATE_MATCH",
+  // M2.5 application attachments.
+  "DOCUMENT",
 ] as const;
 export type TargetType = (typeof targetTypes)[number];
 

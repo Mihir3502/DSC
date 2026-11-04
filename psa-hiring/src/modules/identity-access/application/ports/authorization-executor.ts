@@ -11,7 +11,18 @@ import { AsyncLocalStorage } from "node:async_hooks";
 // Dependency-free on purpose: adapters in other modules import it without
 // creating an evaluation cycle with the identity runtime.
 
-const executor = new AsyncLocalStorage<unknown>();
+//
+// Next.js bundles Route Handlers separately from pages and Server Actions, but
+// the identity runtime and its adapters live on globalThis. The store must be
+// global too, or an adapter from one bundle can't see a transaction bound by
+// another (M2.5 defect fix).
+
+const storeKey = Symbol.for("psa.authorization_executor");
+const globalStores = globalThis as unknown as Record<
+  symbol,
+  AsyncLocalStorage<unknown> | undefined
+>;
+const executor = (globalStores[storeKey] ??= new AsyncLocalStorage<unknown>());
 
 export function withAuthorizationExecutor<T>(
   tx: unknown,

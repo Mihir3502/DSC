@@ -189,6 +189,12 @@ export const formSchemas = Object.freeze({
     expectedVersion: version,
     answers: { maxLength: 40000 },
   }),
+  attachmentRemove: defineFormSchema({
+    commandKey: ref,
+    candidacyId: key,
+    documentId: key,
+    expectedVersion: version,
+  }),
   prospectCreate: defineFormSchema({
     commandKey: ref,
     cycleReference: key,

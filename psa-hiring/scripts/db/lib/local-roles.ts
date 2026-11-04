@@ -274,6 +274,9 @@ export const applicationDraftTables = [
   "application_draft_section",
   // M2.3 tasks: read, opened, and updated only by trusted commands.
   "work_item",
+  // M2.5 attachments: history, never deleted.
+  "document",
+  "document_version",
 ] as const;
 
 /** Assignment columns the runtime role may update (lifecycle only). */

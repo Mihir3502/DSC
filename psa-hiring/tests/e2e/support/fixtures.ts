@@ -73,3 +73,20 @@ export function acceptExpectedNotFound(guards: Guards, count: number) {
   guards.pageErrors.length = 0;
   guards.pageErrors.push(...rest);
 }
+
+/**
+ * Accepts browser console messages for refusals a test deliberately triggers,
+ * such as a rejected upload. Browsers differ in whether they log these, so no
+ * count is required; any other page or console error still fails the test.
+ */
+export function acceptExpectedRefusals(
+  guards: Guards,
+  statuses: readonly number[],
+) {
+  const expected = new RegExp(
+    `Failed to load resource: the server responded with a status of (${statuses.join("|")})`,
+  );
+  const rest = guards.pageErrors.filter((e) => !expected.test(e));
+  guards.pageErrors.length = 0;
+  guards.pageErrors.push(...rest);
+}

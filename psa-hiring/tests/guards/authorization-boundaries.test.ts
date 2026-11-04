@@ -10,6 +10,7 @@ import { findPermission } from "@/modules/identity-access/policy/permission-cata
 import { organizationProjectionNames } from "@/modules/organization/presentation/staff-views";
 import { applicationProjectionNames } from "@/modules/applications/presentation/application-views";
 import { candidateProjectionNames } from "@/modules/candidates/presentation/candidate-views";
+import { documentProjectionNames } from "@/modules/documents/presentation/document-views";
 import { isProtectedPath } from "@/shared/security/protected-cache-policy";
 import {
   codeLines,
@@ -70,6 +71,7 @@ function organizationService(name: string) {
     ...listFiles("src/modules/organization/application"),
     ...listFiles("src/modules/candidates/application"),
     ...listFiles("src/modules/applications/application"),
+    ...listFiles("src/modules/documents/application"),
   ]
     .filter((f) => /\.ts$/.test(f) && !/\.test\.ts$/.test(f))
     .map((f) => ({ text: read(f), body: exportedFunction(read(f), name) }))
@@ -128,12 +130,20 @@ describe("route and entry-point manifest", () => {
       if (entry.kind === "SERVER_ACTION") {
         expect(entry.method, entry.id).toBe("POST");
         expect(entry.csrf, entry.id).toBe("NEXT_SERVER_ACTION_ORIGIN");
+      } else if (
+        entry.kind === "ROUTE_HANDLER" &&
+        entry.method === "POST" &&
+        entry.authorization.kind === "PERMISSION"
+      ) {
+        // M2.5 upload: too large for a Server Action, so it checks the origin itself.
+        expect(entry.csrf, entry.id).toBe("SAME_ORIGIN_HEADER");
+        expect(read(entry.file), entry.id).toContain("isSameOrigin(request)");
       } else {
         expect(entry.csrf, entry.id).toBe("NO_STATE_CHANGE");
       }
       if (entry.kind === "ROUTE_HANDLER") {
-        // The only handler is the closed auth catch-all.
-        expect(entry.authorization.kind, entry.id).toBe("CLOSED");
+        // The closed auth catch-all, or a named permission-bound file route.
+        expect(["CLOSED", "PERMISSION"]).toContain(entry.authorization.kind);
         expect(["GET", "POST"]).toContain(entry.export);
       }
     }
@@ -293,6 +303,7 @@ describe("route and entry-point manifest", () => {
             ...organizationProjectionNames,
             ...candidateProjectionNames,
             ...applicationProjectionNames,
+            ...documentProjectionNames,
           ],
           entry.id,
         ).toContain(entry.output);
@@ -472,7 +483,14 @@ describe("delivery and client boundaries", () => {
 
   it("adds no generic CRUD, GraphQL, or catch-all business endpoint", () => {
     const routes = listFiles("src/app").filter((f) => /\/route\.tsx?$/.test(f));
-    expect(routes).toEqual(["src/app/api/auth/[...all]/route.ts"]);
+    expect(routes.sort()).toEqual(
+      [
+        "src/app/api/auth/[...all]/route.ts",
+        // M2.5 attachment upload and download: named, not generic.
+        "src/app/api/candidate/applications/[candidacyId]/attachments/upload/route.ts",
+        "src/app/api/candidate/applications/[candidacyId]/attachments/[documentId]/download/route.ts",
+      ].sort(),
+    );
     expect(listFiles("src").filter((f) => /graphql/i.test(f))).toEqual([]);
   });
 });

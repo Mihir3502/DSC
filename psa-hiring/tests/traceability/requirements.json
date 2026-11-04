@@ -3429,6 +3429,158 @@
           "title": "a candidate begins a draft, autosaves, fixes an error, and resumes"
         }
       ]
+    },
+    {
+      "id": "AC-M2.5-01",
+      "tests": [
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "keeps the current file until a replacement is clean, and preserves every version"
+        },
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "removes a file from the application with a stale check, keeping its history"
+        },
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "refuses deletes, evidence edits, reversed scans, and a current version that isn't clean"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.5-02",
+      "tests": [
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "quarantines, scans, and promotes a clean file, with audit that holds no file name"
+        },
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "uses only a generated storage key for a hostile file name"
+        },
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "refuses safely when storage or the production provider is unavailable"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.5-03",
+      "tests": [
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "rejects a disallowed or disguised file with audit, no record, and no stored bytes"
+        },
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "rejects malware, discards its bytes, and never offers it for download"
+        },
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "fails closed when the scanner is unavailable, keeps the file in quarantine, and finishes only once"
+        },
+        {
+          "file": "src/modules/documents/domain/attachment-policy.test.ts",
+          "title": "accepts PDF, JPEG, and PNG by signature and takes the type from the bytes"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.5-04",
+      "tests": [
+        {
+          "file": "tests/e2e/application-attachments.spec.ts",
+          "title": "a candidate uploads, sees refusals, downloads safely, replaces, and removes"
+        },
+        {
+          "file": "tests/e2e/application-attachments.spec.ts",
+          "title": "direct requests from elsewhere get nothing, and oversized or cross-site uploads are refused"
+        },
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "returns the owner's exact bytes, safe type, and one audit event per download"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.5-05",
+      "tests": [
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "returns the owner's exact bytes, safe type, and one audit event per download"
+        },
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "sends no bytes when the download's audit event can't be recorded"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.5-X1",
+      "tests": [
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "gives another candidate and an unknown reference the same result, with no read or write"
+        },
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "denies every staff role upload, removal, listing, and download"
+        },
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "refuses edits once a candidacy closes, while the candidate can still download"
+        },
+        {
+          "file": "tests/e2e/application-attachments.spec.ts",
+          "title": "direct requests from elsewhere get nothing, and oversized or cross-site uploads are refused"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.5-X2",
+      "tests": [
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "replays the same key once, rejects it with a different file, and leaves no orphan bytes"
+        },
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "enforces the attachment limit under concurrency"
+        },
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "rolls back the receipt and discards the bytes when the audit append fails"
+        },
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "keeps every audit chain verifiable"
+        },
+        {
+          "file": "src/modules/identity-access/application/ports/authorization-executor.test.ts",
+          "title": "is shared across separately loaded copies of the module"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.5-X3",
+      "tests": [
+        {
+          "file": "tests/accessibility/application-attachments.a11y.spec.ts",
+          "title": "the attachments page is accessible, keyboard operable, and reflows"
+        },
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "rejects malformed references, categories, and keys with no stored bytes"
+        },
+        {
+          "file": "tests/integration/documents/attachments.test.ts",
+          "title": "limits uploads per account before storing anything"
+        },
+        {
+          "file": "tests/e2e/application-attachments.spec.ts",
+          "title": "a candidate uploads, sees refusals, downloads safely, replaces, and removes"
+        }
+      ]
     }
   ]
 }

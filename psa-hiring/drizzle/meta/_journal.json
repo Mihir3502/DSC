@@ -64,6 +64,13 @@
       "when": 1793722628350,
       "tag": "0008_work_item",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793731814513,
+      "tag": "0009_application_attachments",
+      "breakpoints": true
     }
   ]
 }

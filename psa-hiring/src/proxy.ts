@@ -56,6 +56,10 @@ const knownRoutes = new Set([
 const templateRoutes: readonly (readonly [RegExp, string])[] = [
   [/^\/positions\/[^/]+$/, "/positions/[positionId]"],
   [
+    /^\/candidate\/applications\/[^/]+\/attachments$/,
+    "/candidate/applications/[candidacyId]/attachments",
+  ],
+  [
     /^\/candidate\/applications\/[^/]+\/[^/]+$/,
     "/candidate/applications/[candidacyId]/[section]",
   ],

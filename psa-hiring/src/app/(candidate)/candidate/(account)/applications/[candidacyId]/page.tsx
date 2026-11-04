@@ -89,6 +89,20 @@ export default async function ApplicationOverviewPage({
               </li>
             ))}
           </ol>
+          <section className="rounded-lg border p-4">
+            <h2 className="font-semibold">
+              <Link
+                prefetch={false}
+                href={`${base}/attachments`}
+                className="underline underline-offset-4"
+              >
+                Attachments
+              </Link>
+            </h2>
+            <p className="text-sm">
+              Add a resume and any licenses or certifications. Optional.
+            </p>
+          </section>
         </>
       )}
     </div>

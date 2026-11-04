@@ -663,6 +663,21 @@ const definitions: readonly EventDefinition[] = [
     "APPLICATION_SECTION_ASSIST",
     "CANDIDACY",
   ),
+  // M2.5 attachments. Metadata holds codes and versions, never a file name,
+  // hash, or contents.
+  candidateRecord("document.received", "DOCUMENT_RECEIVE", "DOCUMENT"),
+  // Every refusal and every download is its own occurrence.
+  candidateRecord(
+    "document.upload_rejected",
+    "DOCUMENT_UPLOAD_REJECT",
+    "CANDIDACY",
+    { idempotent: false },
+  ),
+  candidateRecord("document.scanned", "DOCUMENT_SCAN", "DOCUMENT"),
+  candidateRecord("document.removed", "DOCUMENT_REMOVE", "DOCUMENT"),
+  candidateRecord("document.downloaded", "DOCUMENT_DOWNLOAD", "DOCUMENT", {
+    idempotent: false,
+  }),
   // A blocked merge is durable denial evidence; nothing else is written.
   def({
     name: "person.merge_blocked",
@@ -801,6 +816,11 @@ export const catalogEventNames = [
   "application.started",
   "application.section_saved",
   "application.section_assisted",
+  "document.received",
+  "document.upload_rejected",
+  "document.scanned",
+  "document.removed",
+  "document.downloaded",
 ] as const;
 export type CatalogEventName = (typeof catalogEventNames)[number];
 
