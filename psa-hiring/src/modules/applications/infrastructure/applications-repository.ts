@@ -4,6 +4,7 @@ import type { CandidateExecutor as Executor } from "@/modules/candidates";
 import {
   applicationCertificationVersion,
   applicationDraftSection,
+  applicationReturn,
   applicationSubmission,
   applicationSubmissionAttachment,
   applicationTemplate,
@@ -87,11 +88,13 @@ export async function insertDraft(
     templateVersionId: string;
     createdByAccountId: string;
     createdAt: Date;
+    versionNumber?: number;
+    supersedesId?: string;
   }>,
 ): Promise<ApplicationVersionRow> {
   const [row] = await db
     .insert(applicationVersion)
-    .values({ ...values, versionNumber: 1, status: "DRAFT" })
+    .values({ versionNumber: 1, ...values, status: "DRAFT" })
     .returning();
   return row!;
 }
@@ -223,4 +226,45 @@ export async function findLatestSubmission(db: Executor, candidacyId: string) {
     .from(applicationSubmissionAttachment)
     .where(eq(applicationSubmissionAttachment.submissionId, row.submission.id));
   return { ...row, attachmentCount: files?.n ?? 0 };
+}
+
+export async function findReturn(db: Executor, applicationVersionId: string) {
+  const [row] = await db
+    .select()
+    .from(applicationReturn)
+    .where(eq(applicationReturn.applicationVersionId, applicationVersionId))
+    .limit(1);
+  return row ?? null;
+}
+
+/** Every return on a candidacy, newest first; bounded. */
+export async function listReturns(db: Executor, candidacyId: string) {
+  return db
+    .select()
+    .from(applicationReturn)
+    .where(eq(applicationReturn.candidacyId, candidacyId))
+    .orderBy(desc(applicationReturn.returnedAt))
+    .limit(20);
+}
+
+export async function findVersion(db: Executor, id: string) {
+  const [row] = await db
+    .select()
+    .from(applicationVersion)
+    .where(eq(applicationVersion.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+/** The frozen submission of one version. */
+export async function findSubmissionOfVersion(
+  db: Executor,
+  applicationVersionId: string,
+) {
+  const [row] = await db
+    .select()
+    .from(applicationSubmission)
+    .where(eq(applicationSubmission.applicationVersionId, applicationVersionId))
+    .limit(1);
+  return row ?? null;
 }

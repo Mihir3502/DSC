@@ -289,12 +289,15 @@ export const applicationDraftTables = [
   // M2.6 frozen submissions (also no runtime UPDATE, below).
   "application_submission",
   "application_submission_attachment",
+  // M2.7 returns (also no runtime UPDATE, below).
+  "application_return",
 ] as const;
 
 /** M2.6 frozen submissions (runtime SELECT and INSERT only). */
 export const applicationFrozenTables = [
   "application_submission",
   "application_submission_attachment",
+  "application_return",
 ] as const;
 
 /** Assignment columns the runtime role may update (lifecycle only). */

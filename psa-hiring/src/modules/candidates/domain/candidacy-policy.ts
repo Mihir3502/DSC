@@ -72,7 +72,8 @@ export type StageCommand =
   | "start_application"
   | "start_application_from_prospect"
   | "close_prospect"
-  | "submit_application";
+  | "submit_application"
+  | "return_application";
 
 /** The named transition table; anything else is refused. */
 export function stageTransition(
@@ -98,6 +99,10 @@ export function stageTransition(
       return from?.stage === "APPLICATION_INCOMPLETE" &&
         from.status === "ACTIVE"
         ? { stage: "APPLICATION_SUBMITTED", status: "ACTIVE" }
+        : null;
+    case "return_application":
+      return from?.stage === "APPLICATION_SUBMITTED" && from.status === "ACTIVE"
+        ? { stage: "APPLICATION_INCOMPLETE", status: "ACTIVE" }
         : null;
   }
 }

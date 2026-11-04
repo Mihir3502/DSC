@@ -17,6 +17,7 @@ export const authEmailTemplates = [
   "STAFF_INVITATION",
   "STAFF_SECURITY_NOTICE",
   "APPLICATION_RECEIVED",
+  "APPLICATION_RETURNED",
 ] as const;
 export type AuthEmailTemplate = (typeof authEmailTemplates)[number];
 
@@ -53,6 +54,12 @@ export type AuthEmailMessage =
       template: "APPLICATION_RECEIVED";
       to: string;
       /** The candidate's nonsecret reference; no name or answer. */
+      reference: string;
+    }>
+  | Readonly<{
+      template: "APPLICATION_RETURNED";
+      to: string;
+      /** The instructions stay in the portal, behind sign-in. */
       reference: string;
     }>;
 
@@ -185,6 +192,21 @@ export function renderAuthEmail(
         template: message.template,
         to: message.to,
         subject: "We received your application",
+        ...body,
+      });
+    }
+    case "APPLICATION_RETURNED": {
+      if (!/^C-[0-9A-HJKMNP-TV-Z]{8}$/.test(message.reference)) {
+        throw new Error("invalid candidate reference shape");
+      }
+      const body = paragraphs([
+        `We need you to correct part of your application. Your reference is ${message.reference}.`,
+        "Sign in to see what to change, then submit it again.",
+      ]);
+      return Object.freeze({
+        template: message.template,
+        to: message.to,
+        subject: "Please correct your application",
         ...body,
       });
     }

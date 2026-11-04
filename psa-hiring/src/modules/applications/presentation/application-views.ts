@@ -15,6 +15,7 @@ export const applicationProjectionNames = [
   "candidate.application_section.v1",
   "candidate.application_review.v1",
   "candidate.application_receipt.v1",
+  "staff.application_review.v1",
 ] as const;
 
 const requires = (permission: string): FieldRule => ({
@@ -39,7 +40,18 @@ const code = z.string().regex(/^[a-z][a-z0-9_]{1,39}$/);
 const publicId = z.string().regex(/^[0-9a-hjkmnp-tv-z]{12}$/);
 const reference = z.string().regex(/^C-[0-9A-HJKMNP-TV-Z]{8}$/);
 const label = z.string().max(300);
-const sectionStatus = z.enum(["Not started", "In progress", "Complete"]);
+const sectionStatus = z.enum([
+  "Not started",
+  "In progress",
+  "Complete",
+  "Needs correction",
+]);
+
+/** What staff asked the candidate to change; plain text, encoded on render. */
+const correction = z.strictObject({
+  reason: label,
+  instructions: z.string().max(1000),
+});
 
 const overviewSchema = z.strictObject({
   candidacyId: publicId,
@@ -60,9 +72,13 @@ const overviewSchema = z.strictObject({
         title: label,
         description: label,
         status: sectionStatus,
+        /** False when a correction didn't reopen this section. */
+        editable: z.boolean(),
       }),
     )
     .max(20),
+  correction: correction.nullable(),
+  attachmentsEditable: z.boolean(),
   completeCount: z.number().int().min(0),
   lastSaved: label.nullable(),
 });
@@ -86,6 +102,8 @@ export const applicationOverviewContract = defineProjection<
       "submitted",
       "editable",
       "sections",
+      "correction",
+      "attachmentsEditable",
       "completeCount",
       "lastSaved",
     ],
@@ -122,12 +140,15 @@ const sectionSchema = z.strictObject({
           "multi_choice",
         ]),
         required: z.boolean(),
+        /** Staff asked the candidate to check this answer. */
+        flagged: z.boolean(),
         options: z.array(option).max(20),
         value: answer.nullable(),
       }),
     )
     .max(30),
   lastSaved: label.nullable(),
+  correction: correction.nullable(),
   previous: z.strictObject({ code, title: label }).nullable(),
   next: z.strictObject({ code, title: label }).nullable(),
 });
@@ -151,6 +172,7 @@ export const applicationSectionContract = defineProjection<
       "version",
       "fields",
       "lastSaved",
+      "correction",
       "previous",
       "next",
     ],
@@ -172,6 +194,7 @@ const reviewSchema = z.strictObject({
         code,
         title: label,
         complete: z.boolean(),
+        editable: z.boolean(),
         missing: z.array(label).max(30),
         answers: z
           .array(
@@ -190,6 +213,8 @@ const reviewSchema = z.strictObject({
   excludedAttachments: z
     .array(z.strictObject({ name: label, status: label }))
     .max(20),
+  attachmentsEditable: z.boolean(),
+  correction: correction.nullable(),
   certification: z.strictObject({
     version: z.number().int().min(1),
     statement: z.string().max(2000),
@@ -216,6 +241,8 @@ export const applicationReviewContract = defineProjection<
       "sections",
       "attachments",
       "excludedAttachments",
+      "attachmentsEditable",
+      "correction",
       "certification",
       "reviewToken",
     ],
@@ -259,4 +286,76 @@ export const applicationReceiptContract = defineProjection<
     "candidate.candidacy.read_own",
   ),
   schema: receiptSchema,
+});
+
+// ------------------------------------------------------------------ staff
+
+const staffReviewSchema = z.strictObject({
+  candidacyId: publicId,
+  reference,
+  title: label,
+  submitted: label,
+  receiptNumber: z.string().regex(/^R-[0-9A-HJKMNP-TV-Z]{8}$/),
+  certifiedName: label,
+  certificationVersion: z.number().int().min(1),
+  version: z.number().int().min(1),
+  /** True only when this staff member may return it now. */
+  canReturn: z.boolean(),
+  sections: z
+    .array(
+      z.strictObject({
+        code,
+        title: label,
+        fields: z
+          .array(
+            z.strictObject({
+              code,
+              label,
+              value: z.string().max(4000).nullable(),
+            }),
+          )
+          .max(30),
+      }),
+    )
+    .max(20),
+  attachments: z
+    .array(z.strictObject({ category: label, name: label, size: label }))
+    .max(20),
+  earlierReturns: z
+    .array(
+      z.strictObject({
+        when: label,
+        reason: label,
+        instructions: z.string().max(1000),
+      }),
+    )
+    .max(20),
+});
+export type StaffApplicationReviewView = z.infer<typeof staffReviewSchema>;
+
+export const staffApplicationReviewContract = defineProjection<
+  StaffApplicationReviewView,
+  StaffApplicationReviewView
+>({
+  name: "staff.application_review.v1",
+  audience: "STAFF",
+  purpose: "REVIEW",
+  fields: fieldsFor<StaffApplicationReviewView>(
+    [
+      "candidacyId",
+      "reference",
+      "title",
+      "submitted",
+      "receiptNumber",
+      "certifiedName",
+      "certificationVersion",
+      "version",
+      "canReturn",
+      "sections",
+      "attachments",
+      "earlierReturns",
+    ],
+    "application.read",
+  ),
+  schema: staffReviewSchema,
 });

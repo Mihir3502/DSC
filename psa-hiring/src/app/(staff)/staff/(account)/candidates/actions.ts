@@ -2,8 +2,13 @@
 
 import { headers } from "next/headers";
 import {
+  dispatchApplicationEmails,
+  returnApplication,
+} from "@/modules/applications";
+import {
   assignCandidacyOwnerToSelf,
   closeProspect,
+  candidateDependencies,
   createStaffProspect,
   mergePeople,
   queryCandidacyPath,
@@ -237,4 +242,51 @@ export async function mergePeopleAction(
     },
     true,
   );
+}
+
+export async function returnApplicationAction(
+  formData: FormData,
+): Promise<Readonly<{ ok: boolean; message?: string }>> {
+  const problem =
+    "This application wasn't returned. Reload the page and try again.";
+  const input = parseFormInput(formData, formSchemas.applicationReturn);
+  if (input.kind === "REJECTED") return { ok: false, message: problem };
+  const result = await returnApplication(input.values, await actor());
+  if (result.kind === "DONE") {
+    try {
+      await dispatchApplicationEmails(candidateDependencies());
+    } catch {
+      // The row stays pending for the next dispatch.
+    }
+    return { ok: true };
+  }
+  if (result.kind === "REFUSED") {
+    switch (result.reason) {
+      case "UNAUTHENTICATED":
+        return refuseAccess("UNAUTHENTICATED", "STAFF");
+      case "NOT_FOUND":
+      case "NOT_AUTHORIZED":
+        return refuseAccess("NOT_FOUND", "STAFF");
+      case "STALE_VERSION":
+        return {
+          ok: false,
+          message:
+            "This application changed after you opened it. Reload the page, then try again.",
+        };
+      case "INVALID_INPUT":
+        return {
+          ok: false,
+          message:
+            "Choose a reason and at least one section or attachments, and write instructions without unusual characters.",
+        };
+      case "RATE_LIMITED":
+        return {
+          ok: false,
+          message: "Too many attempts. Wait a few minutes, then try again.",
+        };
+      default:
+        return { ok: false, message: problem };
+    }
+  }
+  return { ok: false, message: problem };
 }

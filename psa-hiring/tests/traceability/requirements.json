@@ -534,6 +534,22 @@
           "title": "freezes answers, clean files, and certification, moves the stage, and swaps the tasks, all at once"
         }
       ]
+    },
+    {
+      "id": "PRD-APP-005",
+      "title": "Staff may return an application for correction with candidate-visible instructions",
+      "status": "covered",
+      "note": "M2.7: a reason code and instructions on an append-only return record; selected sections reopen.",
+      "tests": [
+        {
+          "file": "tests/integration/applications/correction.test.ts",
+          "title": "records the reason and selection, moves the stage back, swaps tasks, and keeps the submission"
+        },
+        {
+          "file": "tests/e2e/application-correction.spec.ts",
+          "title": "a recruiter returns a section, and the candidate corrects and resubmits it"
+        }
+      ]
     }
   ],
   "acceptanceCriteria": [
@@ -3282,7 +3298,7 @@
       "tests": [
         {
           "file": "src/modules/candidates/domain/candidate-portal.test.ts",
-          "title": "registers only the M2.3 work type"
+          "title": "registers only the built candidate work types"
         },
         {
           "file": "src/modules/candidates/domain/candidate-portal.test.ts",
@@ -3404,7 +3420,7 @@
         },
         {
           "file": "src/modules/identity-access/policy/workflow-policies.test.ts",
-          "title": "permits only draft editing, and only in APPLICATION_INCOMPLETE"
+          "title": "permits only the built application commands, each in its own state"
         },
         {
           "file": "tests/authorization/admin-auditor.matrix.test.ts",
@@ -3768,6 +3784,138 @@
         {
           "file": "tests/e2e/application-submission.spec.ts",
           "title": "a candidate reviews, certifies, submits, and gets a receipt, and a recruiter sees the queue item"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.7-01",
+      "tests": [
+        {
+          "file": "tests/integration/applications/correction.test.ts",
+          "title": "records the reason and selection, moves the stage back, swaps tasks, and keeps the submission"
+        },
+        {
+          "file": "tests/integration/applications/correction.test.ts",
+          "title": "refuses a bad selection, reason, or instructions, and changes nothing"
+        },
+        {
+          "file": "tests/e2e/application-correction.spec.ts",
+          "title": "a recruiter returns a section, and the candidate corrects and resubmits it"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.7-02",
+      "tests": [
+        {
+          "file": "tests/integration/applications/correction.test.ts",
+          "title": "shows the reason, creates a pre-filled new version, and reopens only what was selected"
+        },
+        {
+          "file": "tests/e2e/application-correction.spec.ts",
+          "title": "a recruiter returns a section, and the candidate corrects and resubmits it"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.7-03",
+      "tests": [
+        {
+          "file": "tests/integration/applications/correction.test.ts",
+          "title": "shows the reason, creates a pre-filled new version, and reopens only what was selected"
+        },
+        {
+          "file": "tests/integration/applications/correction.test.ts",
+          "title": "allows attachments to change only when staff reopened them"
+        },
+        {
+          "file": "tests/e2e/application-correction.spec.ts",
+          "title": "a recruiter returns a section, and the candidate corrects and resubmits it"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.7-04",
+      "tests": [
+        {
+          "file": "tests/integration/applications/correction.test.ts",
+          "title": "resubmits as a new frozen version, supersedes the prior one, and preserves both"
+        },
+        {
+          "file": "tests/integration/applications/correction.test.ts",
+          "title": "protects the return record and the version lifecycle"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.7-05",
+      "tests": [
+        {
+          "file": "tests/integration/applications/correction.test.ts",
+          "title": "resubmits as a new frozen version, supersedes the prior one, and preserves both"
+        },
+        {
+          "file": "tests/integration/applications/correction.test.ts",
+          "title": "emails a return with no instructions, and a resubmission separately"
+        },
+        {
+          "file": "tests/integration/applications/correction.test.ts",
+          "title": "lets a correction finish after the hiring cycle closes"
+        },
+        {
+          "file": "tests/e2e/application-correction.spec.ts",
+          "title": "a recruiter returns a section, and the candidate corrects and resubmits it"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.7-X1",
+      "tests": [
+        {
+          "file": "tests/integration/applications/correction.test.ts",
+          "title": "limits reading and returning to scoped staff, and hides it from everyone else the same way"
+        },
+        {
+          "file": "tests/integration/applications/correction.test.ts",
+          "title": "hides a candidate's correction from another candidate"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.7-X2",
+      "tests": [
+        {
+          "file": "tests/integration/applications/correction.test.ts",
+          "title": "replays the same key once, and serializes concurrent returns"
+        },
+        {
+          "file": "tests/integration/applications/correction.test.ts",
+          "title": "rolls everything back when the audit append fails"
+        },
+        {
+          "file": "tests/integration/applications/correction.test.ts",
+          "title": "protects the return record and the version lifecycle"
+        },
+        {
+          "file": "tests/integration/applications/correction.test.ts",
+          "title": "keeps every audit chain verifiable"
+        }
+      ]
+    },
+    {
+      "id": "AC-M2.7-X3",
+      "tests": [
+        {
+          "file": "tests/accessibility/application-correction.a11y.spec.ts",
+          "title": "the staff return form and candidate correction view are accessible"
+        },
+        {
+          "file": "tests/integration/applications/correction.test.ts",
+          "title": "refuses a bad selection, reason, or instructions, and changes nothing"
+        },
+        {
+          "file": "tests/e2e/application-correction.spec.ts",
+          "title": "a recruiter returns a section, and the candidate corrects and resubmits it"
         }
       ]
     }

@@ -462,7 +462,7 @@ describe("submitting (AC-M2.6-01/02/03/04/05)", () => {
       view: {
         submitted: true,
         editable: false,
-        status: "Application submitted",
+        status: "Application received",
       },
     });
     expect(

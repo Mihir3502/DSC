@@ -26,6 +26,7 @@ import {
 } from "../domain/attachment-policy";
 import { documentProviders } from "../infrastructure/document-providers";
 import {
+  attachmentsLockedByCorrection,
   countActiveDocuments,
   lockDocument,
   findDocumentByPublicId,
@@ -224,6 +225,9 @@ export async function uploadApplicationAttachment(
         candidacyWorkflow(row),
       );
       requireEditable(row);
+      if (await attachmentsLockedByCorrection(ctx.tx, row.id)) {
+        return refuse("INVALID_TRANSITION");
+      }
       let documentRow = input.documentId
         ? await findDocumentByPublicId(ctx.tx, input.documentId, row.id)
         : null;
@@ -452,6 +456,9 @@ export async function removeApplicationAttachment(
         candidacyWorkflow(row),
       );
       requireEditable(row);
+      if (await attachmentsLockedByCorrection(ctx.tx, row.id)) {
+        return refuse("INVALID_TRANSITION");
+      }
       const found = await findDocumentByPublicId(
         ctx.tx,
         input.documentId!,

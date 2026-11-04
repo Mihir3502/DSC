@@ -197,6 +197,15 @@ export const formSchemas = Object.freeze({
     signature: shortText,
     reviewToken: key,
   }),
+  applicationReturn: defineFormSchema({
+    commandKey: ref,
+    candidacyId: key,
+    expectedVersion: version,
+    reasonCode: key,
+    instructions: { maxLength: 2000 },
+    selection: { maxLength: 8000 },
+    attachments: key,
+  }),
   attachmentRemove: defineFormSchema({
     commandKey: ref,
     candidacyId: key,

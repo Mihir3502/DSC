@@ -87,8 +87,11 @@ describe("next action", () => {
     expect(isActionable(item({ status: "CANCELED" }), incomplete)).toBe(false);
   });
 
-  it("registers only the M2.3 work type", () => {
-    expect(Object.keys(workTypes)).toEqual(["COMPLETE_APPLICATION"]);
+  it("registers only the built candidate work types", () => {
+    expect(Object.keys(workTypes).sort()).toEqual([
+      "COMPLETE_APPLICATION",
+      "CORRECT_APPLICATION",
+    ]);
   });
 });
 

@@ -21,6 +21,7 @@ export type SectionField = Readonly<{
   hint: string | null;
   type: string;
   required: boolean;
+  flagged: boolean;
   options: readonly Readonly<{ value: string; label: string }>[];
   value: Value | null;
 }>;
@@ -329,6 +330,9 @@ function Field({
       )}
     </>
   );
+  const flag = field.flagged ? (
+    <p className="text-sm font-medium">We asked you to check this answer.</p>
+  ) : null;
   const hint = field.hint ? (
     <p id={hintId} className="text-sm text-muted-foreground">
       {field.hint}
@@ -351,6 +355,7 @@ function Field({
         className="flex flex-col gap-1.5"
       >
         <legend className="mb-1 font-medium">{label}</legend>
+        {flag}
         {hint}
         {errorEl}
         {field.options.map((option) => (
@@ -410,6 +415,7 @@ function Field({
       <label htmlFor={id} className="font-medium">
         {label}
       </label>
+      {flag}
       {hint}
       {errorEl}
       {field.type === "long_text" ? (

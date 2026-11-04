@@ -811,6 +811,9 @@ describe("event coverage (§17)", () => {
       // M2.6 submission: asserted in
       // tests/integration/applications/submission.test.ts.
       "application.submitted",
+      // M2.7: asserted in tests/integration/applications/correction.test.ts.
+      "application.returned",
+      "application.correction_started",
       // M2.5 attachment events: asserted in
       // tests/integration/documents/attachments.test.ts.
       "document.received",

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, count, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 import type { CandidateExecutor as Executor } from "@/modules/candidates";
 import { document, documentVersion } from "./documents-schema";
 
@@ -167,4 +167,23 @@ export async function listCandidacyDocuments(
     )
     .orderBy(asc(document.createdAt), asc(document.id))
     .limit(20);
+}
+
+/**
+ * True while a correction is open that didn't reopen attachments (M2.7). Read
+ * directly because the applications module depends on this one, not the reverse.
+ */
+export async function attachmentsLockedByCorrection(
+  db: Executor,
+  candidacyId: string,
+): Promise<boolean> {
+  const result = await db.execute(sql`
+    SELECT r.attachments_reopened AS reopened
+      FROM app.application_return r
+     WHERE r.candidacy_id = ${candidacyId}
+     ORDER BY r.returned_at DESC
+     LIMIT 1
+  `);
+  const row = (result as unknown as { rows: { reopened: boolean }[] }).rows[0];
+  return row !== undefined && !row.reopened;
 }

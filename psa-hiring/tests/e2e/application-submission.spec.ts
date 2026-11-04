@@ -75,7 +75,7 @@ test.describe("application submission @critical", () => {
 
     // Home has nothing left to do, and the application is read-only.
     await page.goto("/candidate");
-    await expect(main).toContainText("Application submitted");
+    await expect(main).toContainText("Application received");
     await expect(main).toContainText("nothing you need to do");
     await page.goto("/candidate/tasks?filter=under_review");
     await expect(main).toContainText("Status: Submitted");

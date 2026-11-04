@@ -34,6 +34,15 @@ export default async function ApplicationSectionPage({
         <h1 className="text-3xl font-semibold tracking-tight">{view.title}</h1>
         <p>{view.description}</p>
       </div>
+      {view.correction ? (
+        <section
+          aria-label="What we asked you to correct"
+          className="flex flex-col gap-1 rounded-lg border-2 border-foreground p-4 [overflow-wrap:anywhere]"
+        >
+          <p className="font-medium">{view.correction.reason}</p>
+          <p className="whitespace-pre-wrap">{view.correction.instructions}</p>
+        </section>
+      ) : null}
       <ApplicationSectionForm
         action={saveApplicationSectionAction}
         candidacyId={view.candidacyId}

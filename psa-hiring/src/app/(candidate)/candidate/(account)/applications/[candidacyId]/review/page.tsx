@@ -38,6 +38,19 @@ export default async function ApplicationReviewPage({
         {view.title} · <span className="font-mono">{view.reference}</span>
       </p>
 
+      {view.correction ? (
+        <section
+          aria-labelledby="correction"
+          className="flex flex-col gap-2 rounded-lg border-2 border-foreground p-4 [overflow-wrap:anywhere]"
+        >
+          <h2 id="correction" className="text-xl font-semibold">
+            What we asked you to correct
+          </h2>
+          <p className="font-medium">{view.correction.reason}</p>
+          <p className="whitespace-pre-wrap">{view.correction.instructions}</p>
+        </section>
+      ) : null}
+
       {view.sections.map((section) => (
         <section
           key={section.code}
@@ -73,15 +86,17 @@ export default async function ApplicationReviewPage({
               ))}
             </dl>
           ) : null}
-          <p className="print:hidden">
-            <Link
-              prefetch={false}
-              href={`${base}/${section.code}`}
-              className="inline-flex min-h-11 items-center underline underline-offset-4"
-            >
-              Edit {section.title}
-            </Link>
-          </p>
+          {section.editable ? (
+            <p className="print:hidden">
+              <Link
+                prefetch={false}
+                href={`${base}/${section.code}`}
+                className="inline-flex min-h-11 items-center underline underline-offset-4"
+              >
+                Edit {section.title}
+              </Link>
+            </p>
+          ) : null}
         </section>
       ))}
 
@@ -115,15 +130,17 @@ export default async function ApplicationReviewPage({
             </ul>
           </div>
         ) : null}
-        <p className="print:hidden">
-          <Link
-            prefetch={false}
-            href={`${base}/attachments`}
-            className="inline-flex min-h-11 items-center underline underline-offset-4"
-          >
-            Change attachments
-          </Link>
-        </p>
+        {view.attachmentsEditable ? (
+          <p className="print:hidden">
+            <Link
+              prefetch={false}
+              href={`${base}/attachments`}
+              className="inline-flex min-h-11 items-center underline underline-offset-4"
+            >
+              Change attachments
+            </Link>
+          </p>
+        ) : null}
       </section>
 
       <SubmitApplicationForm

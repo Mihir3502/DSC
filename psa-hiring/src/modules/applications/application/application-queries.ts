@@ -3,6 +3,7 @@ import {
   authorize,
   project,
   resolveCurrentCandidate,
+  resolveCurrentStaff,
   type AuthorizationRequest,
   type Principal,
   type ProjectionContract,
@@ -19,11 +20,16 @@ import {
   type CandidateExecutor,
 } from "@/modules/candidates";
 import { cycleForCandidacy } from "@/modules/organization";
-import { listSubmittableAttachments } from "@/modules/documents";
+import {
+  listSubmittableAttachments,
+  listSubmittedAttachments,
+} from "@/modules/documents";
 import {
   checkApplication,
   parseTemplate,
+  returnReasons,
   type ApplicationTemplate,
+  type ReturnReason,
   type TemplateField,
 } from "../domain/application-template";
 import { reviewTokenFor } from "./application-submission";
@@ -33,6 +39,9 @@ import {
   findEffectiveTemplateVersion,
   findLatestSubmission,
   findLatestVersion,
+  findReturn,
+  findSubmissionOfVersion,
+  listReturns,
   findTemplateVersion,
   listDraftSections,
   type DraftSectionRow,
@@ -42,7 +51,9 @@ import {
   applicationReceiptContract,
   applicationReviewContract,
   applicationSectionContract,
+  staffApplicationReviewContract,
   type ApplicationOverviewView,
+  type StaffApplicationReviewView,
   type ApplicationReceiptView,
   type ApplicationReviewView,
   type ApplicationSectionView,
@@ -99,7 +110,7 @@ function render<V extends object>(
 function ownRequest(
   principal: Principal,
   permission: string,
-  operation: "READ" | "EDIT" | "CREATE",
+  operation: "READ" | "EDIT" | "CREATE" | "REVIEW",
   id: string,
 ): AuthorizationRequest {
   return {
@@ -133,6 +144,32 @@ async function templateFor(
   return version ? parseTemplate(version.schemaJson) : null;
 }
 
+/** The return a version answers: its own if returned, else what it corrects. */
+async function openReturn(
+  deps: CandidateDependencies,
+  version: Readonly<{
+    id: string;
+    status: string;
+    supersedesId: string | null;
+  }> | null,
+) {
+  if (!version || version.status === "SUBMITTED") return null;
+  if (version.status === "RETURNED") return findReturn(db(deps), version.id);
+  return version.supersedesId
+    ? findReturn(db(deps), version.supersedesId)
+    : null;
+}
+
+const correctionOf = (
+  returned: Readonly<{ reasonCode: string; instructions: string }> | null,
+) =>
+  returned
+    ? {
+        reason: returnReasons[returned.reasonCode as ReturnReason],
+        instructions: returned.instructions,
+      }
+    : null;
+
 const latestSave = (rows: readonly DraftSectionRow[]) =>
   rows.reduce<Date | null>(
     (latest, r) => (!latest || r.savedAt > latest ? r.savedAt : latest),
@@ -163,15 +200,27 @@ export async function queryApplicationOverview(
   const template = await templateFor(deps, draft?.templateVersionId ?? null);
   const saved = draft ? await listDraftSections(db(deps), draft.id) : [];
   const bySection = new Map(saved.map((s) => [s.sectionCode, s]));
+  const returned = await openReturn(deps, draft);
+  const reopened = (returned?.reopened ?? {}) as Record<string, unknown>;
+  const isOpen = (code: string) =>
+    returned === null || Object.hasOwn(reopened, code);
   const sections = (template?.sections ?? []).map((s) => {
     const current = bySection.get(s.code);
     return {
       code: s.code,
       title: s.title,
       description: s.description,
-      status: current
-        ? statusLabels[current.completionStatus as keyof typeof statusLabels]
-        : ("Not started" as const),
+      editable: isOpen(s.code),
+      status:
+        returned && isOpen(s.code) && (current?.version ?? 1) === 1
+          ? ("Needs correction" as const)
+          : returned && !current
+            ? ("Complete" as const)
+            : current
+              ? statusLabels[
+                  current.completionStatus as keyof typeof statusLabels
+                ]
+              : ("Not started" as const),
     };
   });
   const last = latestSave(saved);
@@ -186,8 +235,10 @@ export async function queryApplicationOverview(
         candidateStatusWording[
           candidateStatusCode(row.currentStage, row.status)
         ].label,
-      started: draft !== null,
+      started: draft?.status === "DRAFT" || draft?.status === "SUBMITTED",
       submitted: draft?.status === "SUBMITTED",
+      correction: correctionOf(returned),
+      attachmentsEditable: returned === null || returned.attachmentsReopened,
       editable: isEditable(row) && template !== null,
       sections,
       completeCount: sections.filter((s) => s.status === "Complete").length,
@@ -226,6 +277,14 @@ export async function queryApplicationSection(
     template?.sections.findIndex((s) => s.code === sectionCode) ?? -1;
   if (!template || index < 0) return { kind: "NOT_FOUND" };
   const section = template.sections[index]!;
+  const returned = await openReturn(deps, draft);
+  const reopened = (returned?.reopened ?? {}) as Record<
+    string,
+    readonly string[] | undefined
+  >;
+  if (returned && !Object.hasOwn(reopened, section.code)) {
+    return { kind: "NOT_FOUND" };
+  }
   const saved = await listDraftSections(db(deps), draft.id);
   const current = saved.find((s) => s.sectionCode === section.code) ?? null;
   const answers = (current?.answers ?? {}) as Record<
@@ -242,9 +301,14 @@ export async function queryApplicationSection(
       code: section.code,
       title: section.title,
       description: section.description,
-      status: current
-        ? statusLabels[current.completionStatus as keyof typeof statusLabels]
-        : "Not started",
+      status:
+        returned && (current?.version ?? 1) === 1
+          ? "Needs correction"
+          : current
+            ? statusLabels[
+                current.completionStatus as keyof typeof statusLabels
+              ]
+            : "Not started",
       version: current?.version ?? 0,
       fields: section.fields.map((f) => ({
         code: f.code,
@@ -252,6 +316,7 @@ export async function queryApplicationSection(
         hint: f.hint ?? null,
         type: f.type,
         required: f.required,
+        flagged: reopened[section.code]?.includes(f.code) === true,
         options:
           f.type === "single_choice" || f.type === "multi_choice"
             ? f.options
@@ -259,6 +324,7 @@ export async function queryApplicationSection(
         value: answers[f.code] ?? null,
       })),
       lastSaved: current ? savedLabel(current.savedAt) : null,
+      correction: correctionOf(returned),
       previous: neighbor(template.sections[index - 1]),
       next: neighbor(template.sections[index + 1]),
     },
@@ -318,6 +384,8 @@ export async function queryApplicationReview(
     ]),
   ) as Record<string, Record<string, string | string[] | undefined>>;
   const check = checkApplication(template, answers);
+  const returned = await openReturn(deps, draft);
+  const reopened = (returned?.reopened ?? {}) as Record<string, unknown>;
   const files = await listSubmittableAttachments(db(deps), row.id);
   const found = await cycleForCandidacy(
     db(deps),
@@ -331,11 +399,15 @@ export async function queryApplicationReview(
       reference: row.candidateReference,
       title: found?.cycle.publicTitle ?? "",
       complete: check.complete,
-      accepting: found?.accepting === true,
+      // A correction staff asked for isn't held to the cycle's closing.
+      accepting: found?.accepting === true || draft.supersedesId !== null,
+      attachmentsEditable: returned === null || returned.attachmentsReopened,
+      correction: correctionOf(returned),
       sections: template.sections.map((section, index) => ({
         code: section.code,
         title: section.title,
         complete: check.sections[index]!.complete,
+        editable: returned === null || Object.hasOwn(reopened, section.code),
         missing: [...check.sections[index]!.missing],
         answers: section.fields.flatMap((field) => {
           const value = displayValue(
@@ -404,6 +476,93 @@ export async function queryApplicationReceipt(
       attachmentCount: frozen.attachmentCount,
     },
     ["candidate.candidacy.read_own"],
+    deps,
+  );
+}
+
+const silent: CandidateDependencies["events"] = {
+  record: async () => true,
+  recordInTransaction: async () => {},
+};
+
+/**
+ * What a staff member reviews (M2.7): the frozen submission, exactly as
+ * certified, for a candidacy in their scope. Anything else is one NOT_FOUND.
+ * Reading it writes nothing, and files have no download here yet.
+ */
+export async function queryStaffApplicationReview(
+  headers: Headers,
+  candidacyId: unknown,
+  deps: CandidateDependencies = candidateDependencies(),
+): Promise<ApplicationQueryResult<StaffApplicationReviewView>> {
+  const principal = await resolveCurrentStaff(headers);
+  if (!principal) return { kind: "UNAUTHENTICATED" };
+  const row = await candidacyById(deps, candidacyId);
+  if (!row) return { kind: "NOT_FOUND" };
+  const decision = await authorize(
+    ownRequest(principal, "application.read", "READ", row.id),
+    deps,
+  );
+  if (decision.decision !== "ALLOW") return { kind: "NOT_FOUND" };
+  const latest = await findLatestVersion(db(deps), row.id);
+  const frozen = latest
+    ? await findSubmissionOfVersion(db(deps), latest.id)
+    : null;
+  const record = await findLatestSubmission(db(deps), row.id);
+  if (!latest || !frozen || !record) return { kind: "NOT_FOUND" };
+  const template = await templateFor(deps, frozen.templateVersionId);
+  if (!template) return { kind: "NOT_FOUND" };
+  const review = await authorize(
+    {
+      ...ownRequest(principal, "application.review", "REVIEW", row.id),
+      workflow: candidacyWorkflow(row),
+    },
+    { ...deps, events: silent },
+  );
+  const answers = frozen.answers as Record<
+    string,
+    Record<string, string | string[] | undefined>
+  >;
+  const found = await cycleForCandidacy(
+    db(deps),
+    { cycleId: row.hiringCycleId },
+    deps.clock(),
+  );
+  const files = await listSubmittedAttachments(db(deps), frozen.id);
+  const returns = await listReturns(db(deps), row.id);
+  return render(
+    staffApplicationReviewContract,
+    {
+      candidacyId: row.publicId,
+      reference: row.candidateReference,
+      title: found?.cycle.publicTitle ?? "",
+      submitted: savedLabel(frozen.submittedAt),
+      receiptNumber: frozen.receiptNumber,
+      certifiedName: frozen.certifiedName,
+      certificationVersion: record.certificationVersion,
+      version: row.version,
+      canReturn:
+        review.decision === "ALLOW" &&
+        latest.status === "SUBMITTED" &&
+        row.status === "ACTIVE" &&
+        row.currentStage === "APPLICATION_SUBMITTED",
+      sections: template.sections.map((section) => ({
+        code: section.code,
+        title: section.title,
+        fields: section.fields.map((field) => ({
+          code: field.code,
+          label: field.label,
+          value: displayValue(field, answers[section.code]?.[field.code]),
+        })),
+      })),
+      attachments: [...files],
+      earlierReturns: returns.map((r) => ({
+        when: savedLabel(r.returnedAt),
+        reason: returnReasons[r.reasonCode as ReturnReason],
+        instructions: r.instructions,
+      })),
+    },
+    ["application.read"],
     deps,
   );
 }

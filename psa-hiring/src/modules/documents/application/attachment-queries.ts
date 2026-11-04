@@ -1,4 +1,5 @@
 import "server-only";
+import { sql } from "drizzle-orm";
 import {
   authorize,
   authorizeDocumentAccess,
@@ -22,6 +23,7 @@ import {
   type ScanStatus,
 } from "../domain/attachment-policy";
 import {
+  attachmentsLockedByCorrection,
   findDocumentByPublicId,
   findVersion,
   latestVersion,
@@ -120,7 +122,8 @@ export async function queryApplicationAttachments(
       candidacyId: row.publicId,
       editable:
         row.status === "ACTIVE" &&
-        row.currentStage === "APPLICATION_INCOMPLETE",
+        row.currentStage === "APPLICATION_INCOMPLETE" &&
+        !(await attachmentsLockedByCorrection(db(deps), row.id)),
       atLimit: documents.length >= MAX_ACTIVE_ATTACHMENTS,
       attachments,
     },
@@ -276,4 +279,29 @@ export async function listSubmittableAttachments(
     }
   }
   return { included, excluded };
+}
+
+/** Names of the files a submission froze. No key, hash, or bytes. */
+export async function listSubmittedAttachments(
+  executor: CandidateExecutor,
+  submissionId: string,
+) {
+  const result = await executor.execute(sql`
+    SELECT d.category_code AS category, v.display_name AS name, v.size_bytes AS size
+      FROM app.application_submission_attachment a
+      JOIN app.document_version v ON v.id = a.document_version_id
+      JOIN app.document d ON d.id = v.document_id
+     WHERE a.submission_id = ${submissionId}
+     ORDER BY v.display_name, v.id
+     LIMIT 20
+  `);
+  return (
+    result as unknown as {
+      rows: { category: string; name: string; size: string | number }[];
+    }
+  ).rows.map((row) => ({
+    category: attachmentCategories[row.category as AttachmentCategory],
+    name: row.name,
+    size: sizeLabel(Number(row.size)),
+  }));
 }

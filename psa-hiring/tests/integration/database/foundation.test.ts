@@ -328,6 +328,7 @@ describe("scope", () => {
     expect(rows.map((r) => r.t)).toEqual([
       "app.application_certification_version",
       "app.application_draft_section",
+      "app.application_return",
       "app.application_submission",
       "app.application_submission_attachment",
       "app.application_template",
@@ -382,11 +383,7 @@ describe("scope", () => {
     // Later entities (attachments, certifications, submissions, audit
     // assignments) and competing opening concepts do not exist yet.
     expect(
-      rows.filter((r) =>
-        /audit_assignment|job_posting|opening/.test(
-          r.t,
-        ),
-      ),
+      rows.filter((r) => /audit_assignment|job_posting|opening/.test(r.t)),
     ).toEqual([]);
   });
 });

@@ -25,7 +25,11 @@ type OutboxDependencies = Pick<
   CandidateDependencies,
   "db" | "logger" | "clock"
 >;
-type SendEmail = (to: string, reference: string) => Promise<void>;
+type SendEmail = (
+  to: string,
+  reference: string,
+  template: "APPLICATION_RECEIVED" | "APPLICATION_RETURNED",
+) => Promise<void>;
 
 export async function dispatchApplicationEmails(
   deps: OutboxDependencies,
@@ -70,7 +74,15 @@ export async function dispatchApplicationEmails(
         ? await readVerifiedCandidateEmail(db, person.candidateAccountId)
         : null;
       if (!candidacy || !to) problem = "NO_VERIFIED_ADDRESS";
-      else await send(to, candidacy.candidateReference);
+      else {
+        await send(
+          to,
+          candidacy.candidateReference,
+          row.eventType === "APPLICATION_RETURNED_EMAIL"
+            ? "APPLICATION_RETURNED"
+            : "APPLICATION_RECEIVED",
+        );
+      }
     } catch {
       problem = "DELIVERY_FAILED";
     }

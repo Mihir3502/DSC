@@ -31,6 +31,7 @@ import {
   completeApplicationTask,
   ensureCompleteApplicationTask,
   openReviewQueueItem,
+  swapReviewItemForCorrection,
   findActiveCandidacy,
   findCandidacyByPublicId,
   findMatchByPublicId,
@@ -1217,5 +1218,44 @@ export async function markApplicationSubmitted(
   );
   await completeApplicationTask(ctx.tx, row.id, ctx.now);
   await openReviewQueueItem(ctx.tx, row.id);
+  return updated;
+}
+
+/**
+ * The stage change a return makes (M2.7), inside the caller's transaction. The
+ * caller has locked the candidacy and authorized the command. Nothing submitted
+ * is erased.
+ */
+export async function markApplicationReturned(
+  ctx: CommandContext,
+  row: CandidacyRow,
+  reasonCode: string,
+): Promise<CandidacyRow> {
+  const to =
+    stageTransition("return_application", {
+      stage: row.currentStage as CandidacyStage,
+      status: row.status as CandidacyStatus,
+    }) ?? refuse("INVALID_TRANSITION");
+  const updated =
+    (await updateCandidacy(
+      ctx.tx,
+      row.id,
+      row.version,
+      {
+        currentStage: to.stage,
+        status: to.status,
+        candidateVisibleStatus: candidateVisibleStatus(to.stage, to.status),
+      },
+      ctx.actorId,
+      ctx.now,
+    )) ?? refuse("STALE_VERSION");
+  await recordStage(
+    ctx,
+    updated,
+    "return_application",
+    { stage: row.currentStage, status: row.status, version: row.version },
+    reasonCode,
+  );
+  await swapReviewItemForCorrection(ctx.tx, row.id, ctx.now);
   return updated;
 }

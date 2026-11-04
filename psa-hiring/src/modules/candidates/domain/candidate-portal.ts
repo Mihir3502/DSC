@@ -29,9 +29,9 @@ export const candidateStatusWording: Readonly<
     explanation: "Complete your application to continue.",
   },
   APPLICATION_SUBMITTED: {
-    label: "Application submitted",
+    label: "Application received",
     explanation:
-      "We received your application. We'll contact you if we need anything else.",
+      "We received your application. No action is needed unless we contact you.",
   },
   NOT_CONTINUING: {
     label: "Application not continuing",
@@ -94,6 +94,14 @@ type WorkType = Readonly<{
 export const WORK_TYPE_REGISTRY_VERSION = "WORK-1";
 
 export const workTypes: Readonly<Record<string, WorkType>> = Object.freeze({
+  CORRECT_APPLICATION: {
+    title: "Correct your application",
+    instruction: "We asked you to change part of your application.",
+    actionLabel: "See what to correct",
+    routeKey: "APPLICATION_OVERVIEW",
+    isEligible: (c: CandidacyFacts) =>
+      c.status === "ACTIVE" && c.stage === "APPLICATION_INCOMPLETE",
+  },
   COMPLETE_APPLICATION: {
     title: "Complete your application",
     instruction: "Answer each section. You can save and come back.",

@@ -1640,6 +1640,14 @@ export const routeManifest: readonly ManifestEntry[] = Object.freeze([
 
   // ------------------------------------------ M2.2 staff candidate records
   candidatePage(
+    "staff.application_review",
+    `${staffCandidates}/[candidacyId]/application/page.tsx`,
+    "/staff/candidates/[candidacyId]/application",
+    "queryStaffApplicationReview",
+    "staff.application_review.v1",
+    ["application.read", "application.review"],
+  ),
+  candidatePage(
     "staff.submitted_queue",
     `${staffCandidates}/submitted/page.tsx`,
     "/staff/candidates/submitted",
@@ -1678,6 +1686,15 @@ export const routeManifest: readonly ManifestEntry[] = Object.freeze([
     "queryDuplicateReview",
     "staff.duplicate_review.v1",
     ["candidate.duplicate.review", "candidate.person.merge"],
+  ),
+  candidateAction(
+    "staff.application.return",
+    "returnApplicationAction",
+    "returnApplication",
+    "applicationReturn",
+    ["application.review"],
+    "NONE",
+    ["applicationReturnPerAccount"],
   ),
   candidateAction(
     "staff.prospect.create",

@@ -744,10 +744,46 @@ export async function completeApplicationTask(
     .where(
       and(
         eq(workItem.candidacyId, candidacyId),
-        eq(workItem.workTypeCode, "COMPLETE_APPLICATION"),
+        inArray(workItem.workTypeCode, [
+          "COMPLETE_APPLICATION",
+          "CORRECT_APPLICATION",
+        ]),
         inArray(workItem.status, ["OPEN", "IN_PROGRESS", "BLOCKED"]),
       ),
     );
+}
+
+/** A return finishes the review item and asks the candidate to correct. */
+export async function swapReviewItemForCorrection(
+  db: Executor,
+  candidacyId: string,
+  now: Date,
+): Promise<void> {
+  await db
+    .update(workItem)
+    .set({
+      status: "COMPLETED",
+      completedAt: now,
+      version: sql`${workItem.version} + 1`,
+    })
+    .where(
+      and(
+        eq(workItem.candidacyId, candidacyId),
+        eq(workItem.workTypeCode, "REVIEW_SUBMITTED_APPLICATION"),
+        inArray(workItem.status, ["OPEN", "IN_PROGRESS", "BLOCKED"]),
+      ),
+    );
+  await db
+    .insert(workItem)
+    .values({
+      candidacyId,
+      workTypeCode: "CORRECT_APPLICATION",
+      targetRecordType: "CANDIDACY",
+      targetRecordId: candidacyId,
+      candidateActionRequired: true,
+      sourceCode: "CANDIDACY_TRANSITION",
+    })
+    .onConflictDoNothing();
 }
 
 /** One staff review item, unassigned until staff workflows arrive. */
@@ -816,7 +852,7 @@ export async function reconcileWorkItems(
        AND p.candidate_account_id IS NOT NULL
        AND NOT EXISTS (
          SELECT 1 FROM app.work_item w
-          WHERE w.candidacy_id = c.id AND w.work_type_code = 'COMPLETE_APPLICATION'
+          WHERE w.candidacy_id = c.id AND w.work_type_code IN ('COMPLETE_APPLICATION', 'CORRECT_APPLICATION')
             AND w.status IN ('OPEN', 'IN_PROGRESS', 'BLOCKED'))
      ORDER BY c.id
      LIMIT ${limit}
@@ -829,7 +865,7 @@ export async function reconcileWorkItems(
        SELECT w2.id FROM app.work_item w2
          JOIN app.candidacy c ON c.id = w2.candidacy_id
         WHERE w2.status IN ('OPEN', 'IN_PROGRESS', 'BLOCKED')
-          AND w2.work_type_code = 'COMPLETE_APPLICATION'
+          AND w2.work_type_code IN ('COMPLETE_APPLICATION', 'CORRECT_APPLICATION')
           AND NOT (c.status = 'ACTIVE' AND c.current_stage = 'APPLICATION_INCOMPLETE')
         ORDER BY w2.id
         LIMIT ${limit})

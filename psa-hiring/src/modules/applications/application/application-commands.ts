@@ -26,6 +26,9 @@ import {
   findDraft,
   findDraftSection,
   findEffectiveTemplateVersion,
+  findLatestVersion,
+  findReturn,
+  findSubmissionOfVersion,
   findTemplateVersion,
   insertDraft,
   insertDraftSection,
@@ -109,6 +112,53 @@ export async function beginApplicationDraft(
       const existing = await findDraft(ctx.tx, row.id);
       if (existing) {
         return { outcome: "EXISTING", targetId: row.id, version: 1 };
+      }
+      // A returned application is corrected from what was submitted: a new
+      // version on the same template, pre-filled, with the prior one kept.
+      const latest = await findLatestVersion(ctx.tx, row.id);
+      if (latest?.status === "RETURNED") {
+        const frozen =
+          (await findSubmissionOfVersion(ctx.tx, latest.id)) ??
+          refuse("INVALID_TRANSITION");
+        const pinned = await findTemplateVersion(
+          ctx.tx,
+          latest.templateVersionId,
+        );
+        const parsed = pinned && parseTemplate(pinned.schemaJson);
+        if (!parsed) return refuse("TEMPLATE_UNAVAILABLE");
+        const corrected = await insertDraft(ctx.tx, {
+          candidacyId: row.id,
+          templateVersionId: latest.templateVersionId,
+          createdByAccountId: ctx.actorId,
+          createdAt: ctx.now,
+          versionNumber: latest.versionNumber + 1,
+          supersedesId: latest.id,
+        });
+        const answers = frozen.answers as Record<string, unknown>;
+        for (const section of parsed.sections) {
+          const checked = validateSection(section, answers[section.code] ?? {});
+          if (!answers[section.code] || !checked.ok) continue;
+          await insertDraftSection(ctx.tx, corrected.id, section.code, {
+            answers: checked.answers,
+            completionStatus: checked.completion,
+            savedByAccountId: ctx.actorId,
+            savedByKind: "CANDIDATE",
+            assistReasonCode: null,
+            savedAt: ctx.now,
+          });
+        }
+        ctx.events.push({
+          code: "application.correction_started",
+          recordRef: row.id,
+          candidacyRef: row.id,
+          organizationRef: row.organizationId,
+          newVersion: corrected.versionNumber,
+        });
+        return {
+          outcome: "CORRECTION_STARTED",
+          targetId: row.id,
+          version: corrected.versionNumber,
+        };
       }
       const template = await findEffectiveTemplateVersion(ctx.tx, ctx.now);
       if (!template || !parseTemplate(template.schemaJson)) {
@@ -218,6 +268,17 @@ async function runSave(
         const section: TemplateSection =
           template.sections.find((s) => s.code === input.sectionCode) ??
           refuse("NOT_FOUND");
+        // A correction reopens only what staff selected.
+        if (draft.supersedesId) {
+          const returned = await findReturn(ctx.tx, draft.supersedesId);
+          const reopened = (returned?.reopened ?? {}) as Record<
+            string,
+            unknown
+          >;
+          if (!Object.hasOwn(reopened, section.code)) {
+            return refuse("INVALID_TRANSITION");
+          }
+        }
         const checked = validateSection(section, raw);
         if (!checked.ok) {
           if ("rejected" in checked) return refuse("INVALID_INPUT");

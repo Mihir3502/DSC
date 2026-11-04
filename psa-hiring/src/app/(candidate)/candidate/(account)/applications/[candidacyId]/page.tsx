@@ -47,6 +47,23 @@ export default async function ApplicationOverviewPage({
         <dd>{view.status}</dd>
       </dl>
 
+      {view.correction ? (
+        <section
+          aria-labelledby="correction"
+          className="flex flex-col gap-2 rounded-lg border-2 border-foreground p-4 [overflow-wrap:anywhere]"
+        >
+          <h2 id="correction" className="text-xl font-semibold">
+            We need you to correct your application
+          </h2>
+          <p className="font-medium">{view.correction.reason}</p>
+          <p className="whitespace-pre-wrap">{view.correction.instructions}</p>
+          <p className="text-sm">
+            Your earlier submission is kept. When you&apos;re done, submit
+            again.
+          </p>
+        </section>
+      ) : null}
+
       {view.submitted ? (
         <div className="flex flex-col gap-3 rounded-lg border p-4">
           <p className="font-medium">
@@ -69,14 +86,17 @@ export default async function ApplicationOverviewPage({
       ) : !view.started ? (
         <>
           <p>
-            Your application has {view.sections.length} sections. You can save
-            your answers and come back to them. Nothing is submitted until you
-            choose to submit it.
+            {view.correction
+              ? "Your answers are filled in from what you submitted. You can change the sections we reopened."
+              : `Your application has ${view.sections.length} sections. You can save your answers and come back to them. Nothing is submitted until you choose to submit it.`}
           </p>
           <BeginApplicationForm
             action={beginApplicationDraftAction}
             candidacyId={view.candidacyId}
             commandKey={newCandidateCommandKey()}
+            label={
+              view.correction ? "Start your correction" : "Begin application"
+            }
           />
         </>
       ) : (
@@ -90,13 +110,17 @@ export default async function ApplicationOverviewPage({
             {view.sections.map((section) => (
               <li key={section.code} className="rounded-lg border p-4">
                 <h2 className="font-semibold">
-                  <Link
-                    prefetch={false}
-                    href={`${base}/${section.code}`}
-                    className="underline underline-offset-4"
-                  >
-                    {section.title}
-                  </Link>
+                  {section.editable ? (
+                    <Link
+                      prefetch={false}
+                      href={`${base}/${section.code}`}
+                      className="underline underline-offset-4"
+                    >
+                      {section.title}
+                    </Link>
+                  ) : (
+                    section.title
+                  )}
                 </h2>
                 <p className="text-sm">{section.description}</p>
                 <p className="text-sm">

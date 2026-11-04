@@ -16,5 +16,6 @@ export {
 } from "./domain/attachment-policy";
 export {
   listSubmittableAttachments,
+  listSubmittedAttachments,
   type SubmittableAttachments,
 } from "./application/attachment-queries";

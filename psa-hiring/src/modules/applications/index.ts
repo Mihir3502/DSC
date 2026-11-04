@@ -11,8 +11,10 @@ export {
   queryApplicationReceipt,
   queryApplicationReview,
   queryApplicationSection,
+  queryStaffApplicationReview,
   type ApplicationQueryResult,
 } from "./application/application-queries";
 export { applicationProjectionNames } from "./presentation/application-views";
 export { submitApplication } from "./application/application-submission";
 export { dispatchApplicationEmails } from "./application/application-outbox";
+export { returnApplication } from "./application/application-return";

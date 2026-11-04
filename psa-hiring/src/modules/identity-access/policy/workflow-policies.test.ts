@@ -9,7 +9,7 @@ import {
 // ADR-0005): a workflow-gated permission denies unless its domain exists.
 
 describe("production workflow policies", () => {
-  it("permits only draft editing, and only in APPLICATION_INCOMPLETE", () => {
+  it("permits only the built application commands, each in its own state", () => {
     const gated = permissionCatalog.filter((p) => p.workflowPolicy !== null);
     const permitted = gated.flatMap((p) =>
       candidacyWorkflowPolicy.states
@@ -20,6 +20,7 @@ describe("production workflow policies", () => {
       "application.assist@APPLICATION_INCOMPLETE",
       "application.own.edit@APPLICATION_INCOMPLETE",
       "application.own.submit@APPLICATION_INCOMPLETE",
+      "application.review@APPLICATION_SUBMITTED",
     ]);
   });
 

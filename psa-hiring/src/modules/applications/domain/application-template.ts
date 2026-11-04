@@ -267,3 +267,57 @@ export function normalizeSignature(raw: unknown): string | null {
     ? name
     : null;
 }
+
+// ------------------------------------------------- return and correction
+
+/** Candidate-visible reasons (M2.7). The wording is a draft for review. */
+export const returnReasons = {
+  INCOMPLETE_INFORMATION: "Some information is missing",
+  INCORRECT_INFORMATION: "Some information looks incorrect",
+  UNCLEAR_ANSWER: "An answer needs more detail",
+  ATTACHMENT_PROBLEM: "There is a problem with an attachment",
+  OTHER: "Something else needs your attention",
+} as const;
+export type ReturnReason = keyof typeof returnReasons;
+
+export const MAX_INSTRUCTIONS_LENGTH = 1000;
+
+export const isReturnReason = (value: unknown): value is ReturnReason =>
+  typeof value === "string" && Object.hasOwn(returnReasons, value);
+
+/** Plain candidate-visible text; null when it can't be accepted. */
+export function normalizeInstructions(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const text = raw.normalize("NFC").replace(/\r\n?/g, "\n").trim();
+  return text.length >= 1 &&
+    text.length <= MAX_INSTRUCTIONS_LENGTH &&
+    !hasForbiddenCharacters(text.replace(/\n/g, " "))
+    ? text
+    : null;
+}
+
+/** Section code to the fields staff flagged in it (possibly none). */
+export type ReopenedSections = Readonly<Record<string, readonly string[]>>;
+
+/** Keeps only an exact selection from the pinned template; else null. */
+export function parseReopenSelection(
+  template: ApplicationTemplate,
+  raw: unknown,
+): ReopenedSections | null {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw))
+    return null;
+  const selected: Record<string, readonly string[]> = {};
+  for (const [code, fields] of Object.entries(raw)) {
+    const section = template.sections.find((s) => s.code === code);
+    if (!section || !Array.isArray(fields)) return null;
+    const known = new Set(section.fields.map((f) => f.code));
+    if (
+      new Set(fields).size !== fields.length ||
+      !fields.every((f) => typeof f === "string" && known.has(f))
+    ) {
+      return null;
+    }
+    selected[code] = fields as string[];
+  }
+  return selected;
+}

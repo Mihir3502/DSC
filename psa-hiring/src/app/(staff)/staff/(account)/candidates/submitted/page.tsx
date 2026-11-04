@@ -55,7 +55,7 @@ export default async function SubmittedQueuePage() {
                 <td className="py-2 pr-4 font-mono">
                   <Link
                     prefetch={false}
-                    href={`/staff/candidates/${item.id}`}
+                    href={`/staff/candidates/${item.id}/application`}
                     className="underline underline-offset-4"
                   >
                     {item.reference}

@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   foreignKey,
   index,
@@ -21,8 +22,8 @@ import { user } from "../../identity-access/infrastructure/auth-schema";
 //
 // - A published template version is immutable, and a draft stays pinned to
 //   the version it started on.
-// - One candidacy has at most one DRAFT application version. RETURNED and
-//   SUPERSEDED arrive with M2.7.
+// - One candidacy has at most one DRAFT application version. A returned version
+//   is corrected by a new one, and the prior submission is kept.
 // - Answers are stored per section, so two sections never conflict; each
 //   section row carries its own optimistic version.
 // - Nothing is ever deleted, and no foreign key cascades.
@@ -97,10 +98,18 @@ export const applicationVersion = appSchema.table(
     templateVersionId: uuid("template_version_id").notNull(),
     versionNumber: integer("version_number").notNull(),
     status: varchar("status", { length: 16 }).notNull(),
+    /** The returned version this one corrects (M2.7). */
+    supersedesId: uuid("supersedes_id"),
     createdByAccountId: uuid("created_by_account_id").notNull(),
     createdAt: timestamp("created_at", tz).notNull(),
   },
   (table) => [
+    foreignKey({
+      name: "application_version_supersedes_fk",
+      columns: [table.supersedesId],
+      foreignColumns: [table.id],
+    }),
+    unique("application_version_supersedes_unique").on(table.supersedesId),
     unique("application_version_number_unique").on(
       table.candidacyId,
       table.versionNumber,
@@ -126,7 +135,7 @@ export const applicationVersion = appSchema.table(
     check("application_version_number_check", sql`${table.versionNumber} >= 1`),
     check(
       "application_version_status_check",
-      sql`${table.status} IN ('DRAFT', 'SUBMITTED')`,
+      sql`${table.status} IN ('DRAFT', 'SUBMITTED', 'RETURNED', 'SUPERSEDED')`,
     ),
     index("application_version_template_idx").on(table.templateVersionId),
   ],
@@ -340,7 +349,7 @@ export const outboxEvent = appSchema.table(
       .where(sql`${table.status} = 'PENDING'`),
     check(
       "outbox_event_type_check",
-      sql`${table.eventType} = 'APPLICATION_RECEIVED_EMAIL'`,
+      sql`${table.eventType} IN ('APPLICATION_RECEIVED_EMAIL', 'APPLICATION_RETURNED_EMAIL')`,
     ),
     check(
       "outbox_event_aggregate_check",
@@ -355,5 +364,56 @@ export const outboxEvent = appSchema.table(
       sql`(${table.status} = 'PENDING') = (${table.processedAt} IS NULL)`,
     ),
     check("outbox_event_attempt_check", sql`${table.attemptCount} >= 0`),
+  ],
+);
+
+// M2.7. Why a submitted version came back and what reopened. Append-only. The
+// instructions are candidate-visible by design and never reach audit or email.
+export const applicationReturn = appSchema.table(
+  "application_return",
+  {
+    id: uuid("id")
+      .default(sql`pg_catalog.gen_random_uuid()`)
+      .primaryKey(),
+    applicationVersionId: uuid("application_version_id").notNull(),
+    candidacyId: uuid("candidacy_id").notNull(),
+    reasonCode: varchar("reason_code", { length: 64 }).notNull(),
+    instructions: varchar("instructions", { length: 1000 }).notNull(),
+    /** Reopened sections, and the fields staff flagged in each. */
+    reopened: jsonb("reopened").notNull(),
+    attachmentsReopened: boolean("attachments_reopened").notNull(),
+    returnedByAccountId: uuid("returned_by_account_id").notNull(),
+    returnedAt: timestamp("returned_at", tz).notNull(),
+  },
+  (table) => [
+    unique("application_return_version_unique").on(table.applicationVersionId),
+    foreignKey({
+      name: "application_return_version_fk",
+      columns: [table.applicationVersionId],
+      foreignColumns: [applicationVersion.id],
+    }),
+    foreignKey({
+      name: "application_return_candidacy_fk",
+      columns: [table.candidacyId],
+      foreignColumns: [candidacy.id],
+    }),
+    foreignKey({
+      name: "application_return_actor_fk",
+      columns: [table.returnedByAccountId],
+      foreignColumns: [user.id],
+    }),
+    index("application_return_candidacy_idx").on(table.candidacyId),
+    check(
+      "application_return_reason_check",
+      sql`${table.reasonCode} IN ('INCOMPLETE_INFORMATION', 'INCORRECT_INFORMATION', 'UNCLEAR_ANSWER', 'ATTACHMENT_PROBLEM', 'OTHER')`,
+    ),
+    check(
+      "application_return_instructions_check",
+      sql`char_length(${table.instructions}) BETWEEN 1 AND 1000`,
+    ),
+    check(
+      "application_return_reopened_check",
+      sql`jsonb_typeof(${table.reopened}) = 'object' AND (${table.reopened} <> '{}'::jsonb OR ${table.attachmentsReopened})`,
+    ),
   ],
 );

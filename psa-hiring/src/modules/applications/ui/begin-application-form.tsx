@@ -13,6 +13,7 @@ export function BeginApplicationForm({
   action,
   candidacyId,
   commandKey,
+  label = "Begin application",
 }: {
   action: (
     previous: BeginDraftState,
@@ -20,6 +21,7 @@ export function BeginApplicationForm({
   ) => Promise<BeginDraftState>;
   candidacyId: string;
   commandKey: string;
+  label?: string;
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(
@@ -53,7 +55,7 @@ export function BeginApplicationForm({
       <input type="hidden" name="candidacyId" value={candidacyId} />
       <div>
         <Button type="submit" size="lg" disabled={pending}>
-          {pending ? "Starting…" : "Begin application"}
+          {pending ? "Starting…" : label}
         </Button>
       </div>
     </form>

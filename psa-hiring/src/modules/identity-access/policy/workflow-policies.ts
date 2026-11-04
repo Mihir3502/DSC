@@ -31,6 +31,8 @@ const candidacyPermissions: Readonly<Record<string, readonly string[]>> = {
     // M2.6: submitting. application.assist stays ungranted.
     "application.own.submit",
   ],
+  // M2.7: staff returning a submitted application for correction.
+  APPLICATION_SUBMITTED: ["application.review"],
 };
 
 export const candidacyWorkflowPolicy: WorkflowPolicy = Object.freeze({

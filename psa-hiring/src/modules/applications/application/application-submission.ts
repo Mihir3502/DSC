@@ -149,14 +149,18 @@ export async function submitApplication(
         ) {
           refuse("INVALID_TRANSITION");
         }
-        const cycle = await cycleForCandidacy(
-          ctx.tx,
-          { cycleId: row.hiringCycleId },
-          ctx.now,
-        );
-        if (!cycle?.accepting) refuse("OPENING_UNAVAILABLE");
         const draft =
           (await findDraft(ctx.tx, row.id)) ?? refuse("INVALID_TRANSITION");
+        // A correction staff asked for can finish after the cycle closes (owner
+        // decision, 2026-11-04); a first submission can't.
+        if (!draft.supersedesId) {
+          const cycle = await cycleForCandidacy(
+            ctx.tx,
+            { cycleId: row.hiringCycleId },
+            ctx.now,
+          );
+          if (!cycle?.accepting) refuse("OPENING_UNAVAILABLE");
+        }
         const templateRow = await findTemplateVersion(
           ctx.tx,
           draft.templateVersionId,
@@ -215,6 +219,12 @@ export async function submitApplication(
           .update(applicationVersion)
           .set({ status: "SUBMITTED" })
           .where(eq(applicationVersion.id, draft.id));
+        if (draft.supersedesId) {
+          await ctx.tx
+            .update(applicationVersion)
+            .set({ status: "SUPERSEDED" })
+            .where(eq(applicationVersion.id, draft.supersedesId));
+        }
         const updated = await markApplicationSubmitted(ctx, row);
         await ctx.tx.insert(outboxEvent).values({
           aggregateType: "CANDIDACY",
@@ -234,6 +244,7 @@ export async function submitApplication(
           changeCodes: [
             `TEMPLATE_V${templateRow!.versionNumber}`,
             `CERTIFICATION_V${certification.versionNumber}`,
+            ...(draft.supersedesId ? ["RESUBMISSION"] : []),
           ],
           count: versionIds.length,
         });
