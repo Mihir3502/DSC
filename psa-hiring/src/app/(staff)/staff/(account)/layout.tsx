@@ -1,7 +1,9 @@
-import Link from "next/link";
 import { currentRequestHeaders } from "@/app/_auth/auth-messages";
+import { Button } from "@/components/ui/button";
 import { queryStaffShell } from "@/modules/candidates";
+import { CandidateNavigation } from "@/modules/candidates/ui/candidate-navigation";
 import { guardNavigation } from "@/modules/identity-access/delivery/route-authorization";
+import { staffSignOutAction } from "./security/actions";
 
 // Staff account route group (packets M1.5 §8, M3.1). Navigation convenience
 // only: an anonymous or password-only (MFA-incomplete) browser goes to staff
@@ -16,25 +18,25 @@ export default async function StaffAccountLayout({
 }: LayoutProps<"/staff">) {
   await guardNavigation("STAFF");
   const shell = await queryStaffShell(await currentRequestHeaders());
+  if (shell.kind !== "OK") return children;
   return (
     <div className="flex flex-col gap-6">
-      {shell.kind === "OK" ? (
-        <nav aria-label="Staff">
-          <ul className="flex flex-wrap gap-x-4 gap-y-1">
-            {shell.view.navigation.map((entry) => (
-              <li key={entry.href}>
-                <Link
-                  prefetch={false}
-                  href={entry.href}
-                  className="inline-flex min-h-11 items-center font-medium underline underline-offset-4 md:min-h-8"
-                >
-                  {entry.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      ) : null}
+      <CandidateNavigation
+        label="Staff"
+        home="/staff"
+        entries={shell.view.navigation}
+        signOut={
+          <form action={staffSignOutAction}>
+            <Button
+              type="submit"
+              variant="outline"
+              className="min-h-11 md:min-h-8"
+            >
+              Sign out
+            </Button>
+          </form>
+        }
+      />
       {children}
     </div>
   );

@@ -594,6 +594,22 @@
           "title": "sets, changes, and clears a staff item's due date with history, and never invents one"
         }
       ]
+    },
+    {
+      "id": "UI-STAFF-MENU",
+      "title": "Permission-aware staff navigation (UI_FLOW §8)",
+      "status": "covered",
+      "note": "Only built screens, and only for roles allowed to open them.",
+      "tests": [
+        {
+          "file": "tests/integration/candidates/workspace.test.ts",
+          "title": "shows each role only the screens it may open"
+        },
+        {
+          "file": "src/modules/candidates/domain/staff-navigation.test.ts",
+          "title": "adds each item only with its own fact, in a fixed order"
+        }
+      ]
     }
   ],
   "acceptanceCriteria": [

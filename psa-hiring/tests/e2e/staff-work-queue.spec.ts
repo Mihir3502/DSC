@@ -188,8 +188,8 @@ test.describe("staff work queue @critical", () => {
       "doesn't include a candidate work queue",
     );
     await expect(
-      adminPage.getByRole("navigation", { name: "Staff" }),
-    ).toHaveCount(0);
+      adminPage.getByRole("navigation", { name: "Staff" }).getByRole("link"),
+    ).toHaveText(["Security"]);
     expect((await adminPage.goto("/staff/work"))!.status()).toBe(404);
     expect((await adminPage.goto(`/staff/work/${candidacy}`))!.status()).toBe(
       404,

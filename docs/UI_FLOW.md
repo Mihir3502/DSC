@@ -437,6 +437,18 @@ Staff navigation is permission-aware and may contain:
 
 Hiding navigation does not replace authorization. A direct route request must be authorized again.
 
+### Menu implemented so far
+
+| Item | Who sees it |
+|---|---|
+| Dashboard, Work Queue, Add Candidate | Recruiter, HR, PSA Manager |
+| Submitted Applications | Recruiter, HR, PSA Manager, Compliance Reviewer, Classification Reviewer |
+| Positions | HR, PSA Manager |
+| Possible Duplicates | PSA Manager |
+| Security, Sign out | All staff |
+
+Auditors would also see Submitted Applications and Positions by permission, but no real audit assignment can exist yet, so they see only Security and Sign out for now. Items for unbuilt screens join when those screens exist, so the menu holds no dead links. Sign out moved here from the Security page.
+
 ### Global staff tools
 
 - Scoped candidate search.

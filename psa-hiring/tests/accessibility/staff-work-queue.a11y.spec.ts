@@ -127,6 +127,17 @@ test.describe("staff work queue accessibility", () => {
     await expect(opener).toBeFocused();
 
     await staff.setViewportSize({ width: 320, height: 640 });
+    // On a phone the menu is a disclosure that opens by keyboard and closes on
+    // Escape, returning focus to its button.
+    const menuButton = staff.getByRole("button", { name: "Menu" });
+    await menuButton.focus();
+    await staff.keyboard.press("Enter");
+    const menu = staff.getByRole("navigation", { name: "Staff" });
+    await expect(menu.getByRole("link", { name: "Positions" })).toBeVisible();
+    await expectNoBlockingViolations(staff, testInfo);
+    await staff.keyboard.press("Escape");
+    await expect(menu.getByRole("link", { name: "Positions" })).toBeHidden();
+    await expect(menuButton).toBeFocused();
     for (const path of ["/staff", "/staff/work", `/staff/work/${candidacy}`]) {
       await staff.goto(path);
       await expect(staff.getByRole("main")).toBeVisible();

@@ -25,6 +25,7 @@ import {
   type WorkerPathFilter,
   type WorkQueueSearch,
 } from "../domain/work-queue";
+import { staffNavigation } from "../domain/staff-navigation";
 import {
   countWorkQueue,
   countWorkQueueDashboard,
@@ -162,6 +163,11 @@ const workerPathLabel = (path: string) =>
   workerPathLabels[path as WorkerPathFilter] ?? "Unavailable";
 const dayOf = (at: Date | null) => (at ? at.toISOString().slice(0, 10) : null);
 
+const hasListScope = (scope: Awaited<ReturnType<typeof authorizeQueryScope>>) =>
+  scope.decision === "ALLOW" &&
+  scope.constraint.kind === "SCOPES" &&
+  scope.constraint.scopes.length > 0;
+
 /** Which staff links apply. Never passed down as authority. */
 export async function queryStaffShell(
   headers: Headers,
@@ -169,18 +175,77 @@ export async function queryStaffShell(
 ): Promise<WorkQueueResult<StaffShellView>> {
   const principal = await resolveCurrentStaff(headers);
   if (!principal) return { kind: "UNAUTHENTICATED" };
-  const scope = await authorizeQueryScope(scopeRequest(principal), {
-    ...deps,
-    events: silent,
-  });
-  const context = queueContext(principal, scope, deps);
-  if (!context) return { kind: "NO_QUEUE" };
+  const probe = { ...deps, events: silent };
+  // Each probe uses the sensitivity its own screen reads at, so the menu can't
+  // disagree with the page.
+  const listScope = (
+    permission: string,
+    sensitivity:
+      "CONFIDENTIAL_PERSONNEL" | "INTERNAL" = "CONFIDENTIAL_PERSONNEL",
+  ) =>
+    authorizeQueryScope(
+      {
+        principal: principalOf(principal),
+        permission,
+        operation: "READ",
+        sensitivity,
+      },
+      probe,
+    );
+  const [queue, prospects, applications, positions] = await Promise.all([
+    listScope(PERMISSION),
+    listScope("candidate.prospect.read"),
+    listScope("application.read"),
+    listScope("position.read", "INTERNAL"),
+  ]);
+  // Possible Duplicates is organization-wide and may need a step-up on opening,
+  // so a reviewer who only lacks recent authentication still gets the link.
+  let duplicates = false;
+  if (
+    prospects.decision === "ALLOW" &&
+    prospects.constraint.kind === "SCOPES"
+  ) {
+    for (const organizationId of new Set(
+      prospects.constraint.scopes.map((s) => s.organizationId),
+    )) {
+      const decision = await authorize(
+        {
+          principal: principalOf(principal),
+          permission: "candidate.duplicate.review",
+          operation: "REVIEW",
+          resource: {
+            kind: "SCOPE",
+            scopeType: "ORGANIZATION",
+            id: organizationId,
+            sensitivity: "CONFIDENTIAL_PERSONNEL",
+          },
+          reasonCode: "DUPLICATE_REVIEW",
+        },
+        probe,
+      );
+      if (
+        decision.decision === "ALLOW" ||
+        decision.reasonCode === "RECENT_AUTH_REQUIRED"
+      ) {
+        duplicates = true;
+      }
+    }
+  }
+  const workQueue = hasListScope(queue);
   return render(
     staffShellContract,
     {
       navigation: [
-        { label: "Dashboard", href: "/staff" },
-        { label: "Work Queue", href: "/staff/work" },
+        ...staffNavigation({
+          workQueue,
+          // List scope can't test a create permission. Everyone holding the
+          // queue and prospect reads may create today; the page and command
+          // still check candidate.prospect.create themselves.
+          addCandidate: workQueue && hasListScope(prospects),
+          submittedApplications: hasListScope(applications),
+          positions: hasListScope(positions),
+          duplicates,
+        }),
       ],
     },
     deps,

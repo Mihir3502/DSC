@@ -630,9 +630,12 @@ describe("safe summary fields", () => {
     expect(
       (await queryStaffDashboard(headers(staff.administrator!.jar), deps)).kind,
     ).toBe("NO_QUEUE");
-    expect(
-      (await queryStaffShell(headers(staff.administrator!.jar), deps)).kind,
-    ).toBe("NO_QUEUE");
+    const shell = await queryStaffShell(
+      headers(staff.administrator!.jar),
+      deps,
+    );
+    if (shell.kind !== "OK") throw new Error(shell.kind);
+    expect(shell.view.navigation.map((e) => e.label)).toEqual(["Security"]);
 
     // Out of scope and nonexistent are the same answer.
     const hidden = await queryWorkItem(

@@ -22,6 +22,7 @@ import {
   assignCandidacyOwner,
   setWorkItemDueDate,
 } from "@/modules/candidates/application/work-queue-commands";
+import { queryStaffShell } from "@/modules/candidates/application/work-queue-queries";
 import {
   createHiringCycle,
   transitionHiringCycle,
@@ -615,6 +616,53 @@ describe("overview", () => {
     await shell("manager", row.public_id);
     await overview("manager", row.public_id);
     expect(await snapshot()).toEqual(before);
+  });
+});
+
+describe("staff menu", () => {
+  it("shows each role only the screens it may open", async () => {
+    const menu = async (name: string) => {
+      const shell = await queryStaffShell(headers(staff[name]!.jar), deps);
+      if (shell.kind !== "OK") throw new Error(`${name} ${shell.kind}`);
+      return shell.view.navigation.map((e) => e.label);
+    };
+    expect(await menu("recruiter")).toEqual([
+      "Dashboard",
+      "Work Queue",
+      "Add Candidate",
+      "Submitted Applications",
+      "Security",
+    ]);
+    expect(await menu("hr")).toEqual([
+      "Dashboard",
+      "Work Queue",
+      "Add Candidate",
+      "Submitted Applications",
+      "Positions",
+      "Security",
+    ]);
+    expect(await menu("manager")).toEqual([
+      "Dashboard",
+      "Work Queue",
+      "Add Candidate",
+      "Submitted Applications",
+      "Positions",
+      "Possible Duplicates",
+      "Security",
+    ]);
+    for (const name of ["compliance", "classification"]) {
+      expect(await menu(name), name).toEqual([
+        "Submitted Applications",
+        "Security",
+      ]);
+    }
+    for (const name of ["administrator", "trainer", "auditor"]) {
+      expect(await menu(name), name).toEqual(["Security"]);
+    }
+    const candidate = await candidateSession(h);
+    expect((await queryStaffShell(headers(candidate.jar), deps)).kind).toBe(
+      "UNAUTHENTICATED",
+    );
   });
 });
 

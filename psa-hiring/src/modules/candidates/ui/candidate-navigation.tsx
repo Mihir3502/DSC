@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
-// Portal navigation (packet M2.3 §12, §21). On small screens the list is a
+// Portal navigation, for candidates and staff (packets M2.3 §12, §21; M3). On small screens the list is a
 // disclosure: Escape closes it and returns focus to its button, and following
 // a link closes it. The current page is conveyed by aria-current and a visible
 // underline, not by color alone. Portal links never prefetch: these pages are
@@ -13,8 +13,8 @@ import { Button } from "@/components/ui/button";
 
 type Entry = Readonly<{ key: string; label: string; href: string }>;
 
-function isCurrent(pathname: string, href: string) {
-  return href === "/candidate"
+function isCurrent(pathname: string, href: string, home: string) {
+  return href === home
     ? pathname === href
     : pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -22,11 +22,16 @@ function isCurrent(pathname: string, href: string) {
 export function CandidateNavigation({
   entries,
   signOut,
+  label = "Candidate portal",
+  home = "/candidate",
 }: {
   entries: readonly Entry[];
   signOut: React.ReactNode;
+  label?: string;
+  home?: string;
 }) {
   const pathname = usePathname();
+  const menuId = useId();
   const [open, setOpen] = useState(false);
   const toggle = useRef<HTMLButtonElement>(null);
 
@@ -43,25 +48,25 @@ export function CandidateNavigation({
   }, [open]);
 
   return (
-    <nav aria-label="Candidate portal" className="border-b pb-3">
+    <nav aria-label={label} className="border-b pb-3">
       <Button
         ref={toggle}
         type="button"
         variant="outline"
         className="min-h-11 md:hidden"
         aria-expanded={open}
-        aria-controls="candidate-navigation"
+        aria-controls={menuId}
         onClick={() => setOpen((value) => !value)}
       >
         {open ? "Close menu" : "Menu"}
       </Button>
       <div
-        id="candidate-navigation"
+        id={menuId}
         className={`${open ? "flex" : "hidden"} mt-2 flex-col gap-1 md:mt-0 md:flex md:flex-row md:flex-wrap md:items-center md:gap-4`}
       >
         <ul className="flex flex-col gap-1 md:flex-row md:flex-wrap md:gap-4">
           {entries.map((entry) => {
-            const current = isCurrent(pathname, entry.href);
+            const current = isCurrent(pathname, entry.href, home);
             return (
               <li key={entry.key}>
                 <Link

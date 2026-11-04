@@ -11,7 +11,6 @@ import {
   revokeOtherStaffSessionsAction,
   revokeStaffSessionAction,
   staffChangePasswordAction,
-  staffSignOutAction,
   staffSignOutEverywhereAction,
 } from "./actions";
 
@@ -80,11 +79,6 @@ export default async function StaffSecurityPage({
               : ""}
           </p>
         </div>
-        <form action={staffSignOutAction}>
-          <Button type="submit" variant="outline" size="lg">
-            Sign out
-          </Button>
-        </form>
       </div>
 
       {noticeText ? (

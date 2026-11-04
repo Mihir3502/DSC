@@ -52,6 +52,22 @@ test.describe("candidate workspace @critical", () => {
       tree.branch,
     );
     await staffSignIn(recruiterPage, recruiter);
+    const recruiterMenu = recruiterPage
+      .getByRole("navigation", { name: "Staff" })
+      .getByRole("link");
+    await expect(recruiterMenu).toHaveText([
+      "Dashboard",
+      "Work Queue",
+      "Add Candidate",
+      "Submitted Applications",
+      "Security",
+    ]);
+    // Every link in the menu opens a real page for this role.
+    for (const href of await recruiterMenu.evaluateAll((links) =>
+      links.map((l) => l.getAttribute("href")!),
+    )) {
+      expect((await recruiterPage.goto(href))!.status(), href).toBe(200);
+    }
     await recruiterPage.goto("/staff/work?stage=APPLICATION_SUBMITTED");
     await recruiterPage
       .locator("li", { hasText: "Review the submitted" })
@@ -113,6 +129,9 @@ test.describe("candidate workspace @critical", () => {
       tree.org,
     );
     await staffSignIn(reviewerPage, reviewer);
+    await expect(
+      reviewerPage.getByRole("navigation", { name: "Staff" }).getByRole("link"),
+    ).toHaveText(["Submitted Applications", "Security"]);
     await reviewerPage.goto(workspace);
     const reviewerMain = reviewerPage.getByRole("main");
     await expect(reviewerMain).toContainText("Nobody owns this record");

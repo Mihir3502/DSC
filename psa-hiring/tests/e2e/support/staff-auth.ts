@@ -188,6 +188,9 @@ export async function staffSignIn(page: Page, staff: ActivatedStaff) {
 }
 
 export async function staffSignOut(page: Page) {
+  // On a narrow screen, Sign out sits inside the menu.
+  const menu = page.getByRole("button", { name: "Menu", exact: true });
+  if (await menu.isVisible()) await menu.click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(page).toHaveURL(/\/staff\/sign-in/);
 }

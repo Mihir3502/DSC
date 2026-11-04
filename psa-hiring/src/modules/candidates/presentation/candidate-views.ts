@@ -452,11 +452,13 @@ const staffShellSchema = z.strictObject({
   navigation: z
     .array(
       z.strictObject({
+        key: z.string().regex(/^[a-z-]+$/),
         label: label,
         href: z.string().regex(/^\/staff(\/[a-z/-]+)?$/),
       }),
     )
-    .max(6),
+    .min(1)
+    .max(12),
 });
 export type StaffShellView = z.infer<typeof staffShellSchema>;
 export const staffShellContract = defineProjection<
