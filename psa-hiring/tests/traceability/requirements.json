@@ -610,6 +610,22 @@
           "title": "adds each item only with its own fact, in a fixed order"
         }
       ]
+    },
+    {
+      "id": "PRD-INT-001",
+      "title": "Staff shall use a consistent prescreen checklist",
+      "status": "covered",
+      "note": "M3.3: a stored, versioned checklist. Version 1 is a draft awaiting business review.",
+      "tests": [
+        {
+          "file": "tests/integration/applications/prescreen.test.ts",
+          "title": "moves to prescreen, pins the version and checklist, and swaps staff work"
+        },
+        {
+          "file": "tests/integration/applications/prescreen.test.ts",
+          "title": "saves exact answers and records the reviewer, and refuses anything else"
+        }
+      ]
     }
   ],
   "acceptanceCriteria": [
@@ -4235,6 +4251,154 @@
         {
           "file": "src/modules/candidates/domain/candidate-workspace.test.ts",
           "title": "never words a blocker as a compliance result"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.3-01",
+      "tests": [
+        {
+          "file": "tests/integration/applications/prescreen.test.ts",
+          "title": "moves to prescreen, pins the version and checklist, and swaps staff work"
+        },
+        {
+          "file": "tests/integration/applications/prescreen.test.ts",
+          "title": "refuses the wrong stage, role, scope, and a stale or repeated request"
+        },
+        {
+          "file": "tests/e2e/application-prescreen.spec.ts",
+          "title": "staff accept, hold, and decide a prescreen, and the candidate sees only generic status @critical"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.3-02",
+      "tests": [
+        {
+          "file": "tests/integration/applications/prescreen.test.ts",
+          "title": "saves exact answers and records the reviewer, and refuses anything else"
+        },
+        {
+          "file": "src/modules/applications/domain/prescreen.test.ts",
+          "title": "accepts only known items and results"
+        },
+        {
+          "file": "src/modules/applications/domain/prescreen.test.ts",
+          "title": "bounds notes and refuses control characters"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.3-03",
+      "tests": [
+        {
+          "file": "tests/integration/applications/prescreen.test.ts",
+          "title": "reuses the return flow, ends this review, and starts a new one on resubmission"
+        },
+        {
+          "file": "tests/integration/applications/prescreen.test.ts",
+          "title": "lets only HR and PSA Managers place one, and blocks every decision while it's active"
+        },
+        {
+          "file": "tests/integration/applications/prescreen.test.ts",
+          "title": "refuses bad input, other stages, and changes to a hold's history"
+        },
+        {
+          "file": "src/modules/candidates/domain/holds.test.ts",
+          "title": "runs a review date to the end of that UTC day, within 180 days"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.3-04",
+      "tests": [
+        {
+          "file": "tests/integration/applications/prescreen.test.ts",
+          "title": "passes only with every answer in, moves to Interview, and creates no downstream record"
+        },
+        {
+          "file": "tests/integration/applications/prescreen.test.ts",
+          "title": "closes as not selected, keeps the reason internal, and sends nothing"
+        },
+        {
+          "file": "src/modules/applications/domain/prescreen.test.ts",
+          "title": "passes only with every answer in and every unmet item excepted"
+        },
+        {
+          "file": "tests/e2e/application-prescreen.spec.ts",
+          "title": "staff accept, hold, and decide a prescreen, and the candidate sees only generic status @critical"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.3-05",
+      "tests": [
+        {
+          "file": "tests/integration/applications/prescreen.test.ts",
+          "title": "needs a manager, and a different person from the reviewer"
+        },
+        {
+          "file": "tests/integration/applications/prescreen.test.ts",
+          "title": "is void once the answers change, and the database refuses self-approval"
+        },
+        {
+          "file": "tests/integration/applications/prescreen.test.ts",
+          "title": "isn't available when nothing is unmet"
+        },
+        {
+          "file": "src/modules/applications/domain/prescreen.test.ts",
+          "title": "voids an exception approved on earlier answers"
+        },
+        {
+          "file": "tests/e2e/application-prescreen.spec.ts",
+          "title": "an unmet item needs a manager's exception before it can pass @critical"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.3-X1",
+      "tests": [
+        {
+          "file": "tests/integration/applications/prescreen.test.ts",
+          "title": "gives outsiders one identical not-found and keeps notes out of other views"
+        },
+        {
+          "file": "tests/integration/applications/prescreen.test.ts",
+          "title": "leaves completing a prescreen to Recruiters and HR until a manager is designated"
+        },
+        {
+          "file": "tests/integration/applications/prescreen.test.ts",
+          "title": "needs a manager, and a different person from the reviewer"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.3-X2",
+      "tests": [
+        {
+          "file": "tests/integration/applications/prescreen.test.ts",
+          "title": "lets exactly one of a concurrent pass and not-selected win"
+        },
+        {
+          "file": "tests/integration/applications/prescreen.test.ts",
+          "title": "rolls everything back when the audit write fails"
+        },
+        {
+          "file": "tests/integration/applications/prescreen.test.ts",
+          "title": "refuses bad input, other stages, and changes to a hold's history"
+        }
+      ]
+    },
+    {
+      "id": "AC-M3.3-X3",
+      "tests": [
+        {
+          "file": "tests/accessibility/application-prescreen.a11y.spec.ts",
+          "title": "the prescreen screen is accessible and reflows"
+        },
+        {
+          "file": "tests/integration/applications/prescreen.test.ts",
+          "title": "closes as not selected, keeps the reason internal, and sends nothing"
         }
       ]
     }

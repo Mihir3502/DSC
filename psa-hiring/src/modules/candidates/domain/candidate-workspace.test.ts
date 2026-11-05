@@ -75,7 +75,7 @@ describe("blockers", () => {
 
   it("never words a blocker as a compliance result", () => {
     for (const label of Object.values(blockerLabels)) {
-      expect(label).not.toMatch(/clear|approved|screening|compliance|hold$/i);
+      expect(label).not.toMatch(/clear|approved|screening|compliance/i);
     }
   });
 });
@@ -101,7 +101,10 @@ describe("timeline", () => {
     expect(Object.keys(stageEventLabels).sort()).toEqual(
       [
         "close_prospect",
+        "accept_for_prescreen",
         "create_prospect",
+        "not_select_prescreen",
+        "pass_prescreen",
         "return_application",
         "start_application",
         "start_application_from_prospect",

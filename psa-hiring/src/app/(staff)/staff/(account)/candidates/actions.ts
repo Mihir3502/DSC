@@ -2,8 +2,13 @@
 
 import { headers } from "next/headers";
 import {
+  acceptApplicationForPrescreen,
+  approvePrescreenException,
   dispatchApplicationEmails,
+  notSelectAtPrescreen,
+  passPrescreen,
   returnApplication,
+  savePrescreenResponses,
 } from "@/modules/applications";
 import {
   assignCandidacyOwner,
@@ -12,7 +17,9 @@ import {
   candidateDependencies,
   createStaffProspect,
   mergePeople,
+  placeCandidacyHold,
   queryCandidacyPath,
+  removeCandidacyHold,
   releaseCandidacyOwner,
   reviewDuplicateMatch,
   setWorkItemDueDate,
@@ -24,6 +31,7 @@ import {
 import {
   refuseAccess,
   refuseIdentityReviewAccess,
+  refusePrescreenExceptionAccess,
 } from "@/modules/identity-access/delivery/route-authorization";
 import type { ConfigFormState } from "@/modules/organization/ui/config-form-state";
 import { parseFormInput } from "@/shared/validation/form-input";
@@ -62,6 +70,15 @@ const refusalText: Readonly<Record<string, string>> = {
   COMMAND_KEY_CONFLICT:
     "This form was already used for a different request. Reload the page and try again.",
   INVALID_INPUT: "Check the form and try again.",
+  ON_HOLD: "This candidate is on hold. Remove the hold first, then try again.",
+  ALREADY_ON_HOLD: "This candidate is already on hold. Reload the page.",
+  PRESCREEN_INCOMPLETE: "Answer every checklist item and save before passing.",
+  EXCEPTION_REQUIRED:
+    "An item is marked Not met, so this needs a PSA Manager's exception before it can pass.",
+  EXCEPTION_NOT_NEEDED:
+    "No exception is needed for the current answers. Reload the page.",
+  EXCEPTION_SELF_APPROVAL:
+    "You answered this checklist, so a different PSA Manager must approve the exception.",
   OWNER_NOT_ELIGIBLE:
     "That person can't own this record. Reload the page and choose someone else.",
   RATE_LIMITED: "Too many attempts. Wait a few minutes, then try again.",
@@ -212,6 +229,99 @@ export async function assignOwnerToMeAction(
   const result = await assignCandidacyOwnerToSelf(input.values, await actor());
   return outcome(previous, result, input.values, {
     message: "You are now the owner.",
+  });
+}
+
+export async function acceptForPrescreenAction(
+  previous: ConfigFormState,
+  formData: FormData,
+): Promise<ConfigFormState> {
+  const input = parseFormInput(formData, formSchemas.candidacyCommand);
+  if (input.kind === "REJECTED") return rejected(previous);
+  const result = await acceptApplicationForPrescreen(
+    input.values,
+    await actor(),
+  );
+  return outcome(previous, result, input.values, {
+    message: "Accepted for prescreen.",
+  });
+}
+
+export async function savePrescreenAction(
+  previous: ConfigFormState,
+  formData: FormData,
+): Promise<ConfigFormState> {
+  const input = parseFormInput(formData, formSchemas.prescreenSave);
+  if (input.kind === "REJECTED") return rejected(previous);
+  const result = await savePrescreenResponses(input.values, await actor());
+  return outcome(previous, result, input.values, {
+    message: "Answers saved.",
+  });
+}
+
+export async function approvePrescreenExceptionAction(
+  previous: ConfigFormState,
+  formData: FormData,
+): Promise<ConfigFormState> {
+  const input = parseFormInput(formData, formSchemas.candidacyCommand);
+  if (input.kind === "REJECTED") return rejected(previous);
+  const result = await approvePrescreenException(input.values, await actor());
+  if (
+    result.kind === "REFUSED" &&
+    result.reason === "REAUTHENTICATION_REQUIRED"
+  ) {
+    return refusePrescreenExceptionAccess("REAUTHENTICATION_REQUIRED");
+  }
+  return outcome(previous, result, input.values, {
+    message: "Exception approved.",
+  });
+}
+
+export async function passPrescreenAction(
+  previous: ConfigFormState,
+  formData: FormData,
+): Promise<ConfigFormState> {
+  const input = parseFormInput(formData, formSchemas.candidacyCommand);
+  if (input.kind === "REJECTED") return rejected(previous);
+  const result = await passPrescreen(input.values, await actor());
+  return outcome(previous, result, input.values, {
+    message: "Prescreen passed.",
+  });
+}
+
+export async function notSelectPrescreenAction(
+  previous: ConfigFormState,
+  formData: FormData,
+): Promise<ConfigFormState> {
+  const input = parseFormInput(formData, formSchemas.candidacyCommand);
+  if (input.kind === "REJECTED") return rejected(previous);
+  const result = await notSelectAtPrescreen(input.values, await actor());
+  return outcome(previous, result, input.values, {
+    message: "Marked as not selected.",
+  });
+}
+
+export async function placeHoldAction(
+  previous: ConfigFormState,
+  formData: FormData,
+): Promise<ConfigFormState> {
+  const input = parseFormInput(formData, formSchemas.holdPlace);
+  if (input.kind === "REJECTED") return rejected(previous);
+  const result = await placeCandidacyHold(input.values, await actor());
+  return outcome(previous, result, input.values, {
+    message: "Placed on hold.",
+  });
+}
+
+export async function removeHoldAction(
+  previous: ConfigFormState,
+  formData: FormData,
+): Promise<ConfigFormState> {
+  const input = parseFormInput(formData, formSchemas.candidacyCommand);
+  if (input.kind === "REJECTED") return rejected(previous);
+  const result = await removeCandidacyHold(input.values, await actor());
+  return outcome(previous, result, input.values, {
+    message: "Hold removed.",
   });
 }
 

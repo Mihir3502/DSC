@@ -275,6 +275,8 @@ const stageLabels = {
   PROSPECT: "Prospect",
   APPLICATION_INCOMPLETE: "Application incomplete",
   APPLICATION_SUBMITTED: "Application submitted",
+  PRESCREEN_REVIEW: "Prescreen review",
+  INTERVIEW: "Interview",
 } as const;
 
 /** Bounded prospect/candidacy detail (not the M3 workspace). */

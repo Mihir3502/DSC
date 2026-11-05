@@ -100,6 +100,10 @@ const templateRoutes: readonly (readonly [RegExp, string])[] = [
     /^\/staff\/candidates\/[^/]+\/application$/,
     "/staff/candidates/[candidacyId]/application",
   ],
+  [
+    /^\/staff\/candidates\/[^/]+\/recruiting\/prescreen$/,
+    "/staff/candidates/[candidacyId]/recruiting/prescreen",
+  ],
   [/^\/staff\/candidates\/[^/]+$/, "/staff/candidates/[candidacyId]"],
   [/^\/staff\/work\/[^/]+$/, "/staff/work/[candidacyId]"],
 ];

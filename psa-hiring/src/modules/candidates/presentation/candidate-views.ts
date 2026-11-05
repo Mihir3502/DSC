@@ -144,6 +144,8 @@ const homeSchema = z.strictObject({
           "UNDER_REVIEW",
           "APPLICATION_IN_PROGRESS",
           "APPLICATION_SUBMITTED",
+          "APPLICATION_UNDER_REVIEW",
+          "INTERVIEW_STEP",
           "NOT_CONTINUING",
           "UNAVAILABLE",
         ]),
@@ -282,6 +284,8 @@ const prospectDetailSchema = z.strictObject({
     "Prospect",
     "Application incomplete",
     "Application submitted",
+    "Prescreen review",
+    "Interview",
   ]),
   status: z.enum(["Active", "Closed"]),
   source: z.enum(["Candidate self-service", "Staff entered"]),
@@ -629,11 +633,11 @@ const candidateWorkspaceSchema = z.strictObject({
   tabs: z
     .array(
       z.strictObject({
-        key: z.enum(["overview", "application"]),
+        key: z.enum(["overview", "application", "prescreen"]),
         label,
         href: z
           .string()
-          .regex(/^\/staff\/candidates\/[0-9a-z]{12}(\/[a-z]+)?$/),
+          .regex(/^\/staff\/candidates\/[0-9a-z]{12}(\/[a-z]+)*$/),
       }),
     )
     .min(1)
@@ -672,7 +676,7 @@ export const candidateWorkspaceContract = defineProjection<
 const candidateOverviewSchema = z.strictObject({
   blockers: z
     .array(z.strictObject({ code: z.string().regex(/^[A-Z_]+$/), label }))
-    .max(5),
+    .max(6),
   timeline: z
     .array(
       z.strictObject({

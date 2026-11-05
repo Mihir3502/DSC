@@ -12,10 +12,12 @@ export const stageFilters = [
   "PROSPECT",
   "APPLICATION_INCOMPLETE",
   "APPLICATION_SUBMITTED",
+  "PRESCREEN_REVIEW",
+  "INTERVIEW",
 ] as const;
 export const dueFilters = ["OVERDUE", "TODAY", "NEXT_7", "NONE"] as const;
 export const workerPathFilters = ["UNDECIDED", "W2", "CONTRACTOR"] as const;
-export const exceptionFilters = ["RETURNED"] as const;
+export const exceptionFilters = ["RETURNED", "ON_HOLD"] as const;
 
 export type AssignmentFilter = (typeof assignmentFilters)[number];
 export type StageFilter = (typeof stageFilters)[number];
@@ -32,6 +34,8 @@ export const stageLabels: Readonly<Record<StageFilter, string>> = {
   PROSPECT: "Prospect",
   APPLICATION_INCOMPLETE: "Application incomplete",
   APPLICATION_SUBMITTED: "Application submitted",
+  PRESCREEN_REVIEW: "Prescreen review",
+  INTERVIEW: "Interview",
 };
 export const dueLabels: Readonly<Record<DueFilter, string>> = {
   OVERDUE: "Overdue",
@@ -46,6 +50,7 @@ export const workerPathLabels: Readonly<Record<WorkerPathFilter, string>> = {
 };
 export const exceptionLabels: Readonly<Record<ExceptionFilter, string>> = {
   RETURNED: "Returned for correction",
+  ON_HOLD: "On hold",
 };
 
 export const ownerChangeReasons = [
@@ -216,11 +221,12 @@ export function nextStaffAction(
   returned: boolean,
   hasReviewItem: boolean,
 ): string {
+  if (stage === "PRESCREEN_REVIEW") return "Complete the prescreen";
   if (stage === "PROSPECT")
     return "Start the application or close the prospect";
   if (stage === "APPLICATION_SUBMITTED") {
     return hasReviewItem
-      ? "Review the submitted application"
+      ? "Accept the application for prescreen"
       : "None right now";
   }
   if (stage === "APPLICATION_INCOMPLETE") {

@@ -42,8 +42,10 @@ import {
   insertMatchIfAbsent,
   insertMergeRecord,
   insertPerson,
+  completeOpenStaffWork,
   insertResponsibilityHistory,
   insertStageHistory,
+  openPrescreenItem,
   lockActiveCandidaciesOf,
   reparentCandidacies,
   updateCandidacy,
@@ -1280,3 +1282,60 @@ export async function markApplicationReturned(
   await swapReviewItemForCorrection(ctx.tx, row.id, ctx.now);
   return updated;
 }
+
+async function moveStage(
+  ctx: CommandContext,
+  row: CandidacyRow,
+  command: "accept_for_prescreen" | "pass_prescreen" | "not_select_prescreen",
+  closureReason: string | null,
+): Promise<CandidacyRow> {
+  const to =
+    stageTransition(command, {
+      stage: row.currentStage as CandidacyStage,
+      status: row.status as CandidacyStatus,
+    }) ?? refuse("INVALID_TRANSITION");
+  const updated =
+    (await updateCandidacy(
+      ctx.tx,
+      row.id,
+      row.version,
+      {
+        currentStage: to.stage,
+        status: to.status,
+        candidateVisibleStatus: candidateVisibleStatus(to.stage, to.status),
+        ...(closureReason
+          ? { closedAt: ctx.now, closureReasonCode: closureReason }
+          : {}),
+      },
+      ctx.actorId,
+      ctx.now,
+    )) ?? refuse("STALE_VERSION");
+  await recordStage(
+    ctx,
+    updated,
+    command,
+    { stage: row.currentStage, status: row.status, version: row.version },
+    closureReason,
+  );
+  await completeOpenStaffWork(ctx.tx, row.id, ctx.now);
+  return updated;
+}
+
+/** Stage changes for M3.3, inside the caller's authorized transaction. */
+export async function markPrescreenAccepted(
+  ctx: CommandContext,
+  row: CandidacyRow,
+): Promise<CandidacyRow> {
+  const updated = await moveStage(ctx, row, "accept_for_prescreen", null);
+  await openPrescreenItem(ctx.tx, row.id);
+  return updated;
+}
+
+export const markPrescreenPassed = (ctx: CommandContext, row: CandidacyRow) =>
+  moveStage(ctx, row, "pass_prescreen", null);
+
+export const markNotSelected = (
+  ctx: CommandContext,
+  row: CandidacyRow,
+  reasonCode: string,
+) => moveStage(ctx, row, "not_select_prescreen", reasonCode);

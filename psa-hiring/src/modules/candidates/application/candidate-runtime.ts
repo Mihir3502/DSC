@@ -71,6 +71,12 @@ export const candidateRefusals = [
   "COMMAND_KEY_CONFLICT",
   "RATE_LIMITED",
   "TEMPLATE_UNAVAILABLE",
+  "ON_HOLD",
+  "ALREADY_ON_HOLD",
+  "PRESCREEN_INCOMPLETE",
+  "EXCEPTION_REQUIRED",
+  "EXCEPTION_NOT_NEEDED",
+  "EXCEPTION_SELF_APPROVAL",
   "BLOCKED_CASE_NOT_CONFIRMED",
   "BLOCKED_PERSON_NOT_ACTIVE",
   "BLOCKED_TWO_CANDIDATE_ACCOUNTS",
@@ -152,6 +158,7 @@ export async function authorizeCandidateCommand(
   resource: AuthorizationRequest["resource"],
   reasonCode?: string,
   workflow?: AuthorizationRequest["workflow"],
+  holdCategory?: AuthorizationRequest["holdCategory"],
 ): Promise<void> {
   const { actor } = ctx;
   if (actor.kind === "BOOTSTRAP") {
@@ -173,6 +180,7 @@ export async function authorizeCandidateCommand(
       resource,
       ...(reasonCode ? { reasonCode } : {}),
       ...(workflow ? { workflow } : {}),
+      ...(holdCategory ? { holdCategory } : {}),
     },
     deps,
   );

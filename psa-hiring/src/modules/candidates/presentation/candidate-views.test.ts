@@ -122,7 +122,7 @@ describe("candidate projections", () => {
     expect(
       project(
         prospectDetailContract,
-        { ...view, stage: "Interview" } as unknown as typeof view,
+        { ...view, stage: "Offer" } as unknown as typeof view,
         allowed,
       ).kind,
     ).not.toBe("PROJECTED");

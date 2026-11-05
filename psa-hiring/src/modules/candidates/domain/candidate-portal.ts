@@ -13,6 +13,8 @@ export type CandidateStatusCode =
   | "UNDER_REVIEW"
   | "APPLICATION_IN_PROGRESS"
   | "APPLICATION_SUBMITTED"
+  | "APPLICATION_UNDER_REVIEW"
+  | "INTERVIEW_STEP"
   | "NOT_CONTINUING"
   | "UNAVAILABLE";
 
@@ -32,6 +34,15 @@ export const candidateStatusWording: Readonly<
     label: "Application received",
     explanation:
       "We received your application. No action is needed unless we contact you.",
+  },
+  APPLICATION_UNDER_REVIEW: {
+    label: "Application under review",
+    explanation: "We are reviewing your application. No action is needed now.",
+  },
+  // Scheduling arrives with M3.4, so this doesn't ask the candidate to act yet.
+  INTERVIEW_STEP: {
+    label: "Interview step",
+    explanation: "We will contact you about the next steps.",
   },
   NOT_CONTINUING: {
     label: "Application not continuing",
@@ -53,6 +64,8 @@ export function candidateStatusCode(
   if (stage === "PROSPECT") return "UNDER_REVIEW";
   if (stage === "APPLICATION_INCOMPLETE") return "APPLICATION_IN_PROGRESS";
   if (stage === "APPLICATION_SUBMITTED") return "APPLICATION_SUBMITTED";
+  if (stage === "PRESCREEN_REVIEW") return "APPLICATION_UNDER_REVIEW";
+  if (stage === "INTERVIEW") return "INTERVIEW_STEP";
   return "UNAVAILABLE";
 }
 
@@ -157,7 +170,9 @@ export function taskCategory(
     if (!workTypes[item.workTypeCode]) return null;
     return item.status === "COMPLETED" &&
       candidacy.status === "ACTIVE" &&
-      candidacy.stage === "APPLICATION_SUBMITTED"
+      (candidacy.stage === "APPLICATION_SUBMITTED" ||
+        candidacy.stage === "PRESCREEN_REVIEW" ||
+        candidacy.stage === "INTERVIEW")
       ? "under_review"
       : "completed";
   }

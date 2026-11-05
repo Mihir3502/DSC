@@ -226,7 +226,7 @@ export const candidacy = appSchema.table(
     ),
     check(
       "candidacy_stage_check",
-      sql`${table.currentStage} IN ('PROSPECT', 'APPLICATION_INCOMPLETE', 'APPLICATION_SUBMITTED')`,
+      sql`${table.currentStage} IN ('PROSPECT', 'APPLICATION_INCOMPLETE', 'APPLICATION_SUBMITTED', 'PRESCREEN_REVIEW', 'INTERVIEW')`,
     ),
     check(
       "candidacy_status_check",
@@ -234,7 +234,7 @@ export const candidacy = appSchema.table(
     ),
     check(
       "candidacy_visible_status_check",
-      sql`${table.candidateVisibleStatus} = CASE WHEN ${table.status} <> 'ACTIVE' THEN 'CLOSED' WHEN ${table.currentStage} = 'APPLICATION_INCOMPLETE' THEN 'APPLICATION_STARTED' WHEN ${table.currentStage} = 'APPLICATION_SUBMITTED' THEN 'APPLICATION_SUBMITTED' ELSE 'NOT_STARTED' END`,
+      sql`${table.candidateVisibleStatus} = CASE WHEN ${table.status} <> 'ACTIVE' THEN 'CLOSED' WHEN ${table.currentStage} = 'APPLICATION_INCOMPLETE' THEN 'APPLICATION_STARTED' WHEN ${table.currentStage} = 'APPLICATION_SUBMITTED' THEN 'APPLICATION_SUBMITTED' WHEN ${table.currentStage} = 'PRESCREEN_REVIEW' THEN 'UNDER_REVIEW' WHEN ${table.currentStage} = 'INTERVIEW' THEN 'INTERVIEW_STEP' ELSE 'NOT_STARTED' END`,
     ),
     check(
       "candidacy_worker_path_check",
@@ -300,7 +300,7 @@ export const candidacyStageHistory = appSchema.table(
     ),
     check(
       "candidacy_stage_history_command_check",
-      sql`${table.commandCode} IN ('create_prospect', 'start_application', 'start_application_from_prospect', 'close_prospect', 'submit_application', 'return_application')`,
+      sql`${table.commandCode} IN ('create_prospect', 'start_application', 'start_application_from_prospect', 'close_prospect', 'submit_application', 'return_application', 'accept_for_prescreen', 'pass_prescreen', 'not_select_prescreen')`,
     ),
     check(
       "candidacy_stage_history_version_check",
@@ -544,7 +544,7 @@ export const workItem = appSchema.table(
       ),
     check(
       "work_item_type_check",
-      sql`${table.workTypeCode} IN ('COMPLETE_APPLICATION', 'CORRECT_APPLICATION', 'REVIEW_SUBMITTED_APPLICATION')`,
+      sql`${table.workTypeCode} IN ('COMPLETE_APPLICATION', 'CORRECT_APPLICATION', 'REVIEW_SUBMITTED_APPLICATION', 'COMPLETE_PRESCREEN')`,
     ),
     check(
       "work_item_target_check",
@@ -638,5 +638,67 @@ export const workResponsibilityHistory = appSchema.table(
       table.candidacyId,
       table.occurredAt,
     ),
+  ],
+);
+
+// A pause on a candidacy (packet M3.3; HIRING_WORKFLOW §6.5). It overlays the
+// stage rather than replacing it, so removing it returns to the same stage. The
+// reason is internal, and candidates don't see holds yet because no candidate
+// wording has been approved. A trigger keeps everything except removal fixed.
+export const candidacyHold = appSchema.table(
+  "candidacy_hold",
+  {
+    id: uuid("id")
+      .default(sql`pg_catalog.gen_random_uuid()`)
+      .primaryKey(),
+    candidacyId: uuid("candidacy_id").notNull(),
+    categoryCode: varchar("category_code", { length: 64 }).notNull(),
+    internalReason: varchar("internal_reason", { length: 1000 }).notNull(),
+    reviewAt: timestamp("review_at", tz).notNull(),
+    status: varchar("status", { length: 16 }).default("ACTIVE").notNull(),
+    placedByAccountId: uuid("placed_by_account_id").notNull(),
+    placedAt: timestamp("placed_at", tz).notNull(),
+    removedByAccountId: uuid("removed_by_account_id"),
+    removedAt: timestamp("removed_at", tz),
+    removalReasonCode: varchar("removal_reason_code", { length: 64 }),
+    version: integer("version").default(1).notNull(),
+  },
+  (table) => [
+    foreignKey({
+      name: "candidacy_hold_candidacy_fk",
+      columns: [table.candidacyId],
+      foreignColumns: [candidacy.id],
+    }),
+    foreignKey({
+      name: "candidacy_hold_placed_by_fk",
+      columns: [table.placedByAccountId],
+      foreignColumns: [user.id],
+    }),
+    foreignKey({
+      name: "candidacy_hold_removed_by_fk",
+      columns: [table.removedByAccountId],
+      foreignColumns: [user.id],
+    }),
+    uniqueIndex("candidacy_hold_one_active_unique")
+      .on(table.candidacyId)
+      .where(sql`${table.status} = 'ACTIVE'`),
+    index("candidacy_hold_candidacy_idx").on(table.candidacyId, table.placedAt),
+    check(
+      "candidacy_hold_category_check",
+      sql`${table.categoryCode} ~ '^[A-Z][A-Z0-9_]{1,63}$'`,
+    ),
+    check(
+      "candidacy_hold_status_check",
+      sql`${table.status} IN ('ACTIVE', 'REMOVED')`,
+    ),
+    check(
+      "candidacy_hold_removal_check",
+      sql`((${table.status} = 'REMOVED') = (${table.removedAt} IS NOT NULL)) AND ((${table.removedAt} IS NULL) = (${table.removedByAccountId} IS NULL)) AND ((${table.removedAt} IS NULL) = (${table.removalReasonCode} IS NULL))`,
+    ),
+    check(
+      "candidacy_hold_reason_check",
+      sql`char_length(${table.internalReason}) >= 1`,
+    ),
+    check("candidacy_hold_version_check", sql`${table.version} >= 1`),
   ],
 );

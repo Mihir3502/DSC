@@ -86,7 +86,7 @@ test.describe("staff work queue @critical", () => {
     // The URL holds codes only, never a name.
     expect(recruiterPage.url()).not.toContain("Ada");
     const row = recruiterPage.locator("li", {
-      hasText: "Review the submitted",
+      hasText: "Accept the application",
     });
     await row.first().getByRole("link").first().click();
     await expect(recruiterPage).toHaveURL(`/staff/candidates/${candidacy}`);

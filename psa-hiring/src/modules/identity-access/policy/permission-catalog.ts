@@ -97,6 +97,10 @@ const recentIdentityReview: RecentAuthRequirement = {
   policy: "RECENT_STAFF_AUTH",
   purpose: "CANDIDATE_IDENTITY_REVIEW",
 };
+const recentPrescreenException: RecentAuthRequirement = {
+  policy: "RECENT_STAFF_AUTH",
+  purpose: "PRESCREEN_EXCEPTION",
+};
 const recentConfiguration: RecentAuthRequirement = {
   policy: "RECENT_STAFF_AUTH",
   purpose: "CONFIGURATION_CHANGE",
@@ -419,6 +423,16 @@ const recruiting = [
     "Complete prescreen",
     ["§8:Complete prescreen"],
     wf,
+  ),
+  p(
+    "prescreen",
+    "exception.approve",
+    "APPROVE",
+    CP,
+    S,
+    "Approve a prescreen exception for an unmet checklist item",
+    ["§8:Approve prescreen exception"],
+    { workflow: true, recentAuth: recentPrescreenException, reason: true },
   ),
   p(
     "recruiting_note",

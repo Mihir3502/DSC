@@ -67,6 +67,7 @@ export const registeredDestinations: readonly string[] = Object.freeze([
   "/staff/candidates/new",
   "/staff/candidates/duplicates",
   "/staff/reauthenticate?purpose=CANDIDATE_IDENTITY_REVIEW",
+  "/staff/reauthenticate?purpose=PRESCREEN_EXCEPTION",
 ]);
 
 const registered = new Set(registeredDestinations);

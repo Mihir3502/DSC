@@ -1,9 +1,10 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import {
   authorizeCandidateCommand,
   candidacyWorkflow,
   candidateDependencies,
+  findActiveHold,
   findCandidacyByPublicId,
   fingerprint,
   isCandidacyPublicId,
@@ -24,6 +25,7 @@ import {
   applicationReturn,
   applicationVersion,
   outboxEvent,
+  prescreenReview,
 } from "../infrastructure/applications-schema";
 import {
   findLatestVersion,
@@ -125,10 +127,13 @@ export async function returnApplication(
       if (row.version !== expected) refuse("STALE_VERSION");
       if (
         row.status !== "ACTIVE" ||
-        row.currentStage !== "APPLICATION_SUBMITTED"
+        (row.currentStage !== "APPLICATION_SUBMITTED" &&
+          row.currentStage !== "PRESCREEN_REVIEW")
       ) {
         refuse("INVALID_TRANSITION");
       }
+      // A hold pauses progression, including asking for more information.
+      if (await findActiveHold(ctx.tx, row.id)) refuse("ON_HOLD");
       const latest = await findLatestVersion(ctx.tx, row.id);
       if (latest?.status !== "SUBMITTED") return refuse("INVALID_TRANSITION");
       const pinned = await findTemplateVersion(
@@ -156,6 +161,20 @@ export async function returnApplication(
         .set({ status: "RETURNED" })
         .where(eq(applicationVersion.id, latest.id));
       const updated = await markApplicationReturned(ctx, row, reason!);
+      // Asking for more during prescreen ends this review. The resubmitted
+      // version gets its own, so the first stays as history.
+      await ctx.tx
+        .update(prescreenReview)
+        .set({
+          status: "RETURNED",
+          version: sql`${prescreenReview.version} + 1`,
+        })
+        .where(
+          and(
+            eq(prescreenReview.candidacyId, row.id),
+            eq(prescreenReview.status, "IN_PROGRESS"),
+          ),
+        );
       await ctx.tx.insert(outboxEvent).values({
         aggregateType: "CANDIDACY",
         aggregateId: row.id,

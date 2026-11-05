@@ -111,6 +111,16 @@ export function refuseIdentityReviewAccess(kind: ApplicationResultKind): never {
   return refuseAccess(kind, "STAFF");
 }
 
+/** The same, for a PSA Manager approving a prescreen exception (M3.3). */
+export function refusePrescreenExceptionAccess(
+  kind: ApplicationResultKind,
+): never {
+  if (kind === "REAUTHENTICATION_REQUIRED") {
+    safeRedirect("/staff/reauthenticate?purpose=PRESCREEN_EXCEPTION");
+  }
+  return refuseAccess(kind, "STAFF");
+}
+
 /**
  * Terminal refusal for a page or Server Action: the application result is
  * mapped through the single outcome mapper and enforced; any outcome that

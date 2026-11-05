@@ -32,7 +32,16 @@ const candidacyPermissions: Readonly<Record<string, readonly string[]>> = {
     "application.own.submit",
   ],
   // M2.7: staff returning a submitted application for correction.
-  APPLICATION_SUBMITTED: ["application.review"],
+  // M3.3: accepting it for prescreen.
+  APPLICATION_SUBMITTED: ["application.review", "prescreen.begin"],
+  // M3.3: the prescreen, its exception, holds, and asking for more information.
+  PRESCREEN_REVIEW: [
+    "application.review",
+    "prescreen.complete",
+    "prescreen.exception.approve",
+    "compliance_hold.place",
+    "compliance_hold.remove",
+  ],
 };
 
 export const candidacyWorkflowPolicy: WorkflowPolicy = Object.freeze({
@@ -41,6 +50,8 @@ export const candidacyWorkflowPolicy: WorkflowPolicy = Object.freeze({
     "PROSPECT",
     "APPLICATION_INCOMPLETE",
     "APPLICATION_SUBMITTED",
+    "PRESCREEN_REVIEW",
+    "INTERVIEW",
     "CLOSED",
   ]),
   permits: (permissionCode: string, state: string) =>

@@ -26,6 +26,8 @@ export const candidacyStages = [
   "PROSPECT",
   "APPLICATION_INCOMPLETE",
   "APPLICATION_SUBMITTED",
+  "PRESCREEN_REVIEW",
+  "INTERVIEW",
 ] as const;
 export type CandidacyStage = (typeof candidacyStages)[number];
 
@@ -73,7 +75,10 @@ export type StageCommand =
   | "start_application_from_prospect"
   | "close_prospect"
   | "submit_application"
-  | "return_application";
+  | "return_application"
+  | "accept_for_prescreen"
+  | "pass_prescreen"
+  | "not_select_prescreen";
 
 /** The named transition table; anything else is refused. */
 export function stageTransition(
@@ -101,8 +106,22 @@ export function stageTransition(
         ? { stage: "APPLICATION_SUBMITTED", status: "ACTIVE" }
         : null;
     case "return_application":
-      return from?.stage === "APPLICATION_SUBMITTED" && from.status === "ACTIVE"
+      return (from?.stage === "APPLICATION_SUBMITTED" ||
+        from?.stage === "PRESCREEN_REVIEW") &&
+        from.status === "ACTIVE"
         ? { stage: "APPLICATION_INCOMPLETE", status: "ACTIVE" }
+        : null;
+    case "accept_for_prescreen":
+      return from?.stage === "APPLICATION_SUBMITTED" && from.status === "ACTIVE"
+        ? { stage: "PRESCREEN_REVIEW", status: "ACTIVE" }
+        : null;
+    case "pass_prescreen":
+      return from?.stage === "PRESCREEN_REVIEW" && from.status === "ACTIVE"
+        ? { stage: "INTERVIEW", status: "ACTIVE" }
+        : null;
+    case "not_select_prescreen":
+      return from?.stage === "PRESCREEN_REVIEW" && from.status === "ACTIVE"
+        ? { stage: "PRESCREEN_REVIEW", status: "TERMINAL" }
         : null;
   }
 }
@@ -111,9 +130,17 @@ export function stageTransition(
 export function candidateVisibleStatus(
   stage: CandidacyStage,
   status: CandidacyStatus,
-): "NOT_STARTED" | "APPLICATION_STARTED" | "APPLICATION_SUBMITTED" | "CLOSED" {
+):
+  | "NOT_STARTED"
+  | "APPLICATION_STARTED"
+  | "APPLICATION_SUBMITTED"
+  | "UNDER_REVIEW"
+  | "INTERVIEW_STEP"
+  | "CLOSED" {
   if (status !== "ACTIVE") return "CLOSED";
   if (stage === "APPLICATION_SUBMITTED") return "APPLICATION_SUBMITTED";
+  if (stage === "PRESCREEN_REVIEW") return "UNDER_REVIEW";
+  if (stage === "INTERVIEW") return "INTERVIEW_STEP";
   return stage === "APPLICATION_INCOMPLETE"
     ? "APPLICATION_STARTED"
     : "NOT_STARTED";

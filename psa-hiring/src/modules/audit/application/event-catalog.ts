@@ -677,6 +677,31 @@ const definitions: readonly EventDefinition[] = [
   ),
   // M2.6 submission. Metadata holds versions and codes, never an answer.
   candidateRecord("application.submitted", "APPLICATION_SUBMIT", "CANDIDACY"),
+  // M3.3 prescreen and holds. Codes and versions only, never an answer, note,
+  // or hold reason.
+  candidateRecord("prescreen.accepted", "PRESCREEN_ACCEPT", "CANDIDACY"),
+  candidateRecord(
+    "prescreen.responses_saved",
+    "PRESCREEN_RESPONSES_SAVE",
+    "CANDIDACY",
+  ),
+  candidateRecord(
+    "prescreen.exception_approved",
+    "PRESCREEN_EXCEPTION_APPROVE",
+    "CANDIDACY",
+  ),
+  candidateRecord("prescreen.passed", "PRESCREEN_PASS", "CANDIDACY"),
+  candidateRecord(
+    "prescreen.not_selected",
+    "PRESCREEN_NOT_SELECT",
+    "CANDIDACY",
+  ),
+  candidateRecord("candidacy.hold_placed", "CANDIDACY_HOLD_PLACE", "CANDIDACY"),
+  candidateRecord(
+    "candidacy.hold_removed",
+    "CANDIDACY_HOLD_REMOVE",
+    "CANDIDACY",
+  ),
   // M2.7 return and correction. Never the instructions or an answer.
   candidateRecord("application.returned", "APPLICATION_RETURN", "CANDIDACY"),
   candidateRecord(
@@ -842,6 +867,13 @@ export const catalogEventNames = [
   "application.submitted",
   "application.returned",
   "application.correction_started",
+  "prescreen.accepted",
+  "prescreen.responses_saved",
+  "prescreen.exception_approved",
+  "prescreen.passed",
+  "prescreen.not_selected",
+  "candidacy.hold_placed",
+  "candidacy.hold_removed",
   "document.received",
   "document.upload_rejected",
   "document.scanned",

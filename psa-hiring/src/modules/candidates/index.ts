@@ -17,6 +17,8 @@ export {
 export {
   findCandidacy,
   findCandidacyByPublicId,
+  findAccountName,
+  findActiveHold,
   findPerson,
   newCandidateReference,
   newPublicId,
@@ -28,6 +30,9 @@ export {
   closeProspect,
   markApplicationReturned,
   markApplicationSubmitted,
+  markNotSelected,
+  markPrescreenAccepted,
+  markPrescreenPassed,
   createStaffProspect,
   mergePeople,
   reviewDuplicateMatch,
@@ -44,6 +49,11 @@ export {
   queryProspectForm,
   querySubmittedQueue,
 } from "./application/candidate-queries";
+export {
+  placeCandidacyHold,
+  removeCandidacyHold,
+} from "./application/hold-commands";
+export { holdCategories, holdCategoryLabels } from "./domain/holds";
 export {
   queryCandidateOverview,
   queryCandidateWorkspaceShell,

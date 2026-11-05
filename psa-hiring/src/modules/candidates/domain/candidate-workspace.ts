@@ -4,14 +4,18 @@
 // exist yet, so nothing here may read as a compliance clearance.
 
 export type WorkspaceTab = Readonly<{
-  key: "overview" | "application";
+  key: "overview" | "application" | "prescreen";
   label: string;
   href: string;
 }>;
 
 export function workspaceTabs(
   publicId: string,
-  facts: Readonly<{ canReadApplication: boolean; everSubmitted: boolean }>,
+  facts: Readonly<{
+    canReadApplication: boolean;
+    canReadPrescreen?: boolean;
+    everSubmitted: boolean;
+  }>,
 ): readonly WorkspaceTab[] {
   const base = `/staff/candidates/${publicId}`;
   const tabs: WorkspaceTab[] = [
@@ -24,6 +28,13 @@ export function workspaceTabs(
       href: `${base}/application`,
     });
   }
+  if (facts.canReadPrescreen && facts.everSubmitted) {
+    tabs.push({
+      key: "prescreen",
+      label: "Prescreen",
+      href: `${base}/recruiting/prescreen`,
+    });
+  }
   return tabs;
 }
 
@@ -33,6 +44,7 @@ export const blockerLabels = {
   STAFF_WORK_OVERDUE: "Staff work is overdue",
   NO_OWNER: "Nobody owns this record",
   POSSIBLE_DUPLICATE: "A possible duplicate is under review",
+  ON_HOLD: "This candidate is on hold",
 } as const;
 export type BlockerCode = keyof typeof blockerLabels;
 
@@ -47,10 +59,12 @@ export function deriveBlockers(
     overdue: boolean;
     unassigned: boolean;
     possibleDuplicate: boolean;
+    onHold?: boolean;
   }>,
 ): readonly BlockerCode[] {
   if (facts.status !== "ACTIVE") return [];
   const blockers: BlockerCode[] = [];
+  if (facts.onHold) blockers.push("ON_HOLD");
   if (facts.returned) blockers.push("RETURNED_FOR_CORRECTION");
   else if (facts.stage === "APPLICATION_INCOMPLETE") {
     blockers.push("WAITING_FOR_SUBMISSION");
@@ -68,6 +82,9 @@ export const stageEventLabels: Readonly<Record<string, string>> = {
   close_prospect: "Prospect closed",
   submit_application: "Application submitted",
   return_application: "Returned for correction",
+  accept_for_prescreen: "Accepted for prescreen",
+  pass_prescreen: "Prescreen passed",
+  not_select_prescreen: "Not selected",
 };
 
 /** Newest first; ties keep the given order, so the result is stable. */

@@ -801,6 +801,14 @@ describe("event coverage (§17)", () => {
       // M3.1: asserted in tests/integration/candidates/work-queue.test.ts.
       "candidacy.owner_released",
       "work_item.due_date_changed",
+      // M3.3: asserted in tests/integration/applications/prescreen.test.ts.
+      "prescreen.accepted",
+      "prescreen.responses_saved",
+      "prescreen.exception_approved",
+      "prescreen.passed",
+      "prescreen.not_selected",
+      "candidacy.hold_placed",
+      "candidacy.hold_removed",
       "prospect.closed",
       "duplicate_match.created",
       "duplicate_match.reviewed",

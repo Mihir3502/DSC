@@ -423,13 +423,13 @@ describe("permission-aware tabs", () => {
       (await shell("recruiter", draft.public_id)).tabs.map((t) => t.key),
     ).toEqual(["overview"]);
     const { row } = await submitted();
-    for (const name of [
-      "manager",
-      "hr",
-      "recruiter",
-      "compliance",
-      "classification",
-    ]) {
+    for (const name of ["manager", "hr", "recruiter"]) {
+      expect(
+        (await shell(name, row.public_id)).tabs.map((t) => t.key),
+        name,
+      ).toEqual(["overview", "application", "prescreen"]);
+    }
+    for (const name of ["compliance", "classification"]) {
       expect(
         (await shell(name, row.public_id)).tabs.map((t) => t.key),
         name,

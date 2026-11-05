@@ -21,6 +21,12 @@ describe("production workflow policies", () => {
       "application.own.edit@APPLICATION_INCOMPLETE",
       "application.own.submit@APPLICATION_INCOMPLETE",
       "application.review@APPLICATION_SUBMITTED",
+      "application.review@PRESCREEN_REVIEW",
+      "compliance_hold.place@PRESCREEN_REVIEW",
+      "compliance_hold.remove@PRESCREEN_REVIEW",
+      "prescreen.begin@APPLICATION_SUBMITTED",
+      "prescreen.complete@PRESCREEN_REVIEW",
+      "prescreen.exception.approve@PRESCREEN_REVIEW",
     ]);
   });
 

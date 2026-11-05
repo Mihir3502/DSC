@@ -16,6 +16,7 @@ export const applicationProjectionNames = [
   "candidate.application_review.v1",
   "candidate.application_receipt.v1",
   "staff.application_review.v1",
+  "staff.prescreen.v1",
 ] as const;
 
 const requires = (permission: string): FieldRule => ({
@@ -362,3 +363,92 @@ export const staffApplicationReviewContract = defineProjection<
   ),
   schema: staffReviewSchema,
 });
+
+// ---------------------------------------------------------- M3.3 prescreen
+//
+// Staff only. Answers, notes, and reasons never appear in a candidate view. It
+// carries names rather than account ids.
+
+const prescreenLabel = z.string().max(200);
+const prescreenSchema = z.strictObject({
+  candidacyId: z.string().regex(/^[0-9a-hjkmnp-tv-z]{12}$/),
+  reference: z.string().regex(/^C-[0-9A-HJKMNP-TV-Z]{8}$/),
+  candidacyVersion: z.number().int().min(1),
+  status: z.enum([
+    "NOT_STARTED",
+    "IN_PROGRESS",
+    "PASSED",
+    "NOT_SELECTED",
+    "RETURNED",
+  ]),
+  reviewVersion: z.number().int().min(1).nullable(),
+  checklistVersion: z.number().int().min(1).nullable(),
+  checklistDraft: z.boolean(),
+  items: z
+    .array(
+      z.strictObject({
+        code: z.string().max(64),
+        label: prescreenLabel,
+        result: z.enum(["MET", "NOT_MET", "NOT_APPLICABLE"]).nullable(),
+      }),
+    )
+    .max(50),
+  complete: z.boolean(),
+  notes: z.string().max(2000).nullable(),
+  reviewer: prescreenLabel.nullable(),
+  exception: z
+    .strictObject({
+      reason: prescreenLabel,
+      by: prescreenLabel,
+      when: z.string().max(40),
+    })
+    .nullable(),
+  exceptionNeeded: z.boolean(),
+  decision: z
+    .strictObject({
+      by: prescreenLabel,
+      when: z.string().max(40),
+      reason: prescreenLabel.nullable(),
+    })
+    .nullable(),
+  hold: z
+    .strictObject({
+      version: z.number().int().min(1),
+      category: prescreenLabel,
+      reason: z.string().max(1000),
+      reviewDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      placedBy: prescreenLabel,
+    })
+    .nullable(),
+  actions: z.array(z.string().regex(/^[a-z_]+$/)).max(10),
+});
+export type PrescreenView = z.infer<typeof prescreenSchema>;
+export const prescreenContract = defineProjection<PrescreenView, PrescreenView>(
+  {
+    name: "staff.prescreen.v1",
+    audience: "STAFF",
+    purpose: "DETAIL",
+    fields: fieldsFor<PrescreenView>(
+      [
+        "candidacyId",
+        "reference",
+        "candidacyVersion",
+        "status",
+        "reviewVersion",
+        "checklistVersion",
+        "checklistDraft",
+        "items",
+        "complete",
+        "notes",
+        "reviewer",
+        "exception",
+        "exceptionNeeded",
+        "decision",
+        "hold",
+        "actions",
+      ],
+      "candidate.work_queue.read",
+    ),
+    schema: prescreenSchema,
+  },
+);

@@ -13,6 +13,7 @@ import {
   candidateDependencies,
   candidateStatusCode,
   candidateStatusWording,
+  findActiveHold,
   findCandidacyByPublicId,
   isCandidacyPublicId,
   type CandidacyRow,
@@ -544,7 +545,9 @@ export async function queryStaffApplicationReview(
         review.decision === "ALLOW" &&
         latest.status === "SUBMITTED" &&
         row.status === "ACTIVE" &&
-        row.currentStage === "APPLICATION_SUBMITTED",
+        (row.currentStage === "APPLICATION_SUBMITTED" ||
+          row.currentStage === "PRESCREEN_REVIEW") &&
+        !(await findActiveHold(db(deps), row.id)),
       sections: template.sections.map((section) => ({
         code: section.code,
         title: section.title,

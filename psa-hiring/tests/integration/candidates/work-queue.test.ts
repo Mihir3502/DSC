@@ -499,7 +499,7 @@ describe("work queue filters", () => {
       { assignment: "ANYONE" },
       { due: "YESTERDAY" },
       { workerPath: "APPROVED_1099" },
-      { exception: "HOLD" },
+      { exception: "ESCALATED" },
       { branch: "not-a-uuid" },
       { position: "1; DROP TABLE app.candidacy" },
       { owner: accountOf("manager") },

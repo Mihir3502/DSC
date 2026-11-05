@@ -133,11 +133,15 @@ describe("next staff action", () => {
       /correction/,
     );
     expect(nextStaffAction("APPLICATION_SUBMITTED", false, true)).toMatch(
-      /Review/,
+      /Accept/,
     );
     expect(nextStaffAction("APPLICATION_SUBMITTED", false, false)).toBe(
       "None right now",
     );
+    expect(nextStaffAction("PRESCREEN_REVIEW", false, true)).toMatch(
+      /prescreen/,
+    );
+    expect(nextStaffAction("INTERVIEW", false, false)).toBe("None right now");
     expect(nextStaffAction("UNKNOWN", false, true)).toBe("None right now");
   });
 });

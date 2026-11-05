@@ -167,6 +167,8 @@ export const holdCategories = [
   "DOCUMENT",
   "CLASSIFICATION",
   "TRAINING_COMPETENCY",
+  // M3.3 holds during prescreen.
+  "RECRUITING",
 ] as const;
 export type HoldCategory = (typeof holdCategories)[number];
 export const isHoldCategory = guard(holdCategories);

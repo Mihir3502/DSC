@@ -23,6 +23,7 @@ import { constraintPredicate } from "@/modules/identity-access/infrastructure/sc
 import { referenceAlphabet } from "../domain/candidacy-policy";
 import {
   candidacy,
+  candidacyHold,
   candidacyStageHistory,
   candidateCommandReceipt,
   duplicateCandidateMatch,
@@ -774,20 +775,7 @@ export async function swapReviewItemForCorrection(
   candidacyId: string,
   now: Date,
 ): Promise<void> {
-  await db
-    .update(workItem)
-    .set({
-      status: "COMPLETED",
-      completedAt: now,
-      version: sql`${workItem.version} + 1`,
-    })
-    .where(
-      and(
-        eq(workItem.candidacyId, candidacyId),
-        eq(workItem.workTypeCode, "REVIEW_SUBMITTED_APPLICATION"),
-        inArray(workItem.status, ["OPEN", "IN_PROGRESS", "BLOCKED"]),
-      ),
-    );
+  await completeOpenStaffWork(db, candidacyId, now);
   await db
     .insert(workItem)
     .values({
@@ -900,6 +888,8 @@ const exactInstant = (column: AnyColumn) =>
 
 const isReturned = sql<boolean>`EXISTS (SELECT 1 FROM ${workItem} WHERE ${workItem.candidacyId} = ${candidacy.id} AND ${workItem.workTypeCode} = 'CORRECT_APPLICATION' AND ${workItem.status} IN ('OPEN', 'IN_PROGRESS', 'BLOCKED'))`;
 
+const isOnHold = sql<boolean>`EXISTS (SELECT 1 FROM ${candidacyHold} WHERE ${candidacyHold.candidacyId} = ${candidacy.id} AND ${candidacyHold.status} = 'ACTIVE')`;
+
 const staffItemJoin = and(
   eq(staffItem.candidacyId, candidacy.id),
   eq(staffItem.candidateActionRequired, false),
@@ -986,6 +976,7 @@ function queueWhere(filters: WorkQueueFilters, context: WorkQueueContext) {
       ? eq(candidacy.proposedWorkerPath, filters.workerPath)
       : undefined,
     filters.exception === "RETURNED" ? isReturned : undefined,
+    filters.exception === "ON_HOLD" ? isOnHold : undefined,
   );
 }
 
@@ -1021,6 +1012,7 @@ export async function listWorkQueuePage(
       dueAt: staffItem.dueAt,
       dueAtText: exactInstant(staffItem.dueAt),
       returned: isReturned,
+      onHold: isOnHold,
     })
     .from(candidacy)
     .innerJoin(person, eq(person.id, candidacy.personId))
@@ -1224,4 +1216,120 @@ export async function hasActiveCorrection(
     )
     .limit(1);
   return row !== undefined;
+}
+
+// ------------------------------------------------------ M3.3 prescreen, holds
+
+/** Finishes whatever staff work is open on a candidacy. */
+export async function completeOpenStaffWork(
+  db: Executor,
+  candidacyId: string,
+  now: Date,
+): Promise<void> {
+  await db
+    .update(workItem)
+    .set({
+      status: "COMPLETED",
+      completedAt: now,
+      version: sql`${workItem.version} + 1`,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(workItem.candidacyId, candidacyId),
+        eq(workItem.candidateActionRequired, false),
+        inArray(workItem.status, activeWorkStatuses),
+      ),
+    );
+}
+
+export async function openPrescreenItem(
+  db: Executor,
+  candidacyId: string,
+): Promise<void> {
+  await db
+    .insert(workItem)
+    .values({
+      candidacyId,
+      workTypeCode: "COMPLETE_PRESCREEN",
+      targetRecordType: "CANDIDACY",
+      targetRecordId: candidacyId,
+      candidateActionRequired: false,
+      sourceCode: "CANDIDACY_TRANSITION",
+    })
+    .onConflictDoNothing();
+}
+
+export type HoldRow = typeof candidacyHold.$inferSelect;
+
+export async function findActiveHold(
+  db: Executor,
+  candidacyId: string,
+  lock: Lock = null,
+): Promise<HoldRow | null> {
+  const query = db
+    .select()
+    .from(candidacyHold)
+    .where(
+      and(
+        eq(candidacyHold.candidacyId, candidacyId),
+        eq(candidacyHold.status, "ACTIVE"),
+      ),
+    )
+    .limit(1);
+  const [row] = await (locked(query, lock) as typeof query);
+  return row ?? null;
+}
+
+export async function insertHold(
+  tx: Executor,
+  values: Readonly<{
+    candidacyId: string;
+    categoryCode: string;
+    internalReason: string;
+    reviewAt: Date;
+    placedByAccountId: string;
+    placedAt: Date;
+  }>,
+): Promise<HoldRow> {
+  const [row] = await tx.insert(candidacyHold).values(values).returning();
+  return row!;
+}
+
+export async function removeHold(
+  tx: Executor,
+  id: string,
+  expectedVersion: number,
+  removedByAccountId: string,
+  removalReasonCode: string,
+  removedAt: Date,
+): Promise<HoldRow | null> {
+  const [row] = await tx
+    .update(candidacyHold)
+    .set({
+      status: "REMOVED",
+      removedByAccountId,
+      removedAt,
+      removalReasonCode,
+      version: sql`${candidacyHold.version} + 1`,
+    })
+    .where(
+      and(eq(candidacyHold.id, id), eq(candidacyHold.version, expectedVersion)),
+    )
+    .returning();
+  return row ?? null;
+}
+
+/** Newest first; bounded. Codes and instants only, never the reason. */
+export async function listHoldEvents(db: Executor, candidacyId: string) {
+  return db
+    .select({
+      categoryCode: candidacyHold.categoryCode,
+      placedAt: candidacyHold.placedAt,
+      removedAt: candidacyHold.removedAt,
+    })
+    .from(candidacyHold)
+    .where(eq(candidacyHold.candidacyId, candidacyId))
+    .orderBy(desc(candidacyHold.placedAt), desc(candidacyHold.id))
+    .limit(25);
 }

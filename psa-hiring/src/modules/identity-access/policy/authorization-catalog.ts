@@ -15,7 +15,7 @@ import { grantCatalog, type GrantDefinition } from "./role-permission-catalog";
 // 4. apply with `pnpm db:catalog:apply` as a reviewed deployment step.
 // Codes are never deleted or reused; retire them instead.
 
-export const AUTHORIZATION_CATALOG_VERSION = 4;
+export const AUTHORIZATION_CATALOG_VERSION = 5;
 
 /** Version of the decision engine's rules (ordering, containment, SoD). */
 export const AUTHORIZATION_POLICY_ENGINE_VERSION = 1;
@@ -25,7 +25,7 @@ export const AUTHORIZATION_POLICY_VERSION = `authz-p${AUTHORIZATION_POLICY_ENGIN
 
 /** SHA-256 of canonicalCatalog(); guards unreviewed edits. */
 export const AUTHORIZATION_CATALOG_DIGEST =
-  "d22092c4adce6ffdc8ebbcd0952abd18336e7c6da7cbc4d2ead1fa41891a57ad";
+  "a1f9146a6061df54eba54b907dc4b3760614415b43da2bb101aebe4dfba00b67";
 
 export type AuthorizationCatalog = Readonly<{
   version: number;

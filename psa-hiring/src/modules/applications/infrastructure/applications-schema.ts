@@ -110,6 +110,10 @@ export const applicationVersion = appSchema.table(
       foreignColumns: [table.id],
     }),
     unique("application_version_supersedes_unique").on(table.supersedesId),
+    unique("application_version_id_candidacy_unique").on(
+      table.id,
+      table.candidacyId,
+    ),
     unique("application_version_number_unique").on(
       table.candidacyId,
       table.versionNumber,
@@ -415,5 +419,134 @@ export const applicationReturn = appSchema.table(
       "application_return_reopened_check",
       sql`jsonb_typeof(${table.reopened}) = 'object' AND (${table.reopened} <> '{}'::jsonb OR ${table.attachmentsReopened})`,
     ),
+  ],
+);
+
+// The prescreen checklist, as published versions (packet M3.3 §6). Version 1 is
+// a neutral draft for business review, so nothing here is an approved hiring
+// criterion. Read-only at runtime.
+export const prescreenChecklistVersion = appSchema.table(
+  "prescreen_checklist_version",
+  {
+    id: uuid("id")
+      .default(sql`pg_catalog.gen_random_uuid()`)
+      .primaryKey(),
+    versionNumber: integer("version_number").notNull(),
+    items: jsonb("items").notNull(),
+    reviewStatus: varchar("review_status", { length: 32 }).notNull(),
+    effectiveFrom: timestamp("effective_from", tz).notNull(),
+    createdAt: timestamp("created_at", tz).defaultNow().notNull(),
+  },
+  (table) => [
+    unique("prescreen_checklist_version_number_unique").on(table.versionNumber),
+    check(
+      "prescreen_checklist_version_number_check",
+      sql`${table.versionNumber} >= 1`,
+    ),
+    check(
+      "prescreen_checklist_review_check",
+      sql`${table.reviewStatus} IN ('DRAFT_UNREVIEWED', 'APPROVED')`,
+    ),
+    check(
+      "prescreen_checklist_items_check",
+      sql`jsonb_typeof(${table.items}) = 'array'`,
+    ),
+  ],
+);
+
+// One prescreen of one submitted version. Finished reviews are history (trigger).
+// An exception is tied to the exact answers it covers, and its approver can't be
+// the reviewer.
+export const prescreenReview = appSchema.table(
+  "prescreen_review",
+  {
+    id: uuid("id")
+      .default(sql`pg_catalog.gen_random_uuid()`)
+      .primaryKey(),
+    candidacyId: uuid("candidacy_id").notNull(),
+    applicationVersionId: uuid("application_version_id").notNull(),
+    checklistVersionId: uuid("checklist_version_id").notNull(),
+    status: varchar("status", { length: 16 }).default("IN_PROGRESS").notNull(),
+    responses: jsonb("responses")
+      .default(sql`'{}'::jsonb`)
+      .notNull(),
+    responsesVersion: integer("responses_version").default(0).notNull(),
+    internalNotes: varchar("internal_notes", { length: 2000 }),
+    acceptedByAccountId: uuid("accepted_by_account_id").notNull(),
+    acceptedAt: timestamp("accepted_at", tz).notNull(),
+    reviewerAccountId: uuid("reviewer_account_id"),
+    exceptionReasonCode: varchar("exception_reason_code", { length: 64 }),
+    exceptionByAccountId: uuid("exception_by_account_id"),
+    exceptionAt: timestamp("exception_at", tz),
+    exceptionResponsesVersion: integer("exception_responses_version"),
+    decidedByAccountId: uuid("decided_by_account_id"),
+    decidedAt: timestamp("decided_at", tz),
+    notSelectedReasonCode: varchar("not_selected_reason_code", { length: 64 }),
+    version: integer("version").default(1).notNull(),
+  },
+  (table) => [
+    foreignKey({
+      name: "prescreen_review_version_fk",
+      columns: [table.applicationVersionId, table.candidacyId],
+      foreignColumns: [applicationVersion.id, applicationVersion.candidacyId],
+    }),
+    foreignKey({
+      name: "prescreen_review_checklist_fk",
+      columns: [table.checklistVersionId],
+      foreignColumns: [prescreenChecklistVersion.id],
+    }),
+    foreignKey({
+      name: "prescreen_review_accepted_by_fk",
+      columns: [table.acceptedByAccountId],
+      foreignColumns: [user.id],
+    }),
+    foreignKey({
+      name: "prescreen_review_reviewer_fk",
+      columns: [table.reviewerAccountId],
+      foreignColumns: [user.id],
+    }),
+    foreignKey({
+      name: "prescreen_review_exception_by_fk",
+      columns: [table.exceptionByAccountId],
+      foreignColumns: [user.id],
+    }),
+    foreignKey({
+      name: "prescreen_review_decided_by_fk",
+      columns: [table.decidedByAccountId],
+      foreignColumns: [user.id],
+    }),
+    unique("prescreen_review_version_unique").on(table.applicationVersionId),
+    uniqueIndex("prescreen_review_one_open_unique")
+      .on(table.candidacyId)
+      .where(sql`${table.status} = 'IN_PROGRESS'`),
+    index("prescreen_review_candidacy_idx").on(
+      table.candidacyId,
+      table.acceptedAt,
+    ),
+    check(
+      "prescreen_review_status_check",
+      sql`${table.status} IN ('IN_PROGRESS', 'PASSED', 'NOT_SELECTED', 'RETURNED')`,
+    ),
+    check(
+      "prescreen_review_decided_check",
+      sql`((${table.status} IN ('PASSED', 'NOT_SELECTED')) = (${table.decidedAt} IS NOT NULL)) AND ((${table.decidedAt} IS NULL) = (${table.decidedByAccountId} IS NULL))`,
+    ),
+    check(
+      "prescreen_review_not_selected_check",
+      sql`(${table.status} = 'NOT_SELECTED') = (${table.notSelectedReasonCode} IS NOT NULL)`,
+    ),
+    check(
+      "prescreen_review_exception_check",
+      sql`((${table.exceptionReasonCode} IS NULL) = (${table.exceptionByAccountId} IS NULL)) AND ((${table.exceptionReasonCode} IS NULL) = (${table.exceptionAt} IS NULL)) AND ((${table.exceptionReasonCode} IS NULL) = (${table.exceptionResponsesVersion} IS NULL))`,
+    ),
+    check(
+      "prescreen_review_exception_separation_check",
+      sql`${table.exceptionByAccountId} IS NULL OR ${table.exceptionByAccountId} <> ${table.reviewerAccountId}`,
+    ),
+    check(
+      "prescreen_review_responses_check",
+      sql`jsonb_typeof(${table.responses}) = 'object' AND ${table.responsesVersion} >= 0`,
+    ),
+    check("prescreen_review_version_check", sql`${table.version} >= 1`),
   ],
 );

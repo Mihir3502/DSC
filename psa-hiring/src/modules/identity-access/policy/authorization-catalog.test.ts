@@ -209,7 +209,7 @@ describe("authorization catalog integrity", () => {
     expect(holds("HR_SPECIALIST", "compliance_hold.place")?.condition).toEqual({
       v: 1,
       kind: "HOLD_CATEGORY",
-      categories: ["DOCUMENT"],
+      categories: ["DOCUMENT", "RECRUITING"],
     });
     // Interviewing requires the interviewer relationship.
     expect(

@@ -44,6 +44,8 @@ const reauthenticationDestinations = Object.freeze({
   CONFIGURATION_CHANGE: "/staff/admin/positions",
   /** M2.2 duplicate review and person merge (PSA Manager). */
   CANDIDATE_IDENTITY_REVIEW: "/staff/candidates/duplicates",
+  /** M3.3 prescreen exception (PSA Manager). */
+  PRESCREEN_EXCEPTION: "/staff/work",
 } as const);
 /**
  * Purposes satisfied only by an inline step-up made by the command that

@@ -260,6 +260,7 @@ export const candidateTables = [
   "person_merge_record",
   "candidate_command_receipt",
   "work_responsibility_history",
+  "candidacy_hold",
 ] as const;
 
 /** M2.2 append-only tables (no runtime UPDATE either). */
@@ -272,6 +273,7 @@ export const candidateAppendOnlyTables = [
 
 /** M2.4 published templates (runtime SELECT only). */
 export const applicationTemplateTables = [
+  "prescreen_checklist_version",
   "application_template",
   "application_template_version",
   "application_certification_version",
@@ -293,6 +295,8 @@ export const applicationDraftTables = [
   "application_submission_attachment",
   // M2.7 returns (also no runtime UPDATE, below).
   "application_return",
+  // M3.3 reviews: updated only until finished (trigger), never deleted.
+  "prescreen_review",
 ] as const;
 
 /** M2.6 frozen submissions (runtime SELECT and INSERT only). */

@@ -230,6 +230,33 @@ export const formSchemas = Object.freeze({
     expectedVersion: version,
     reasonCode: key,
   }),
+  prescreenSave: defineFormSchema({
+    commandKey: ref,
+    candidacyId: key,
+    expectedVersion: version,
+    responses: summary,
+    internalNotes: { maxLength: 2100 },
+    // The checklist's radio groups, by position. The answers travel in
+    // `responses`, and the server ignores these.
+    choice0: key,
+    choice1: key,
+    choice2: key,
+    choice3: key,
+    choice4: key,
+    choice5: key,
+    choice6: key,
+    choice7: key,
+    choice8: key,
+    choice9: key,
+  }),
+  holdPlace: defineFormSchema({
+    commandKey: ref,
+    candidacyId: key,
+    expectedVersion: version,
+    reasonCode: key,
+    internalReason: { maxLength: 1100 },
+    reviewDate: key,
+  }),
   workOwnerAssign: defineFormSchema({
     commandKey: ref,
     candidacyId: key,

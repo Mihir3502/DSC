@@ -247,8 +247,8 @@ const grantSpecs: Readonly<Record<RoleCode, readonly Spec[]>> = {
     "final_review.read",
     "readiness.read",
     "compliance_hold.read",
-    ["compliance_hold.place", holdOnly("DOCUMENT")],
-    ["compliance_hold.remove", holdOnly("DOCUMENT")],
+    ["compliance_hold.place", holdOnly("DOCUMENT", "RECRUITING")],
+    ["compliance_hold.remove", holdOnly("DOCUMENT", "RECRUITING")],
     "communication.read",
     "communication.send",
     "record.export.standard",
@@ -464,6 +464,8 @@ const grantSpecs: Readonly<Record<RoleCode, readonly Spec[]>> = {
     // M3.1 work queue (catalog version 4, approved 2026-11-04). Only the
     // manager assigns other staff.
     "candidate.owner.assign_others",
+    // M3.3 (catalog version 5, approved 2026-11-04).
+    "prescreen.exception.approve",
     "candidate.due_date.manage",
     "candidate.work_queue.read",
     "candidate.duplicate.review",

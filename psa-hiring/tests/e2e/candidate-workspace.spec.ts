@@ -70,7 +70,7 @@ test.describe("candidate workspace @critical", () => {
     }
     await recruiterPage.goto("/staff/work?stage=APPLICATION_SUBMITTED");
     await recruiterPage
-      .locator("li", { hasText: "Review the submitted" })
+      .locator("li", { hasText: "Accept the application" })
       .first()
       .getByRole("link")
       .first()
@@ -86,12 +86,13 @@ test.describe("candidate workspace @critical", () => {
     await expect(
       recruiterPage.getByRole("heading", { level: 1 }),
     ).toBeVisible();
-    await expect(main).toContainText("Review the submitted application");
+    await expect(main).toContainText("Accept the application for prescreen");
     await expect(main).toContainText("Nobody owns this record");
     await expect(main).toContainText("Application submitted");
     await expect(tabs.getByRole("link")).toHaveText([
       "Overview",
       "Application",
+      "Prescreen",
     ]);
     await expect(tabs.getByRole("link", { name: "Overview" })).toHaveAttribute(
       "aria-current",
